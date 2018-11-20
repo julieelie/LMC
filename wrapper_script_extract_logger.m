@@ -18,7 +18,19 @@ Server_audio_path = 'Z:\users\Julie E\GiMo_65430_71300\Audio';
 for dd=1:length(Days)
     Loggers_dir = fullfile(Server_logger_path, Days{dd});
     Audio_dir = fullfile(Server_audio_path, Days{dd});
-ExpStartTime = '1059';
-
-align_soundmexAudio_2_logger(Audio_dir, Loggers_dir, ExpStartTime,'Method','rise');
+    % find the time stamp of each experiment
+    StampFiles = dir(fullfile(Audio_dir, '*RecOnly_param.txt'));
+    if length(StampFiles)>1
+        fprintf('Several Recording Only tests were done on that day, please choose the one you want to look at:\n')
+        for ff=1:length(StampFiles)
+            fprintf('%d: %s\n',ff, StampFiles(ff).name);
+        end
+        Indff = input('Your choice:\n');
+    else
+        Indff = 1;
+    end
+    ExpStartTime = StampFiles(Indff).name(13:16);
+    align_soundmexAudio_2_logger(Audio_dir, Loggers_dir, ExpStartTime,'Method','rise');
 end
+
+%%  
