@@ -12,9 +12,9 @@ script_extract_loggers('07252018',{'65430' '71300' '60014' '71132' '71213'} , [5
 script_extract_loggers('07262018',{'65430' '71300' '71173' '71137' '71335'} , [5 6 10 9 7])
 
 %% Allign TTL pulses for all these days
-Days = {'06272018', '06282018', '07022018', '07032018', '07062018', '07102018', '07112018', '07122018', '07242018', '07252018', '07262018'};
-Server_logger_path = 'Z:\users\Julie E\GiMo_65430_71300\Loggers';
-Server_audio_path = 'Z:\users\Julie E\GiMo_65430_71300\Audio';
+Days = {'20180627', '20180628', '20180702', '20180703', '20180706', '20180710', '20180711', '20180712', '20180724', '20180725', '20180726'};
+Server_logger_path = 'Z:\users\JulieE\GiMo_65430_71300\Loggers';
+Server_audio_path = 'Z:\users\JulieE\GiMo_65430_71300\Audio';
 for dd=1:length(Days)
     Loggers_dir = fullfile(Server_logger_path, Days{dd});
     Audio_dir = fullfile(Server_audio_path, Days{dd});
