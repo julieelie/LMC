@@ -84,7 +84,7 @@ for ll=1:length(AudioLogs)
         % extract the data snippet
 %         Piezo_wave.(sprintf('Logger%s', LData.logger_serial_number)){vv} = double(LData.AD_count_int16(IndSampOn:IndSampOff) - mean(LData.AD_count_int16))/std(LData.AD_count_int16);
         Piezo_wave.(sprintf('Logger%s', LData.logger_serial_number)){vv} = double(LData.AD_count_int16(IndSampOn:IndSampOff));
-        Piezo_FS.(sprintf('Logger%s', LData.logger_serial_number))(vv) = mean(LData.Estimated_channelFS_Transceiver(IndTSOn:IndTSOff));
+        Piezo_FS.(sprintf('Logger%s', LData.logger_serial_number))(vv) = nanmean(LData.Estimated_channelFS_Transceiver(IndTSOn:IndTSOff));
     end
 end
 clear LData
@@ -97,16 +97,24 @@ OffsetAudiosamp=nan(Nvoc,1); % New more accurate offset sample of vocalization o
 Fns_AL = fieldnames(Piezo_wave);
 
 for vv=1:Nvoc
-    % calculate the RMS of each logger and select the one with the highest
-    % to perform a cross-correlation
+    % roughly detect vocalizations on the environment microphone
+    
+    
+    % calculate the RMS of each logger on the corresponding location of the loudest vocalization and select the one with the highest
+    % to perform a cross-correlation on the whole sound section
     RMS_audioLog = nan(length(AudioLogs),1);
+    RDS_audioLog = nan(length(AudioLogs),1);
     Filt_Logger_wav = cell(length(AudioLogs),1);
     F1=figure(1);
     for ll=1:length(AudioLogs)
+        fprintf('%s\n', Fns_AL{ll})
         [z,p,k] = butter(6,BandPassFilter(1:2)/(Piezo_FS.(Fns_AL{ll})(vv)/2),'bandpass');
         sos = zp2sos(z,p,k);
         Filt_Logger_wav{ll} = (filtfilt(sos,1,Piezo_wave.(Fns_AL{ll}){vv} - mean(Piezo_wave.(Fns_AL{ll}){vv}))); % band-pass filter the centered voltage trace
-        RMS_audioLog(ll) = mean(Filt_Logger_wav{ll} .^2)^0.5;
+        fprintf('RMS\n')
+        RMS_audioLog(ll) = mean(Filt_Logger_wav{ll} .^2)^0.5
+        fprintf('RDS\n')
+        RDS_audioLog(ll) = std(Filt_Logger_wav{ll} .^2)^0.5
         subplot(length(AudioLogs)+1,1,ll)
         plot(Piezo_wave.(Fns_AL{ll}){vv} - mean(Piezo_wave.(Fns_AL{ll}){vv}), 'k-');
         hold on

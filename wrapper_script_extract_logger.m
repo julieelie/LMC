@@ -15,7 +15,8 @@ script_extract_loggers('07262018',{'65430' '71300' '71173' '71137' '71335'} , [5
 Days = {'20180627', '20180628', '20180702', '20180703', '20180706', '20180710', '20180711', '20180712', '20180724', '20180725', '20180726'};
 Server_logger_path = 'Z:\users\JulieE\GiMo_65430_71300\Loggers';
 Server_audio_path = 'Z:\users\JulieE\GiMo_65430_71300\Audio';
-for dd=1:length(Days)
+for dd=10:length(Days)
+    fprintf('*********** %s *************\n', Days{dd})
     Loggers_dir = fullfile(Server_logger_path, Days{dd});
     Audio_dir = fullfile(Server_audio_path, Days{dd});
     % find the time stamp of each experiment
@@ -33,4 +34,82 @@ for dd=1:length(Days)
     align_soundmexAudio_2_logger(Audio_dir, Loggers_dir, ExpStartTime,'Method','rise');
 end
 
-%%  
+%% Now for each day and each manualy extracted vocalization, find the index of the corresponding first sample in the environmental microphone recordings
+VocDir = 'Z:\users\JulieE\GiMo_65430_71300\Audio\ManualCuts';
+for dd=1:length(Days)
+    fprintf(' LOCALIZING VOCALIZATIONS \n')
+    fprintf('*********** %s *************\n', Days{dd})
+    Audio_dir = fullfile(Server_audio_path, Days{dd});
+    % find the time stamp of each experiment
+    StampFiles = dir(fullfile(Audio_dir, '*RecOnly_param.txt'));
+    if length(StampFiles)>1
+        fprintf('Several Recording Only tests were done on that day, please choose the one you want to look at:\n')
+        for ff=1:length(StampFiles)
+            fprintf('%d: %s\n',ff, StampFiles(ff).name);
+        end
+        Indff = input('Your choice:\n');
+    else
+        Indff = 1;
+    end
+    ExpStartTime = StampFiles(Indff).name(13:16);
+    voc_localize(VocDir, Audio_dir, Days{dd}(3:end), ExpStartTime);
+end
+%% Identify the same vocalizations on the piezos and save sound extracts, onset and offset times
+for dd=1:length(Days)
+    fprintf(' LOCALIZING VOCALIZATIONS ON PIEZO RECORDINGS\n')
+    fprintf('*********** %s *************\n', Days{dd})
+    Audio_dir = fullfile(Server_audio_path, Days{dd});
+    Loggers_dir = fullfile(Server_logger_path, Days{dd});
+    % find the time stamp of each experiment
+    StampFiles = dir(fullfile(Audio_dir, '*RecOnly_param.txt'));
+    if length(StampFiles)>1
+        fprintf('Several Recording Only tests were done on that day, please choose the one you want to look at:\n')
+        for ff=1:length(StampFiles)
+            fprintf('%d: %s\n',ff, StampFiles(ff).name);
+        end
+        Indff = input('Your choice:\n');
+    else
+        Indff = 1;
+    end
+    ExpStartTime = StampFiles(Indff).name(13:16);
+    get_logger_data_voc(Audio_dir, Loggers_dir,Days{dd}(3:end), ExpStartTime);
+end
+%% Identify who is calling
+for dd=1:length(Days)
+    fprintf(' IDENTIFY WHO IS CALLING\n')
+    fprintf('*********** %s *************\n', Days{dd})
+    Loggers_dir = fullfile(Server_logger_path, Days{dd});
+    % find the time stamp of each experiment
+    StampFiles = dir(fullfile(Audio_dir, '*RecOnly_param.txt'));
+    if length(StampFiles)>1
+        fprintf('Several Recording Only tests were done on that day, please choose the one you want to look at:\n')
+        for ff=1:length(StampFiles)
+            fprintf('%d: %s\n',ff, StampFiles(ff).name);
+        end
+        Indff = input('Your choice:\n');
+    else
+        Indff = 1;
+    end
+    ExpStartTime = StampFiles(Indff).name(13:16);
+    who_calls(Loggers_dir,Days{dd}(3:end), ExpStartTime);
+end
+
+%% Extract the neural data corresponding to the vocalizations
+for dd=1:length(Days)
+    fprintf(' EXTRACTING NEURAL DATA CORRESPONDING TO VOCALIZATIONS \n')
+    fprintf('*********** %s *************\n', Days{dd})
+    Loggers_dir = fullfile(Server_logger_path, Days{dd});
+    % find the time stamp of each experiment
+    StampFiles = dir(fullfile(Audio_dir, '*RecOnly_param.txt'));
+    if length(StampFiles)>1
+        fprintf('Several Recording Only tests were done on that day, please choose the one you want to look at:\n')
+        for ff=1:length(StampFiles)
+            fprintf('%d: %s\n',ff, StampFiles(ff).name);
+        end
+        Indff = input('Your choice:\n');
+    else
+        Indff = 1;
+    end
+    ExpStartTime = StampFiles(Indff).name(13:16);
+    cut_neuralData_voc(Loggers_dir,Days{dd}(3:end), ExpStartTime);
+end

@@ -34,6 +34,7 @@ Voc_transc_time = nan(NVoc,2);
 
 %% Loop through extracts and localize them
 for vv=1:NVoc
+    fprintf('vocalization %d/%d\n',vv, NVoc);
     % load the extract
     Voc_filename{vv} = fullfile(AllVocs(vv).folder, AllVocs(vv).name);
     [Voc_wav] = audioread(Voc_filename{vv});
@@ -59,6 +60,7 @@ for vv=1:NVoc
     line([Buffer Buffer],[min(Voc_wav) max(Voc_wav)])
     hold off
     legend({'Raw recording', 'extract'})
+    pause(1)
     
     % Extract the transceiver time 
     % zscore the sample stamps
