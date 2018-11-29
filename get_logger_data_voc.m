@@ -97,8 +97,29 @@ OffsetAudiosamp=nan(Nvoc,1); % New more accurate offset sample of vocalization o
 Fns_AL = fieldnames(Piezo_wave);
 
 for vv=1:Nvoc
-    % roughly detect vocalizations on the environment microphone
+    % filter the original wavfile
+    [Raw_wave{vv}, FS] = audioread(VocExt.Voc_filename{vv});
+    [z,p,k] = butter(6,BandPassFilter(1:2)/(FS/2),'bandpass');% a 12th order Butterworth band-pass filter; the second input argument is normalized cut-off frequency (ie. normalized to the Nyquist frequency, which is half the sampling frequency, as required by MATLAB)
+    sos = zp2sos(z,p,k); % obtain the second order section (biquad) filter to use as input in filtfilt
+    Filt_Raw_wav=(filtfilt(sos,1,Raw_wave{vv})); % band-pass filter the voltage traces
+    subplot(length(AudioLogs)+1,1,length(AudioLogs)+1)
+    plot(Raw_wave{vv}, '-k')
+    hold on
+    plot(Filt_Raw_wav, '-r')
+    title('Environmental Mic filtering and resampling')
+    legend('Raw voltage trace', sprintf('BandPass %d %d Hz', BandPassFilter(1:2)))
     
+    % roughly detect loadest vocalization on the environment microphone by
+    % calculating an RMS in windows of 100ms
+    Wins = 1:(FS/100):FS;
+    S_Raw = Filt_Raw_wav.^2;
+    RunRMS = nan(length(Wins),1);
+    for ww=1:length(Wins)
+        RunRMS(ww) = mean(S_Raw(Wins(ww):(Wins(ww)-1)))^0.5;
+    end
+    MaxVoc = find(RunRMS == max(RunRMS));
+    plot([(0.1*MaxVoc*FS)  (0.1*(MaxVoc+1)*FS)], [0 0],'-','Color',[0.5 0.5 0.5 0.2],'LineWidth',10)
+    hold off
     
     % calculate the RMS of each logger on the corresponding location of the loudest vocalization and select the one with the highest
     % to perform a cross-correlation on the whole sound section
@@ -111,10 +132,13 @@ for vv=1:Nvoc
         [z,p,k] = butter(6,BandPassFilter(1:2)/(Piezo_FS.(Fns_AL{ll})(vv)/2),'bandpass');
         sos = zp2sos(z,p,k);
         Filt_Logger_wav{ll} = (filtfilt(sos,1,Piezo_wave.(Fns_AL{ll}){vv} - mean(Piezo_wave.(Fns_AL{ll}){vv}))); % band-pass filter the centered voltage trace
+        FLW_local = Filt_Logger_wav{ll}((0.1*MaxVoc*Piezo_FS.(Fns_AL{ll})) : (0.1*(MaxVoc+1)*Piezo_FS.(Fns_AL{ll})));
         fprintf('RMS\n')
-        RMS_audioLog(ll) = mean(Filt_Logger_wav{ll} .^2)^0.5
+%         RMS_audioLog(ll) = mean(Filt_Logger_wav{ll} .^2)^0.5
+        RMS_audioLog(ll) = mean(FLW_local .^2)^0.5
         fprintf('RDS\n')
-        RDS_audioLog(ll) = std(Filt_Logger_wav{ll} .^2)^0.5
+%         RDS_audioLog(ll) = std(Filt_Logger_wav{ll} .^2)^0.5
+        RDS_audioLog(ll) = std(FLW_local .^2)^0.5
         subplot(length(AudioLogs)+1,1,ll)
         plot(Piezo_wave.(Fns_AL{ll}){vv} - mean(Piezo_wave.(Fns_AL{ll}){vv}), 'k-');
         hold on
@@ -128,19 +152,6 @@ for vv=1:Nvoc
     % Only rely on the logger of the individual that vocalized the loudest
     % for reallignement
     HRMS_Ind = find(RMS_audioLog == max(RMS_audioLog));
-    
-    % filter the original wavfile
-    [Raw_wave{vv}, FS] = audioread(VocExt.Voc_filename{vv});
-    [z,p,k] = butter(6,BandPassFilter(1:2)/(FS/2),'bandpass');% a 12th order Butterworth band-pass filter; the second input argument is normalized cut-off frequency (ie. normalized to the Nyquist frequency, which is half the sampling frequency, as required by MATLAB)
-    sos = zp2sos(z,p,k); % obtain the second order section (biquad) filter to use as input in filtfilt
-    Filt_Raw_wav=(filtfilt(sos,1,Raw_wave{vv})); % band-pass filter the voltage traces
-    subplot(length(AudioLogs)+1,1,length(AudioLogs)+1)
-    plot(Raw_wave{vv}, '-k')
-    hold on
-    plot(Filt_Raw_wav, '-r')
-    hold off
-    title('Environmental Mic filtering and resampling')
-    legend('Raw voltage trace', sprintf('BandPass %d %d Hz', BandPassFilter(1:2)))
 
     % resample the sounds so they are at the same sample frequency of 4
     % times the low pass filter value
