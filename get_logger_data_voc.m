@@ -78,13 +78,38 @@ for ll=1:length(AudioLogs)
         % find the time stamp on the logger that is closest to after
         % the snippet of sound offset
         IndTSOff = find(LData.Timestamps_of_first_samples_usec>(VocOffset_time*10^3), 1, 'First');
-        % deduct the corresponding onset and offset samples
-        IndSampOn = round(LData.Indices_of_first_and_last_samples(IndTSOn,1) + LData.Estimated_channelFS_Transceiver(IndTSOn)*(10^-6)*(VocOnset_time*10^3 - LData.Timestamps_of_first_samples_usec(IndTSOn)));
-        IndSampOff = round(LData.Indices_of_first_and_last_samples(IndTSOff,1) - LData.Estimated_channelFS_Transceiver(IndTSOff)*(10^-6)*(LData.Timestamps_of_first_samples_usec(IndTSOff) - VocOffset_time*10^3));
+        if ~isempty(IndTSOff)
+            % deduct the corresponding onset and offset samples
+            IndSampOn = round(LData.Indices_of_first_and_last_samples(IndTSOn,1) + LData.Estimated_channelFS_Transceiver(IndTSOn)*(10^-6)*(VocOnset_time*10^3 - LData.Timestamps_of_first_samples_usec(IndTSOn)));
+            IndSampOff = round(LData.Indices_of_first_and_last_samples(IndTSOff,1) - LData.Estimated_channelFS_Transceiver(IndTSOff)*(10^-6)*(LData.Timestamps_of_first_samples_usec(IndTSOff) - VocOffset_time*10^3));
+        else
+            % find the time stamp on the logger that is closest to before
+            % the snippet of sound offset
+            IndTSOff = find(LData.Timestamps_of_first_samples_usec<(VocOffset_time*10^3), 1, 'Last');
+            % this vocalization is in the last recording file
+            % There is no estimation of the sample frequency for that last
+            % file. Let's estimate it as the average of the previous
+            % estimates
+            FS_local = nanmean(LData.Estimated_channelFS_Transceiver);
+            IndSampOn = round(LData.Indices_of_first_and_last_samples(IndTSOn,1) + FS_local*(10^-6)*(VocOnset_time*10^3 - LData.Timestamps_of_first_samples_usec(IndTSOn)));
+            IndSampOff = round(LData.Indices_of_first_and_last_samples(IndTSOff,1) + FS_local*(10^-6)*(VocOffset_time*10^3 - LData.Timestamps_of_first_samples_usec(IndTSOff)));
+        end    
+            
         % extract the data snippet
 %         Piezo_wave.(sprintf('Logger%s', LData.logger_serial_number)){vv} = double(LData.AD_count_int16(IndSampOn:IndSampOff) - mean(LData.AD_count_int16))/std(LData.AD_count_int16);
-        Piezo_wave.(sprintf('Logger%s', LData.logger_serial_number)){vv} = double(LData.AD_count_int16(IndSampOn:IndSampOff));
-        Piezo_FS.(sprintf('Logger%s', LData.logger_serial_number))(vv) = nanmean(LData.Estimated_channelFS_Transceiver(IndTSOn:IndTSOff));
+        if IndSampOff<length(LData.AD_count_int16)
+            Piezo_wave.(sprintf('Logger%s', LData.logger_serial_number)){vv} = double(LData.AD_count_int16(IndSampOn:IndSampOff));
+        else % The piezo recording ended before the end of the call section requested
+            warning('The piezo recording of %s ended before the end of vocalization %d, only extracting up to the end of piezo recording and pading the rest with NaN\n',Logger_dirs(AudioLogs(ll)).name, vv);
+            Piezo_wave.(sprintf('Logger%s', LData.logger_serial_number)){vv} = [double(LData.AD_count_int16(IndSampOn:end)) nan(1,IndSampOff-length(LData.AD_count_int16))];
+        end
+        if IndTSOff<=length(LData.Estimated_channelFS_Transceiver)
+            Piezo_FS.(sprintf('Logger%s', LData.logger_serial_number))(vv) = nanmean(LData.Estimated_channelFS_Transceiver(IndTSOn:IndTSOff));
+        elseif IndTSOn<=length(LData.Estimated_channelFS_Transceiver)
+            Piezo_FS.(sprintf('Logger%s', LData.logger_serial_number))(vv) = nanmean(LData.Estimated_channelFS_Transceiver(IndTSOn:end));
+        else % vocalization start and ends in the last recording
+            Piezo_FS.(sprintf('Logger%s', LData.logger_serial_number))(vv) = nanmean(LData.Estimated_channelFS_Transceiver);
+        end
     end
 end
 clear LData
@@ -97,6 +122,7 @@ OffsetAudiosamp=nan(Nvoc,1); % New more accurate offset sample of vocalization o
 Fns_AL = fieldnames(Piezo_wave);
 
 for vv=1:Nvoc
+    F1=figure(1);
     % filter the original wavfile
     [Raw_wave{vv}, FS] = audioread(VocExt.Voc_filename{vv});
     [z,p,k] = butter(6,BandPassFilter(1:2)/(FS/2),'bandpass');% a 12th order Butterworth band-pass filter; the second input argument is normalized cut-off frequency (ie. normalized to the Nyquist frequency, which is half the sampling frequency, as required by MATLAB)
@@ -109,16 +135,19 @@ for vv=1:Nvoc
     title('Environmental Mic filtering and resampling')
     legend('Raw voltage trace', sprintf('BandPass %d %d Hz', BandPassFilter(1:2)))
     
-    % roughly detect loadest vocalization on the environment microphone by
-    % calculating an RMS in windows of 100ms
-    Wins = 1:(FS/100):FS;
-    S_Raw = Filt_Raw_wav.^2;
-    RunRMS = nan(length(Wins),1);
-    for ww=1:length(Wins)
-        RunRMS(ww) = mean(S_Raw(Wins(ww):(Wins(ww)-1)))^0.5;
-    end
-    MaxVoc = find(RunRMS == max(RunRMS));
-    plot([(0.1*MaxVoc*FS)  (0.1*(MaxVoc+1)*FS)], [0 0],'-','Color',[0.5 0.5 0.5 0.2],'LineWidth',10)
+%     % roughly detect loadest vocalization on the environment microphone by
+%     % calculating an RMS in windows of 100ms
+%     Wins = 1:(FS/100):length(Filt_Raw_wav);
+%     S_Raw = Filt_Raw_wav.^2;
+%     RunRMS = nan(length(Wins)-1,1);
+%     for ww=1:(length(Wins)-1)
+%         RunRMS(ww) = mean(S_Raw(Wins(ww):(Wins(ww+1))))^0.5;
+%     end
+%     MaxVoc = find(RunRMS == max(RunRMS));
+%     legend('update','off')
+%     plot([Wins(MaxVoc)  Wins(MaxVoc+1)], [0 0],'-','Color',[0.5 0.5 1 0.5],'LineWidth',30)
+%     yyaxis right
+%     plot(Wins(1:end-1)+FS/200, RunRMS, 'b-')
     hold off
     
     % calculate the RMS of each logger on the corresponding location of the loudest vocalization and select the one with the highest
@@ -126,19 +155,23 @@ for vv=1:Nvoc
     RMS_audioLog = nan(length(AudioLogs),1);
     RDS_audioLog = nan(length(AudioLogs),1);
     Filt_Logger_wav = cell(length(AudioLogs),1);
-    F1=figure(1);
+    
     for ll=1:length(AudioLogs)
         fprintf('%s\n', Fns_AL{ll})
         [z,p,k] = butter(6,BandPassFilter(1:2)/(Piezo_FS.(Fns_AL{ll})(vv)/2),'bandpass');
         sos = zp2sos(z,p,k);
         Filt_Logger_wav{ll} = (filtfilt(sos,1,Piezo_wave.(Fns_AL{ll}){vv} - mean(Piezo_wave.(Fns_AL{ll}){vv}))); % band-pass filter the centered voltage trace
-        FLW_local = Filt_Logger_wav{ll}((0.1*MaxVoc*Piezo_FS.(Fns_AL{ll})) : (0.1*(MaxVoc+1)*Piezo_FS.(Fns_AL{ll})));
-        fprintf('RMS\n')
-%         RMS_audioLog(ll) = mean(Filt_Logger_wav{ll} .^2)^0.5
-        RMS_audioLog(ll) = mean(FLW_local .^2)^0.5
-        fprintf('RDS\n')
-%         RDS_audioLog(ll) = std(Filt_Logger_wav{ll} .^2)^0.5
-        RDS_audioLog(ll) = std(FLW_local .^2)^0.5
+%         FLW_local = Filt_Logger_wav{ll}(round(MaxVoc*Piezo_FS.(Fns_AL{ll})(vv)/100) : round((MaxVoc+1)*Piezo_FS.(Fns_AL{ll})(vv)/100));
+        RMS_audioLog(ll) = mean(Filt_Logger_wav{ll} .^2)^0.5;
+%         RMS_audioLog(ll) = mean(FLW_local .^2)^0.5;
+        RDS_audioLog(ll) = std(Filt_Logger_wav{ll} .^2)^0.5;
+%         RDS_audioLog(ll) = std(FLW_local .^2)^0.5;
+        if ll==length(AudioLogs)
+            fprintf('RMS\n')
+            RMS_audioLog
+            fprintf('RDS\n')
+            RDS_audioLog
+        end
         subplot(length(AudioLogs)+1,1,ll)
         plot(Piezo_wave.(Fns_AL{ll}){vv} - mean(Piezo_wave.(Fns_AL{ll}){vv}), 'k-');
         hold on
@@ -152,6 +185,12 @@ for vv=1:Nvoc
     % Only rely on the logger of the individual that vocalized the loudest
     % for reallignement
     HRMS_Ind = find(RMS_audioLog == max(RMS_audioLog));
+    fprintf('The %dth logger is chosen as the loudest vocalizer\n',HRMS_Ind);
+    Agree = 0;
+    Agree = input('Do you agree? yes (1), No (0)\n');
+    if ~Agree
+        HRMS_Ind = input('Indicate your choice:\n');
+    end
 
     % resample the sounds so they are at the same sample frequency of 4
     % times the low pass filter value
@@ -173,7 +212,7 @@ for vv=1:Nvoc
         legend(sprintf('BandPass + Resampled %d Hz', 4*BandPassFilter(2)))
         hold off
     end
-    
+    %Resamp_Filt_Logger_wav{ll}(109365:(length(t2)-14937))=zeros(size((109365:(length(t2)-14937))));
     % Localize vocalizations on the selected loggers and set to zero the
     % signal outside of putative vocalizations.
     % calculate a running RMS of the audio signal with a 1ms bin
@@ -233,6 +272,13 @@ for vv=1:Nvoc
         line([LagDiff(ll) LagDiff(ll)], [min(Xcor{ll}) max(Xcor{ll})], 'Color','r', 'LineStyle','--');
         text(LagDiff(ll) , mean(Xcor{ll}), sprintf('%d',LagDiff(ll)))
         hold off
+    end
+    if (LagDiff<-2000) || LagDiff>-1000
+        fprintf('The result of the cross-correlation is most likely abherrent: LagDiff=%d\n', LagDiff);
+        LagDiff = input('You want to input another value (suggested -1970):\n');
+    end
+    if strcmp(Date, '180712') &&(vv==2 || vv==4) %Allignment not working for that vocalization taking best default guess
+        LagDiff = -1971;
     end
     
     % check the allignment
