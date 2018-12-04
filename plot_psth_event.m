@@ -6,9 +6,7 @@ function plot_psth_event(Loggers_dir, Date, ExpStartTime, AudioLoggerID, NeuroLo
 % Flags = whether to print PSTH of Tetrode (Flags(1)=1) and/or Single units
 % (Flags(2)=1))
 
-XLIM = [-1000 1500];
-YLIM_SU = [0 0.005];
-YLIM_T = [0 0.005];
+
 
 % load the data
 load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date, ExpStartTime)), 'IndVocStartRaw_merged', 'IndVocStopRaw_merged', 'IndVocStartPiezo_merged', 'IndVocStopPiezo_merged','Neuro_LFP','Neuro_spikes','Neuro_spikesT', 'FS','Piezo_FS','Piezo_wave','VocFilename','Voc_transc_time_refined');
@@ -17,6 +15,10 @@ load(fullfile(EventDir.folder, EventDir.name), 'DataDeletionOnsetOffset_usec_syn
 Delay = 500;% time in ms to extract data before and after vocalization onset/offset
 Response_samprate = 100;% Sampling rate of the KDE in Hz
 Bin_ms = 10; % size of the KDE binning
+
+XLIM = [-Delay 1000 + Delay];
+YLIM_SU = [0 0.002];
+YLIM_T = [0 0.005];
 
 %% extract the spike arrival times from NeuroLoggerID for each vocalization cut of AudioLoggerID
 % centering them on the vocalization cut onset
@@ -164,8 +166,8 @@ if sum(Ncall)
                     plot(SpikesTTimes_VocCall{cc,uu}(spike)*ones(2,1), cc-[0.9 0.1], 'k-', 'LineWidth',1)
                 end
                 hold on
-                yyaxis right
-                plot(Psth_KDEfiltered_TVocCall_t{cc,uu}, Psth_KDEfiltered_TVocCall{cc,uu}/max(Psth_KDEfiltered_TVocCall_scalef(:,uu))+cc-1, 'r-', 'LineWidth',2)
+%                 yyaxis right
+%                 plot(Psth_KDEfiltered_TVocCall_t{cc,uu}, Psth_KDEfiltered_TVocCall{cc,uu}/max(Psth_KDEfiltered_TVocCall_scalef(:,uu))+cc-1, 'r-', 'LineWidth',2)
             end
             xlabel('Time centered at production onset (ms)')
             yyaxis left
@@ -182,7 +184,7 @@ if sum(Ncall)
             xlabel('Time centered at production onset (ms)')
             ylabel('Spike rate (/ms)')
             set(gcf, 'Position', get(0, 'Screensize'));
-            saveas(gcf,fullfile(Loggers_dir,sprintf('%s_%s_VocProdPSTH_Tetrode%d', Date, NeuroLoggerID,uu)),'epsc')
+            saveas(gcf,fullfile(Loggers_dir,sprintf('%s_%s_VocProdPSTH_Tetrode%d.pdf', Date, NeuroLoggerID,uu)),'pdf')
         end
     end
 
@@ -203,8 +205,8 @@ if sum(Ncall)
                     plot(SpikesTimes_VocCall{cc,uu}(spike)*ones(2,1), cc-[0.9 0.1], 'k-', 'LineWidth',1)
                 end
                 hold on
-                yyaxis right
-                plot(Psth_KDEfiltered_VocCall_t{cc,uu}, Psth_KDEfiltered_VocCall{cc,uu}/max(Psth_KDEfiltered_VocCall_scalef(:,uu))+cc-1, 'r-', 'LineWidth',2)
+%                 yyaxis right
+%                 plot(Psth_KDEfiltered_VocCall_t{cc,uu}, Psth_KDEfiltered_VocCall{cc,uu}/max(Psth_KDEfiltered_VocCall_scalef(:,uu))+cc-1, 'r-', 'LineWidth',2)
             end
             yyaxis left
             xlabel('Time centered at production onset (ms)')
@@ -221,7 +223,7 @@ if sum(Ncall)
             xlabel('Time centered at production onset (ms)')
             ylabel('Spike rate (/ms)')
             set(gcf, 'Position', get(0, 'Screensize'));
-            saveas(gcf,fullfile(Loggers_dir,sprintf('%s_%s_VocProdPSTH_SU%d', Date, NeuroLoggerID,uu)),'epsc')
+            saveas(gcf,fullfile(Loggers_dir,sprintf('%s_%s_VocProdPSTH_SU%d.pdf', Date, NeuroLoggerID,uu)),'pdf')
         end
     end
 else
@@ -384,8 +386,8 @@ if Flags(1)
                 plot(SpikesTTimes_HearCall{cc,uu}(spike)*ones(2,1), hh-[0.9 0.1], 'k-', 'LineWidth',1)
             end
             hold on
-            yyaxis right
-            plot(Psth_KDEfiltered_THearCall_t{cc,uu}, Psth_KDEfiltered_THearCall{cc,uu}/max(Psth_KDEfiltered_THearCall_scalef(HearOnlyInd,uu))+hh-1, 'r-', 'LineWidth',2)
+%             yyaxis right
+%             plot(Psth_KDEfiltered_THearCall_t{cc,uu}, Psth_KDEfiltered_THearCall{cc,uu}/max(Psth_KDEfiltered_THearCall_scalef(HearOnlyInd,uu))+hh-1, 'r-', 'LineWidth',2)
         end
         yyaxis left
         xlabel('Time centered at hearing onset (ms)')
@@ -403,7 +405,7 @@ if Flags(1)
         ylabel('Spike rate (/ms)')
         
         set(gcf, 'Position', get(0, 'Screensize'));
-        saveas(gcf,fullfile(Loggers_dir,sprintf('%s_%s_VocHearPSTH_Tetrode%d', Date, NeuroLoggerID,uu)),'epsc')
+        saveas(gcf,fullfile(Loggers_dir,sprintf('%s_%s_VocHearPSTH_Tetrode%d.pdf', Date, NeuroLoggerID,uu)),'pdf')
     end
 end
 
@@ -425,8 +427,8 @@ if Flags(2)
                 plot(SpikesTimes_HearCall{cc,uu}(spike)*ones(2,1), hh-[0.9 0.1], 'k-', 'LineWidth',1)
             end
             hold on
-            yyaxis right
-            plot(Psth_KDEfiltered_HearCall_t{cc,uu}, Psth_KDEfiltered_HearCall{cc,uu}/max(Psth_KDEfiltered_HearCall_scalef(HearOnlyInd,uu))+hh-1, 'r-', 'LineWidth',2)
+%             yyaxis right
+%             plot(Psth_KDEfiltered_HearCall_t{cc,uu}, Psth_KDEfiltered_HearCall{cc,uu}/max(Psth_KDEfiltered_HearCall_scalef(HearOnlyInd,uu))+hh-1, 'r-', 'LineWidth',2)
         end
         yyaxis left
         xlabel('Time centered at hearing onset (ms)')
@@ -444,6 +446,6 @@ if Flags(2)
         ylabel('Spike rate (/ms)')
         
         set(gcf, 'Position', get(0, 'Screensize'));
-        saveas(gcf,fullfile(Loggers_dir,sprintf('%s_%s_VocHearPSTH_SU%d', Date, NeuroLoggerID,uu)),'epsc')
+        saveas(gcf,fullfile(Loggers_dir,sprintf('%s_%s_VocHearPSTH_SU%d.pdf', Date, NeuroLoggerID,uu)),'pdf')
     end
 end
