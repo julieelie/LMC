@@ -117,14 +117,14 @@ set(Fig,'PaperOrientation','landscape');
 set(Fig,'PaperUnits','normalized');
 set(Fig,'PaperPosition', [0 0 1 1]);
 
-print(Fig,fullfile(Output_dir,sprintf('%s_%s_Actuogram.pdf', Date, LoggerID)),'-dpdf')
+print(Fig,fullfile(Output_dir,sprintf('%s_%s_Actuogram.pdf', Date(3:end), LoggerID)),'-dpdf')
 
 %% extract the neural activity during the whole recording time
 PlayBackOffset = AllActions{contains(UActionText, 'playback')}(end,2);
 fprintf('Extract Single Unit spike arrival times for the whole experiment session\n')
 Delay = 0;% time in ms to extract data before and after event onset/offset
 [~,~, ~, SpikeSU] = extract_timeslot_LFP_spikes(ExtData_dir, [RefTime, PlayBackOffset], Delay, NaN,[0 0 0 1]);
-save(fullfile(Output_dir, sprintf('%s_SpikeSU_RecordPlayback.mat', Date)),'SpikeSU');
+save(fullfile(Output_dir, sprintf('%s_SpikeSU_RecordPlayback.mat', Date(3:end))),'SpikeSU');
 Response_samprate = 1;% Sampling rate of the KDE in Hz
 Bin_ms = 1000; % size of the KDE binning
 t=-Delay: Bin_ms : round((PlayBackOffset-RefTime + Delay)/Bin_ms)*Bin_ms;
@@ -145,7 +145,7 @@ end
 Fig=figure();
 % Plot KDE
 SpikeCol = [1 0.2 0.2 0.3;  0.5 0.7 0.5 0.8; 0.9 0.1 0.2 0.3; [get(groot,'DefaultAxesColorOrder') repmat(0.3,7,1)]];
-LegendKDE ={};
+LegendKDE =cell(length(SpikeSU),1);
 for uu=1:length(SpikeSU)
     yyaxis right
     hold on
@@ -192,7 +192,7 @@ set(Fig,'PaperOrientation','landscape');
 set(Fig,'PaperUnits','normalized');
 set(Fig,'PaperPosition', [0 0 1 1]);
 
-print(Fig,fullfile(Output_dir,sprintf('%s_%s_NeuroActuogram.pdf', Date, LoggerID)),'-dpdf')
+print(Fig,fullfile(Output_dir,sprintf('%s_%s_NeuroActuogram.pdf', Date(3:end), LoggerID)),'-dpdf')
 
 %% Extract the neural activity around each behavioral event
 % Only work on a subset of the events
@@ -383,7 +383,7 @@ for nn=1:NAction
         set(Fig,'PaperUnits','normalized');
         set(Fig,'PaperPosition', [0 0 1 1]);
         
-        print(Fig,fullfile(Output_dir,sprintf('%s_%s_%sPSTH_Tetrode%d_%d.pdf', Date, LoggerID,UActionText{aa},uu,Buffer)),'-dpdf')
+        print(Fig,fullfile(Output_dir,sprintf('%s_%s_%sPSTH_Tetrode%d_%d.pdf', Date(3:end), LoggerID,UActionText{aa},uu,Buffer)),'-dpdf')
    end
     
     % KDE over all events for each tetrode
@@ -433,7 +433,7 @@ for nn=1:NAction
         set(Fig,'PaperUnits','normalized');
         set(Fig,'PaperPosition', [0 0 1 1]);
         
-        print(Fig,fullfile(Output_dir,sprintf('%s_%s_%sPSTH_SU%d_%d.pdf', Date, LoggerID,UActionText{aa},uu,Buffer)),'-dpdf')
+        print(Fig,fullfile(Output_dir,sprintf('%s_%s_%sPSTH_SU%d_%d.pdf', Date(3:end), LoggerID,UActionText{aa},uu,Buffer)),'-dpdf')
     end
     
     % KDE of rate over all events for each single unit
