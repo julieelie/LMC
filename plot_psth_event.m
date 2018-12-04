@@ -6,10 +6,12 @@ function plot_psth_event(Loggers_dir, Date, ExpStartTime, AudioLoggerID, NeuroLo
 % Flags = whether to print PSTH of Tetrode (Flags(1)=1) and/or Single units
 % (Flags(2)=1))
 
-
+FigureSize = [1 1 30 20];
 
 % load the data
-load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date, ExpStartTime)), 'IndVocStartRaw_merged', 'IndVocStopRaw_merged', 'IndVocStartPiezo_merged', 'IndVocStopPiezo_merged','Neuro_LFP','Neuro_spikes','Neuro_spikesT', 'FS','Piezo_FS','Piezo_wave','VocFilename','Voc_transc_time_refined');
+load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, Delay)), 'IndVocStartRaw_merged', 'IndVocStopRaw_merged', 'IndVocStartPiezo_merged', 'IndVocStopPiezo_merged','Neuro_LFP','Neuro_spikes','Neuro_spikesT');
+load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date, ExpStartTime)), 'FS','Piezo_FS','Piezo_wave','VocFilename','Voc_transc_time_refined');
+
 EventDir = dir(fullfile(Loggers_dir,sprintf('l%s', NeuroLoggerID(2:end)), 'extracted_data',sprintf('*%s*EVENTS.mat', Date)));
 load(fullfile(EventDir.folder, EventDir.name), 'DataDeletionOnsetOffset_usec_sync')
 if nargin<7
@@ -19,8 +21,8 @@ Response_samprate = 100;% Sampling rate of the KDE in Hz
 Bin_ms = 10; % size of the KDE binning
 
 XLIM = [-Delay 1000 + Delay];
-YLIM_SU = [0 0.002];
-YLIM_T = [0 0.005];
+YLIM_SU = [0 0.004];
+YLIM_T = [0 0.1];
 
 %% extract the spike arrival times from NeuroLoggerID for each vocalization cut of AudioLoggerID
 % centering them on the vocalization cut onset
@@ -153,7 +155,7 @@ if sum(Ncall)
     % Now plot Raster
     if Flags(1)
         for uu=1:NT
-            figure()
+            Fig=figure();
             subplot(2,1,1)
             for cc=1:VocCall
                 hold on
@@ -185,14 +187,20 @@ if sum(Ncall)
             ylim(YLIM_T)
             xlabel('Time centered at production onset (ms)')
             ylabel('Spike rate (/ms)')
-            set(gcf, 'Position', get(0, 'Screensize'));
-            saveas(gcf,fullfile(Loggers_dir,sprintf('%s_%s_VocProdPSTH_Tetrode%d_%d.pdf', Date, NeuroLoggerID,uu,Delay)),'pdf')
+            orient(Fig,'landscape')
+            Fig.PaperPositionMode = 'auto';
+            set(Fig,'Units', 'centimeters', 'Position', get(0, 'screensize'));
+            set(Fig,'PaperOrientation','landscape');
+            set(Fig,'PaperUnits','normalized');
+            set(Fig,'PaperPosition', [0 0 1 1]);
+            
+            print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocProdPSTH_Tetrode%d_%d.pdf', Date, NeuroLoggerID,uu,Delay)),'-dpdf')
         end
     end
 
     if Flags(2)
         for uu=1:NSU
-            figure()
+            Fig=figure();
             subplot(2,1,1)
             for cc=1:VocCall
                 hold on
@@ -224,8 +232,13 @@ if sum(Ncall)
             ylim(YLIM_SU)
             xlabel('Time centered at production onset (ms)')
             ylabel('Spike rate (/ms)')
-            set(gcf, 'Position', get(0, 'Screensize'));
-            saveas(gcf,fullfile(Loggers_dir,sprintf('%s_%s_VocProdPSTH_SU%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'pdf')
+            orient(Fig,'landscape')
+            Fig.PaperPositionMode = 'auto';
+            set(Fig,'Units', 'centimeters', 'Position', get(0, 'screensize'));
+            set(Fig,'PaperOrientation','landscape');
+            set(Fig,'PaperUnits','normalized');
+            set(Fig,'PaperPosition', [0 0 1 1]);
+            print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocProdPSTH_SU%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf')
         end
     end
 else
@@ -372,7 +385,7 @@ end
 % Now plot Rasters and PSTH
 if Flags(1)
     for uu=1:NT
-        figure()
+        Fig=figure();
         subplot(2,1,1)
         for hh=1:length(HearOnlyInd)
             cc = HearOnlyInd(hh);
@@ -405,15 +418,19 @@ if Flags(1)
         ylim(YLIM_T)
         xlabel('Time centered at hearing onset (ms)')
         ylabel('Spike rate (/ms)')
-        
-        set(gcf, 'Position', get(0, 'Screensize'));
-        saveas(gcf,fullfile(Loggers_dir,sprintf('%s_%s_VocHearPSTH_Tetrode%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'pdf')
+        orient(Fig,'landscape')
+        Fig.PaperPositionMode = 'auto';
+        set(Fig,'Units', 'centimeters', 'Position', get(0, 'screensize'));
+        set(Fig,'PaperOrientation','landscape');
+        set(Fig,'PaperUnits','normalized');
+        set(Fig,'PaperPosition', [0 0 1 1]);
+        print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocHearPSTH_Tetrode%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf')
     end
 end
 
 if Flags(2)
     for uu=1:NSU
-        figure()
+       Fig= figure();
         subplot(2,1,1)
         for hh=1:length(HearOnlyInd)
             cc = HearOnlyInd(hh);
@@ -446,8 +463,12 @@ if Flags(2)
         ylim(YLIM_SU)
         xlabel('Time centered at hearing onset (ms)')
         ylabel('Spike rate (/ms)')
-        
-        set(gcf, 'Position', get(0, 'Screensize'));
-        saveas(gcf,fullfile(Loggers_dir,sprintf('%s_%s_VocHearPSTH_SU%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'pdf')
+        orient(Fig,'landscape')
+        Fig.PaperPositionMode = 'auto';
+        set(Fig,'Units', 'centimeters', 'Position', get(0, 'screensize'));
+        set(Fig,'PaperOrientation','landscape');
+        set(Fig,'PaperUnits','normalized');
+        set(Fig,'PaperPosition', [0 0 1 1]);
+        print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocHearPSTH_SU%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf')
     end
 end

@@ -114,7 +114,7 @@ for dd=1:length(Days)
         Indff = 1;
     end
     ExpStartTime = StampFiles(Indff).name(13:16);
-    who_calls(Loggers_dir,Days{dd}(3:end), ExpStartTime,500,0);
+    who_calls(Loggers_dir,Days{dd}(3:end), ExpStartTime,200,0);
 end
 
 %% Extract the neural data corresponding to the vocalizations
@@ -135,7 +135,7 @@ for dd=1:length(Days)
         Indff = 1;
     end
     ExpStartTime = StampFiles(Indff).name(13:16);
-    cut_neuralData_voc(Loggers_dir,Days{dd}(3:end), ExpStartTime,[0 1 1 1],500);
+    cut_neuralData_voc(Loggers_dir,Days{dd}(3:end), ExpStartTime,[0 1 1 1],200);
 end
 
 
@@ -143,8 +143,8 @@ end
 addpath(genpath('C:\Users\Julie\Documents\GitHub\GeneralCode\'))
 AudioLoggerID = {'Logger5';'Logger5' ; 'Logger7' ;'Logger7';'Logger5';'Logger5';'Logger5';'Logger5';'Logger5';'Logger5';'Logger5'};
 NeuroLoggerID = 'Logger16';
-Flags=[0 1];
-for dd=1:length(Days)
+Flags=[1 1];
+for dd=9:length(Days)
     fprintf(' PSTH of NEURAL DATA CORRESPONDING TO VOCALIZATIONS \n')
     fprintf('*********** %s *************\n', Days{dd})
     Audio_dir = fullfile(Server_audio_path, Days{dd});
@@ -161,7 +161,8 @@ for dd=1:length(Days)
         Indff = 1;
     end
     ExpStartTime = StampFiles(Indff).name(13:16);
-    plot_psth_event(Loggers_dir, Days{dd}(3:end), ExpStartTime, AudioLoggerID{dd}, NeuroLoggerID, Flags, 500)
+    plot_psth_event(Loggers_dir, Days{dd}(3:end), ExpStartTime, AudioLoggerID{dd}, NeuroLoggerID, Flags, 200)
+    close all
 %     pause()
 end
 
