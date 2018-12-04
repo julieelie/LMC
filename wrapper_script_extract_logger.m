@@ -86,7 +86,7 @@ for dd=1:length(Days)
     get_logger_data_voc(Audio_dir, Loggers_dir,Days{dd}(3:end), ExpStartTime);
 end
 %% Identify who is calling
-for dd=10:length(Days)
+for dd=1:length(Days)
     fprintf(' IDENTIFY WHO IS CALLING\n')
     fprintf('*********** %s *************\n', Days{dd})
     Audio_dir = fullfile(Server_audio_path, Days{dd});
@@ -103,7 +103,7 @@ for dd=10:length(Days)
         Indff = 1;
     end
     ExpStartTime = StampFiles(Indff).name(13:16);
-    who_calls(Loggers_dir,Days{dd}(3:end), ExpStartTime,1);
+    who_calls(Loggers_dir,Days{dd}(3:end), ExpStartTime,0);
 end
 
 %% Convert the spike sorted ntt files to mat files
