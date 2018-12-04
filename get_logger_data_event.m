@@ -1,18 +1,27 @@
-function [AllActions, UActionText]= get_logger_data_event(ExtData_dir, Date, Buffer, LoggerID)
+function [AllActions, UActionText]= get_logger_data_event(ExtData_dir, Date, Buffer, LoggerID, Output_dir)
 % AllActions is a cell array of length the number of actions containing
 % each 2 columns giving the onset and offset times in ms of behavioral
 % events
 if nargin<3
     Buffer = 500; %ms
 end
+
+AllSep = strfind(ExtData_dir, filesep);
 if nargin<4
-    AllSep = strfind(ExtData_dir, filesep);
     if length(ExtData_dir)==AllSep(end)
         LoggerID = ExtData_dir((AllSep(end-2)+1):(AllSep(end-1)-1));
     else
         LoggerID = ExtData_dir((AllSep(end-1)+1):(AllSep(end)-1));
     end
 end
+if nargin<5
+    if length(ExtData_dir)==AllSep(end)
+        Output_dir = ExtData_dir(1:(AllSep(end-2)));
+    else
+        Output_dir = ExtData_dir(1:(AllSep(end-1)));
+    end
+end
+fprintf(1, 'Figures and data are saved to %s\n', Output_dir)
 MaxEventDur = 1000; %ms
 EventfilePath = dir(fullfile(ExtData_dir, sprintf('*%s*EVENTS.mat', Date)));
 Eventfile = load(fullfile(EventfilePath.folder, EventfilePath.name));
@@ -108,14 +117,14 @@ set(Fig,'PaperOrientation','landscape');
 set(Fig,'PaperUnits','normalized');
 set(Fig,'PaperPosition', [0 0 1 1]);
 
-print(Fig,fullfile(ExtData_dir,sprintf('%s_%s_Actuogram.pdf', Date, LoggerID)),'-dpdf')
+print(Fig,fullfile(Output_dir,sprintf('%s_%s_Actuogram.pdf', Date, LoggerID)),'-dpdf')
 
 %% extract the neural activity during the whole recording time
 PlayBackOffset = AllActions{contains(UActionText, 'playback')}(end,2);
 fprintf('Extract Single Unit spike arrival times for the whole experiment session\n')
 Delay = 0;% time in ms to extract data before and after event onset/offset
 [~,~, ~, SpikeSU] = extract_timeslot_LFP_spikes(ExtData_dir, [RefTime, PlayBackOffset], Delay, NaN,[0 0 0 1]);
-save(fullfile(ExtData_dir, sprintf('%s_SpikeSU_RecordPlayback.mat', Date)),'SpikeSU');
+save(fullfile(Output_dir, sprintf('%s_SpikeSU_RecordPlayback.mat', Date)),'SpikeSU');
 Response_samprate = 1;% Sampling rate of the KDE in Hz
 Bin_ms = 1000; % size of the KDE binning
 t=-Delay: Bin_ms : round((PlayBackOffset-RefTime + Delay)/Bin_ms)*Bin_ms;
@@ -183,7 +192,7 @@ set(Fig,'PaperOrientation','landscape');
 set(Fig,'PaperUnits','normalized');
 set(Fig,'PaperPosition', [0 0 1 1]);
 
-print(Fig,fullfile(ExtData_dir,sprintf('%s_%s_NeuroActuogram.pdf', Date, LoggerID)),'-dpdf')
+print(Fig,fullfile(Output_dir,sprintf('%s_%s_NeuroActuogram.pdf', Date, LoggerID)),'-dpdf')
 
 %% Extract the neural activity around each behavioral event
 % Only work on a subset of the events
@@ -374,7 +383,7 @@ for nn=1:NAction
         set(Fig,'PaperUnits','normalized');
         set(Fig,'PaperPosition', [0 0 1 1]);
         
-        print(Fig,fullfile(ExtData_dir,sprintf('%s_%s_%sPSTH_Tetrode%d_%d.pdf', Date, LoggerID,UActionText{aa},uu,Buffer)),'-dpdf')
+        print(Fig,fullfile(Output_dir,sprintf('%s_%s_%sPSTH_Tetrode%d_%d.pdf', Date, LoggerID,UActionText{aa},uu,Buffer)),'-dpdf')
    end
     
     % KDE over all events for each tetrode
@@ -424,7 +433,7 @@ for nn=1:NAction
         set(Fig,'PaperUnits','normalized');
         set(Fig,'PaperPosition', [0 0 1 1]);
         
-        print(Fig,fullfile(ExtData_dir,sprintf('%s_%s_%sPSTH_SU%d_%d.pdf', Date, LoggerID,UActionText{aa},uu,Buffer)),'-dpdf')
+        print(Fig,fullfile(Output_dir,sprintf('%s_%s_%sPSTH_SU%d_%d.pdf', Date, LoggerID,UActionText{aa},uu,Buffer)),'-dpdf')
     end
     
     % KDE of rate over all events for each single unit
