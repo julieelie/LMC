@@ -1,6 +1,8 @@
-function cut_neuralData_voc(Loggers_dir, Date, ExpStartTime, Flags)
+function cut_neuralData_voc(Loggers_dir, Date, ExpStartTime, Flags, NeuroBuffer)
 load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date, ExpStartTime)), 'Voc_transc_time_refined');
-NeuroBuffer = 100; % NeuroBuffer ms will be added before the onset and after the onset of the behavioral event when extracting neural data and spikes times will be alligned to behavioral event onset
+if nargin<5
+    NeuroBuffer = 100; % NeuroBuffer ms will be added before the onset and after the offset of the behavioral event when extracting neural data and spikes times will be alligned to behavioral event onset
+end
 MaxEventDur = NaN; % Set to NaN: The neural data is extracted for the whole duration of each event
 %% Identify Neural loggers and extract the neural data that correspond to the vocalizations
 % Get the number of loggers
@@ -18,11 +20,11 @@ for ll=1:NLogger
     end
 end
 if Flags(2)
-    save(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date, ExpStartTime)), 'Neuro_LFP', '-append');
+    save(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, NeuroBuffer)), 'Neuro_LFP', '-append');
 end
 if Flags(3)
-    save(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date, ExpStartTime)),'Neuro_spikesT', '-append');
+    save(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, NeuroBuffer)),'Neuro_spikesT', '-append');
 end
 if Flags(4)
-    save(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date, ExpStartTime)),'Neuro_spikes', '-append');
+    save(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, NeuroBuffer)),'Neuro_spikes', '-append');
 end
