@@ -1,8 +1,18 @@
-function [AllActions, UActionText]= get_logger_data_event(ExtData_dir, Date)
+function [AllActions, UActionText]= get_logger_data_event(ExtData_dir, Date, Buffer, LoggerID)
 % AllActions is a cell array of length the number of actions containing
 % each 2 columns giving the onset and offset times in ms of behavioral
 % events
-Buffer = 500; %ms
+if nargin<3
+    Buffer = 500; %ms
+end
+if nargin<4
+    AllSep = strfind(ExtData_dir, filesep);
+    if length(ExtData_dir)==AllSep(end)
+        LoggerID = ExtData_dir((AllSep(end-2)+1):(AllSep(end-1)-1));
+    else
+        LoggerID = ExtData_dir((AllSep(end-1)+1):(AllSep(end)-1));
+    end
+end
 MaxEventDur = 1000; %ms
 EventfilePath = dir(fullfile(ExtData_dir, sprintf('*%s*EVENTS.mat', Date)));
 Eventfile = load(fullfile(EventfilePath.folder, EventfilePath.name));
@@ -37,7 +47,7 @@ RefTime = Eventfile.event_timestamps_usec(find(contains(Eventfile.event_types_an
 IndStart = find(contains(Eventfile.event_types_and_details, 'start'));
 % Get the indices of all the stoping points
 IndStop = find(contains(Eventfile.event_types_and_details, 'stop'));
-figure()
+Fig=figure();
 ColorCode = get(groot,'DefaultAxesColorOrder');
 ColorCode = [ColorCode(1:6,:) ; 0 0 1; ColorCode(7,:); 0.85 0.6940 0.556; 0 0 0; 1 0 0; 0.301 0.078 0.741; ];
 % loop through each action
@@ -91,6 +101,15 @@ set(gca,'YLim',[0 NAction+1], 'YTick',1:NAction, 'YTickLabel', UActionText)
 xlabel('Time (in s)')
 title(sprintf('Ethogram Implanted bat %s', Date))
 
+orient(Fig,'landscape')
+Fig.PaperPositionMode = 'auto';
+set(Fig,'Units', 'centimeters', 'Position', get(0, 'screensize'));
+set(Fig,'PaperOrientation','landscape');
+set(Fig,'PaperUnits','normalized');
+set(Fig,'PaperPosition', [0 0 1 1]);
+
+print(Fig,fullfile(ExtData_dir,sprintf('%s_%s_Actuogram.pdf', Date, LoggerID)),'-dpdf')
+
 %% extract the neural activity during the whole recording time
 PlayBackOffset = AllActions{contains(UActionText, 'playback')}(end,2);
 fprintf('Extract Single Unit spike arrival times for the whole experiment session\n')
@@ -114,9 +133,9 @@ for uu=1:length(SpikeSU)
     Psth_KDEfiltered_SpikeSU{uu} =  y * length(SpikeSU{uu}) * Response_samprate;
 end
 
-figure()
+Fig=figure();
 % Plot KDE
-SpikeCol = [1 0.2 0.2 0.3;  0.5 0.7 0.5 0.8; 0.9 0.1 0.2 0.3];
+SpikeCol = [1 0.2 0.2 0.3;  0.5 0.7 0.5 0.8; 0.9 0.1 0.2 0.3; [get(groot,'DefaultAxesColorOrder') repmat(0.3,7,1)]];
 LegendKDE ={};
 for uu=1:length(SpikeSU)
     yyaxis right
@@ -157,6 +176,15 @@ for uu=1:length(SpikeSU)
 end
 set(gca,'YLim',[-1 1]*(NAction+1), 'YTick',[-flip(1:length(SpikeSU))/(length(SpikeSU)+1) 1:NAction], 'YTickLabel', LegendPlot)
 
+orient(Fig,'landscape')
+Fig.PaperPositionMode = 'auto';
+set(Fig,'Units', 'centimeters', 'Position', get(0, 'screensize'));
+set(Fig,'PaperOrientation','landscape');
+set(Fig,'PaperUnits','normalized');
+set(Fig,'PaperPosition', [0 0 1 1]);
+
+print(Fig,fullfile(ExtData_dir,sprintf('%s_%s_NeuroActuogram.pdf', Date, LoggerID)),'-dpdf')
+
 %% Extract the neural activity around each behavioral event
 % Only work on a subset of the events
 Response_samprate = 100;% Sampling rate of the KDE in Hz
@@ -171,7 +199,7 @@ NAction = length(GoodEvents);
 SpikesTimesSU_Action = cell(NAction,1);
 SpikesTimesT_Action = cell(NAction,1);
 LFP_Action =  cell(NAction,1);
-Raw_Action = cell(NAction,1);
+% Raw_Action = cell(NAction,1);
 Event_duration =  cell(NAction,1);
 Psth_KDEfilteredT_Action_scalef = cell(NAction,1);
 Psth_KDEfilteredT_Action_t = cell(NAction,1);
@@ -192,7 +220,7 @@ for nn=1:NAction
     aa = GoodEvents(nn);
     % extracting neural data around the event
     fprintf(1,'Extracting neural data for %s events\n', UActionText{aa});
-    [Raw_Action{nn} ,LFP_Action{nn}, SpikesTimesT_Action{nn},SpikesTimesSU_Action{nn}] = extract_timeslot_LFP_spikes(ExtData_dir, AllActions{aa}, Buffer, MaxEventDur, [1 1 1 1]);
+    [~ ,LFP_Action{nn}, SpikesTimesT_Action{nn},SpikesTimesSU_Action{nn}] = extract_timeslot_LFP_spikes(ExtData_dir, AllActions{aa}, Buffer, MaxEventDur, [0 1 1 1]);
     
     % calculate event duration
     Event_duration{nn} = AllActions{aa}(:,2) - AllActions{aa}(:,1);
@@ -313,7 +341,7 @@ for nn=1:NAction
     %% Now plot Raster and KDE of the spike rate
     % Raster and average PSTH for each tetrode
     for uu=1:NT
-        figure()
+        Fig = figure();
         subplot(2,1,1)
         for cc=1:Nevents
             hold on
@@ -324,8 +352,8 @@ for nn=1:NAction
                 plot(SpikesTimesT_Action{nn}{cc,uu}(spike)*ones(2,1), cc-[0.9 0.1], 'k-', 'LineWidth',1)
             end
             hold on
-            yyaxis right
-            plot(Psth_KDEfilteredT_Action_t{nn}{cc,uu}, Psth_KDEfilteredT_Action{nn}{cc,uu}/max(Psth_KDEfilteredT_Action_scalef{nn}(:,uu))+cc-1, 'r-', 'LineWidth',2)
+%             yyaxis right
+%             plot(Psth_KDEfilteredT_Action_t{nn}{cc,uu}, Psth_KDEfilteredT_Action{nn}{cc,uu}/max(Psth_KDEfilteredT_Action_scalef{nn}(:,uu))+cc-1, 'r-', 'LineWidth',2)
         end
         xlabel('Time centered at production onset (ms)')
         yyaxis left
@@ -339,7 +367,15 @@ for nn=1:NAction
         ylabel('Spike rate (/ms)')
         Ylim = get(gca, 'YLim');
         set(gca, 'YLim', [0 Ylim(2)]);
-    end
+        orient(Fig,'landscape')
+        Fig.PaperPositionMode = 'auto';
+        set(Fig,'Units', 'centimeters', 'Position', get(0, 'screensize'));
+        set(Fig,'PaperOrientation','landscape');
+        set(Fig,'PaperUnits','normalized');
+        set(Fig,'PaperPosition', [0 0 1 1]);
+        
+        print(Fig,fullfile(ExtData_dir,sprintf('%s_%s_%sPSTH_Tetrode%d_%d.pdf', Date, LoggerID,UActionText{aa},uu,Buffer)),'-dpdf')
+   end
     
     % KDE over all events for each tetrode
     figure()
@@ -355,7 +391,7 @@ for nn=1:NAction
     
     % Raster and average PSTH for each Single unit
     for uu=1:NSU
-        figure()
+        Fig=figure();
         subplot(2,1,1)
         for cc=1:Nevents
             hold on
@@ -366,8 +402,8 @@ for nn=1:NAction
                 plot(SpikesTimesSU_Action{nn}{cc,uu}(spike)*ones(2,1), cc-[0.9 0.1], 'k-', 'LineWidth',1)
             end
             hold on
-            yyaxis right
-            plot(Psth_KDEfilteredSU_Action_t{nn}{cc,uu}, Psth_KDEfilteredSU_Action{nn}{cc,uu}/max(Psth_KDEfilteredSU_Action_scalef{nn}(:,uu))+cc-1, 'r-', 'LineWidth',2)
+%             yyaxis right
+%             plot(Psth_KDEfilteredSU_Action_t{nn}{cc,uu}, Psth_KDEfilteredSU_Action{nn}{cc,uu}/max(Psth_KDEfilteredSU_Action_scalef{nn}(:,uu))+cc-1, 'r-', 'LineWidth',2)
         end
         yyaxis left
         xlabel('Time centered at production onset (ms)')
@@ -381,9 +417,17 @@ for nn=1:NAction
         ylabel('Spike rate (/ms)')
         Ylim = get(gca, 'YLim');
         set(gca, 'YLim', [0 Ylim(2)]);
+        orient(Fig,'landscape')
+        Fig.PaperPositionMode = 'auto';
+        set(Fig,'Units', 'centimeters', 'Position', get(0, 'screensize'));
+        set(Fig,'PaperOrientation','landscape');
+        set(Fig,'PaperUnits','normalized');
+        set(Fig,'PaperPosition', [0 0 1 1]);
+        
+        print(Fig,fullfile(ExtData_dir,sprintf('%s_%s_%sPSTH_SU%d_%d.pdf', Date, LoggerID,UActionText{aa},uu,Buffer)),'-dpdf')
     end
     
-    % KDE of rate ovre all events for each single unit
+    % KDE of rate over all events for each single unit
     figure()
     for uu=1:NSU
         subplot(NSU,1,uu)
