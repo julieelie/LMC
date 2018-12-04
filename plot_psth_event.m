@@ -20,7 +20,7 @@ end
 Response_samprate = 100;% Sampling rate of the KDE in Hz
 Bin_ms = 10; % size of the KDE binning
 
-XLIM = [-Delay 1000 + Delay];
+XLIM = [-Delay 3*Delay];
 YLIM_SU = [0 0.004];
 YLIM_T = [0 0.1];
 

@@ -144,7 +144,7 @@ addpath(genpath('C:\Users\Julie\Documents\GitHub\GeneralCode\'))
 AudioLoggerID = {'Logger5';'Logger5' ; 'Logger7' ;'Logger7';'Logger5';'Logger5';'Logger5';'Logger5';'Logger5';'Logger5';'Logger5'};
 NeuroLoggerID = 'Logger16';
 Flags=[1 1];
-for dd=9:length(Days)
+for dd=1:length(Days)
     fprintf(' PSTH of NEURAL DATA CORRESPONDING TO VOCALIZATIONS \n')
     fprintf('*********** %s *************\n', Days{dd})
     Audio_dir = fullfile(Server_audio_path, Days{dd});
