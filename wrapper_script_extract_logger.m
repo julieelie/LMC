@@ -9,6 +9,17 @@ Server_audio_path = 'Z:\users\JulieE\GiMo_65430_71300\Audio';
 VocDir = 'Z:\users\JulieE\GiMo_65430_71300\Audio\ManualCuts';
 NeuroLoggerID = 'Logger16';
 Path2NlxCode = 'C:\Users\Julie\Documents\GitHub\MatlabImportExport_v6.0.0';
+
+%% Convert the spike sorted ntt files to mat files
+
+for dd=1:length(Days)
+    fprintf(' CONVERTING NTT FILES TO MAT FILES \n')
+    fprintf('*********** %s *************\n', Days{dd})
+    Loggers_dir = fullfile(Server_logger_path, Days{dd});
+    InputPath = fullfile(Loggers_dir,NeuroLoggerID,'extracted_data');
+    ntt2mat(InputPath,Path2NlxCode);
+end
+
 %% Extract the audio logger data of the days we are interested in
 script_extract_loggers('06272018',{'65430' '71300' '71354' '71335' '71332'} , [5 6 3 7 9])
 script_extract_loggers('06282018',{'65430' '71300' '71354' '71213' '71137'} , [5 6 3 7 9])
@@ -46,7 +57,7 @@ end
 %% Now for each day and each manualy extracted vocalization, find the index of the corresponding first sample in the environmental microphone recordings
 
 for dd=1:length(Days)
-    fprintf(' LOCALIZING VOCALIZATIONS \n')
+    fprintf(' LOCALIZING VOCALIZATIONS ON AMBIENT MIC \n')
     fprintf('*********** %s *************\n', Days{dd})
     Audio_dir = fullfile(Server_audio_path, Days{dd});
     % find the time stamp of each experiment
@@ -103,19 +114,8 @@ for dd=1:length(Days)
         Indff = 1;
     end
     ExpStartTime = StampFiles(Indff).name(13:16);
-    who_calls(Loggers_dir,Days{dd}(3:end), ExpStartTime,0);
+    who_calls(Loggers_dir,Days{dd}(3:end), ExpStartTime,500,0);
 end
-
-%% Convert the spike sorted ntt files to mat files
-
-for dd=1:length(Days)
-    fprintf(' CONVERTING NTT FILES TO MAT FILES \n')
-    fprintf('*********** %s *************\n', Days{dd})
-    Loggers_dir = fullfile(Server_logger_path, Days{dd});
-    InputPath = fullfile(Loggers_dir,NeuroLoggerID,'extracted_data');
-    ntt2mat(InputPath,Path2NlxCode);
-end
-
 
 %% Extract the neural data corresponding to the vocalizations
 for dd=1:length(Days)
@@ -135,7 +135,7 @@ for dd=1:length(Days)
         Indff = 1;
     end
     ExpStartTime = StampFiles(Indff).name(13:16);
-    cut_neuralData_voc(Loggers_dir,Days{dd}(3:end), ExpStartTime,[0 0 0 1]);
+    cut_neuralData_voc(Loggers_dir,Days{dd}(3:end), ExpStartTime,[0 1 1 1],500);
 end
 
 
@@ -161,7 +161,7 @@ for dd=1:length(Days)
         Indff = 1;
     end
     ExpStartTime = StampFiles(Indff).name(13:16);
-    plot_psth_event(Loggers_dir, Days{dd}(3:end), ExpStartTime, AudioLoggerID{dd}, NeuroLoggerID, Flags)
-    pause()
+    plot_psth_event(Loggers_dir, Days{dd}(3:end), ExpStartTime, AudioLoggerID{dd}, NeuroLoggerID, Flags, 500)
+%     pause()
 end
 

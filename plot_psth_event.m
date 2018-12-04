@@ -1,4 +1,4 @@
-function plot_psth_event(Loggers_dir, Date, ExpStartTime, AudioLoggerID, NeuroLoggerID, Flags)
+function plot_psth_event(Loggers_dir, Date, ExpStartTime, AudioLoggerID, NeuroLoggerID, Flags, Delay)
 % AudioLoggerID = ID of the audio logger that the targeting animal is
 % wearing
 % NeuroLoggerID = ID of the neural logger that the targeting animal is
@@ -12,7 +12,9 @@ function plot_psth_event(Loggers_dir, Date, ExpStartTime, AudioLoggerID, NeuroLo
 load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date, ExpStartTime)), 'IndVocStartRaw_merged', 'IndVocStopRaw_merged', 'IndVocStartPiezo_merged', 'IndVocStopPiezo_merged','Neuro_LFP','Neuro_spikes','Neuro_spikesT', 'FS','Piezo_FS','Piezo_wave','VocFilename','Voc_transc_time_refined');
 EventDir = dir(fullfile(Loggers_dir,sprintf('l%s', NeuroLoggerID(2:end)), 'extracted_data',sprintf('*%s*EVENTS.mat', Date)));
 load(fullfile(EventDir.folder, EventDir.name), 'DataDeletionOnsetOffset_usec_sync')
-Delay = 500;% time in ms to extract data before and after vocalization onset/offset
+if nargin<7
+    Delay = 500;% time in ms to extract data before and after vocalization onset/offset
+end
 Response_samprate = 100;% Sampling rate of the KDE in Hz
 Bin_ms = 10; % size of the KDE binning
 
