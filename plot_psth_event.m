@@ -184,7 +184,7 @@ if sum(Ncall)
             xlabel('Time centered at production onset (ms)')
             ylabel('Spike rate (/ms)')
             set(gcf, 'Position', get(0, 'Screensize'));
-            saveas(gcf,fullfile(Loggers_dir,sprintf('%s_%s_VocProdPSTH_Tetrode%d.pdf', Date, NeuroLoggerID,uu)),'pdf')
+            saveas(gcf,fullfile(Loggers_dir,sprintf('%s_%s_VocProdPSTH_Tetrode%d_%d.pdf', Date, NeuroLoggerID,uu,Delay)),'pdf')
         end
     end
 
@@ -223,7 +223,7 @@ if sum(Ncall)
             xlabel('Time centered at production onset (ms)')
             ylabel('Spike rate (/ms)')
             set(gcf, 'Position', get(0, 'Screensize'));
-            saveas(gcf,fullfile(Loggers_dir,sprintf('%s_%s_VocProdPSTH_SU%d.pdf', Date, NeuroLoggerID,uu)),'pdf')
+            saveas(gcf,fullfile(Loggers_dir,sprintf('%s_%s_VocProdPSTH_SU%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'pdf')
         end
     end
 else
@@ -405,7 +405,7 @@ if Flags(1)
         ylabel('Spike rate (/ms)')
         
         set(gcf, 'Position', get(0, 'Screensize'));
-        saveas(gcf,fullfile(Loggers_dir,sprintf('%s_%s_VocHearPSTH_Tetrode%d.pdf', Date, NeuroLoggerID,uu)),'pdf')
+        saveas(gcf,fullfile(Loggers_dir,sprintf('%s_%s_VocHearPSTH_Tetrode%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'pdf')
     end
 end
 
@@ -446,6 +446,6 @@ if Flags(2)
         ylabel('Spike rate (/ms)')
         
         set(gcf, 'Position', get(0, 'Screensize'));
-        saveas(gcf,fullfile(Loggers_dir,sprintf('%s_%s_VocHearPSTH_SU%d.pdf', Date, NeuroLoggerID,uu)),'pdf')
+        saveas(gcf,fullfile(Loggers_dir,sprintf('%s_%s_VocHearPSTH_SU%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'pdf')
     end
 end
