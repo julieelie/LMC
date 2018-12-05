@@ -161,7 +161,35 @@ for dd=1:length(Days)
         Indff = 1;
     end
     ExpStartTime = StampFiles(Indff).name(13:16);
-    plot_psth_event(Loggers_dir, Days{dd}(3:end), ExpStartTime, AudioLoggerID{dd}, NeuroLoggerID, Flags, 200)
+    plot_psth_voc(Loggers_dir, Days{dd}(3:end), ExpStartTime, AudioLoggerID{dd}, NeuroLoggerID, Flags, 200)
+    close all
+%     pause()
+end
+
+%% Plot PSTH of the bats doing other actions!
+addpath(genpath('C:\Users\Julie\Documents\GitHub\GeneralCode\'))
+AudioLoggerID = {'Logger5';'Logger5' ; 'Logger7' ;'Logger7';'Logger5';'Logger5';'Logger5';'Logger5';'Logger5';'Logger5';'Logger5'};
+NeuroLoggerID = 'Logger16';
+Flags=[1 1];
+for dd=1:length(Days)
+    fprintf(' PSTH of NEURAL DATA CORRESPONDING TO ALL BEHAVIORS \n')
+    fprintf('*********** %s *************\n', Days{dd})
+    Audio_dir = fullfile(Server_audio_path, Days{dd});
+    Loggers_dir = fullfile(Server_logger_path, Days{dd});
+    % find the time stamp of each experiment
+    StampFiles = dir(fullfile(Audio_dir, '*RecOnly_param.txt'));
+    if length(StampFiles)>1
+        fprintf('Several Recording Only tests were done on that day, please choose the one you want to look at:\n')
+        for ff=1:length(StampFiles)
+            fprintf('%d: %s\n',ff, StampFiles(ff).name);
+        end
+        Indff = input('Your choice:\n');
+    else
+        Indff = 1;
+    end
+    ExpStartTime = StampFiles(Indff).name(13:16);
+    ExtData_dir = fullfile(Loggers_dir, NeuroLoggerID, 'extracted_data');
+    get_logger_data_event(ExtData_dir, Days{dd}, 200, NeuroLoggerID)
     close all
 %     pause()
 end

@@ -1,474 +1,311 @@
-function plot_psth_event(Loggers_dir, Date, ExpStartTime, AudioLoggerID, NeuroLoggerID, Flags, Delay)
-% AudioLoggerID = ID of the audio logger that the targeting animal is
-% wearing
-% NeuroLoggerID = ID of the neural logger that the targeting animal is
-% wearing
-% Flags = whether to print PSTH of Tetrode (Flags(1)=1) and/or Single units
-% (Flags(2)=1))
-
-FigureSize = [1 1 30 20];
-
-% load the data
-load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, Delay)), 'IndVocStartRaw_merged', 'IndVocStopRaw_merged', 'IndVocStartPiezo_merged', 'IndVocStopPiezo_merged','Neuro_LFP','Neuro_spikes','Neuro_spikesT');
-load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date, ExpStartTime)), 'FS','Piezo_FS','Piezo_wave','VocFilename','Voc_transc_time_refined');
-
-EventDir = dir(fullfile(Loggers_dir,sprintf('l%s', NeuroLoggerID(2:end)), 'extracted_data',sprintf('*%s*EVENTS.mat', Date)));
-load(fullfile(EventDir.folder, EventDir.name), 'DataDeletionOnsetOffset_usec_sync')
-if nargin<7
-    Delay = 500;% time in ms to extract data before and after vocalization onset/offset
-end
-Response_samprate = 100;% Sampling rate of the KDE in Hz
-Bin_ms = 10; % size of the KDE binning
-
-XLIM = [-Delay 3*Delay];
-YLIM_SU = [0 0.004];
-YLIM_T = [0 0.1];
-
-%% extract the spike arrival times from NeuroLoggerID for each vocalization cut of AudioLoggerID
-% centering them on the vocalization cut onset
-NV = length(VocFilename);
-
-% Count the number of vocalization cuts where the targeted animal is
-% vocalizing vs hearing for preallocation of space
-VocCall = 0;
-Fns_AL = fieldnames(Piezo_wave);
-Fns_Neuro = fieldnames(Neuro_spikes);
- % find the vocalizations emitted by the vocalizer of interest
-FocIndAudio = find(contains(Fns_AL, AudioLoggerID));
-FocIndNeuro = find(contains(Fns_Neuro, NeuroLoggerID));
-%     OthInd = find(~contains(Fns_AL, AudioLoggerID));
-for vv=1:NV
-   VocCall = VocCall + length(IndVocStartRaw_merged{vv}{FocIndAudio});%#ok<IDISVAR,USENS>
+function [AllActions, UActionText]= plot_psth_event(ExtData_dir, Date,AllActions, UActionText, Buffer, LoggerID, Output_dir)
+% AllActions is a cell array of length the number of actions containing
+% each 2 columns giving the onset and offset times in ms of behavioral
+% events, constructed by get_logger_data_event.m
+if nargin<5
+    Buffer = 500; %ms
 end
 
-% Now loop through calls and gather data
-VocDuration = nan(1,VocCall);
-if Flags(2)
-    NSU = size(Neuro_spikes.(Fns_Neuro{FocIndNeuro}),2);
-    SpikesTimes_VocCall = cell(VocCall,NSU);
-    Psth_KDEfiltered_VocCall = cell(VocCall,NSU);
-    Psth_KDEfiltered_VocCall_t = cell(VocCall,NSU);
-    Psth_KDEfiltered_VocCall_scalef = nan(VocCall,NSU);
-end
-if Flags(1)
-    NT = size(Neuro_spikesT.(Fns_Neuro{FocIndNeuro}),2);
-    SpikesTTimes_VocCall = cell(VocCall,NT);
-    Psth_KDEfiltered_TVocCall = cell(VocCall,NT);
-    Psth_KDEfiltered_TVocCall_t = cell(VocCall,NT);
-    Psth_KDEfiltered_TVocCall_scalef = nan(VocCall,NT);
-end
-% DataDeletion_VocCall = cell(VocCall,1); % This cell array contains the onset offset times (1st and 2nd column) of data deletion periods (RF Artefact) that happens during each vocalization
-VocCall = 0;
-Ncall = nan(NV,1);
-for vv=1:NV
-    Ncall(vv) = length(IndVocStartRaw_merged{vv}{FocIndAudio});
-    if Ncall(vv)
-        for nn=1:Ncall(vv)
-            VocCall = VocCall+1;
-            VocDuration(VocCall) = (IndVocStopRaw_merged{vv}{FocIndAudio}(nn) -IndVocStartRaw_merged{vv}{FocIndAudio}(nn))/FS*1000; %#ok<IDISVAR,USENS>
-            % Identify if any deletion period fall within the spike sequence for the call
-%             VocStartTransc = Voc_transc_time_refined(vv,1) + IndVocStartRaw_merged{vv}{FocIndAudio}(nn)/FS*1000 - Delay;
-%             VocStopTransc = Voc_transc_time_refined(vv,1) + IndVocStopRaw_merged{vv}{FocIndAudio}(nn)/FS*1000 + Delay;
-%             DelOnsetInd = find((DataDeletionOnsetOffset_usec_sync(:,1)/1000 > VocStartTransc) .* (DataDeletionOnsetOffset_usec_sync(:,1)/1000 < VocStopTransc));
-%             DelOffsetInd = find((DataDeletionOnsetOffset_usec_sync(:,2)/1000 > VocStartTransc) .* (DataDeletionOnsetOffset_usec_sync(:,2)/1000 < VocStopTransc));
-%             DelOnOffsetInd = intersect(DelOnsetInd, DelOffsetInd); % deletion periods starting and stoping within the time of the vocalization spike sequence
-%             DelOnsetInd = setdiff(DelOnsetInd, DelOnOffsetInd);  % deletion periods starting within the time of the vocalization spike sequence
-%             DelOffsetInd = setdiff(DelOffsetInd, DelOnOffsetInd);  % deletion periods stoping within the time of the vocalization spike sequence
-%             DataDeletion_VocCall{VocCall} = [DataDeletionOnsetOffset_usec_sync(DelOnOffsetInd,:)/1000; DataDeletionOnsetOffset_usec_sync(DelOnsetInd,1)/1000 VocStopTransc.*ones(length(DelOnsetInd),1) ; VocStartTransc.*ones(length(DelOffsetInd),1) DataDeletionOnsetOffset_usec_sync(DelOffsetInd,1)/1000] - VocStartTransc - Delay; % The deletion periods are time centered at vocalization onset
-%             
-            % Calculate the t for KDE
-            t=-Delay: Bin_ms : round((VocDuration(VocCall) + Delay)/Bin_ms)*Bin_ms;
-            if Flags(1)
-                for uu=1:NT
-                    IndT01 = logical((Neuro_spikesT.(Fns_Neuro{FocIndNeuro}){vv,uu}>(IndVocStartRaw_merged{vv}{FocIndAudio}(nn)/FS*1000 - Delay)) .* (Neuro_spikesT.(Fns_Neuro{FocIndNeuro}){vv,uu}<(IndVocStopRaw_merged{vv}{FocIndAudio}(nn)/FS*1000 + Delay)));
-                    SpikesTTimes_VocCall{VocCall,uu} = Neuro_spikesT.(Fns_Neuro{FocIndNeuro}){vv,uu}(IndT01)- IndVocStartRaw_merged{vv}{FocIndAudio}(nn)/FS*1000;
-                    % calculate the density estimate
-                    [y,Psth_KDEfiltered_TVocCall_t{VocCall,uu},~]=ssvkernel(SpikesTTimes_VocCall{VocCall,uu},t);
-                    % y is a density function that sums to 1
-                    % multiplying by the total number of spikes gives the number of expecting spike per time bin (here 10 ms)
-                    % multiplying by the response sampling rate in kHz gives the expected spike rate to one stimulus presentation in spike/ms
-                    Psth_KDEfiltered_TVocCall{VocCall,uu} =  y * length(SpikesTTimes_VocCall{VocCall,uu}) * Response_samprate/1000;
-                    Psth_KDEfiltered_TVocCall_scalef(VocCall,uu) = max(Psth_KDEfiltered_TVocCall{VocCall,uu});
-                end
-            end
-            if Flags(2)
-                for uu=1:NSU
-                    IndSU01 = logical((Neuro_spikes.(Fns_Neuro{FocIndNeuro}){vv,uu}>(IndVocStartRaw_merged{vv}{FocIndAudio}(nn)/FS*1000 - Delay)) .* (Neuro_spikes.(Fns_Neuro{FocIndNeuro}){vv,uu}<(IndVocStopRaw_merged{vv}{FocIndAudio}(nn)/FS*1000 + Delay)));
-                    SpikesTimes_VocCall{VocCall,uu} = Neuro_spikes.(Fns_Neuro{FocIndNeuro}){vv,uu}(IndSU01) - IndVocStartRaw_merged{vv}{FocIndAudio}(nn)/FS*1000;
-                    % calculate the density estimate
-                    [y,Psth_KDEfiltered_VocCall_t{VocCall,uu},~]=ssvkernel(SpikesTimes_VocCall{VocCall,uu},t);
-                    % y is a density function that sums to 1
-                    % multiplying by the total number of spikes gives the number of expecting spike per time bin (here 10 ms)
-                    % multiplying by the response sampling rate in kHz gives the expected spike rate to one stimulus presentation in spike/ms
-                    Psth_KDEfiltered_VocCall{VocCall,uu} =  y * length(SpikesTimes_VocCall{VocCall,uu}) * Response_samprate/1000;
-                    Psth_KDEfiltered_VocCall_scalef(VocCall,uu) = max(Psth_KDEfiltered_VocCall{VocCall,uu});
-                end
-            end
-        end
+AllSep = strfind(ExtData_dir, filesep);
+if nargin<6
+    if length(ExtData_dir)==AllSep(end)
+        LoggerID = ExtData_dir((AllSep(end-2)+1):(AllSep(end-1)-1));
+    else
+        LoggerID = ExtData_dir((AllSep(end-1)+1):(AllSep(end)-1));
     end
 end
+if nargin<7
+    if length(ExtData_dir)==AllSep(end)
+        Output_dir = ExtData_dir(1:(AllSep(end-2)));
+    else
+        Output_dir = ExtData_dir(1:(AllSep(end-1)));
+    end
+end
+fprintf(1, 'Figures and data are saved to %s\n', Output_dir)
+MaxEventDur = 1000; %ms
 
+%% Extract the neural activity around each behavioral event
+% Only work on a subset of the events
+Response_samprate = 100;% Sampling rate of the KDE in Hz
+Bin_ms = 10; % size of the KDE binning
+Cleared_events = {'eating', 'female', 'playback','record only', 'food in', 'vocalization', 'yawning'};
+Cleared_events_Ind = nan(length(Cleared_events),1);
+for ee=1:length(Cleared_events)
+    Cleared_events_Ind(ee) = find(contains(UActionText, Cleared_events{ee}));
+end
+GoodEvents = setdiff(1:length(UActionText), Cleared_events_Ind);
+NAction = length(GoodEvents);
+SpikesTimesSU_Action = cell(NAction,1);
+SpikesTimesT_Action = cell(NAction,1);
+LFP_Action =  cell(NAction,1);
+% Raw_Action = cell(NAction,1);
+Event_duration =  cell(NAction,1);
+Psth_KDEfilteredT_Action_scalef = cell(NAction,1);
+Psth_KDEfilteredT_Action_t = cell(NAction,1);
+Psth_KDEfilteredT_Action = cell(NAction,1);
+Psth_KDEfilteredSU_Action_scalef = cell(NAction,1);
+Psth_KDEfilteredSU_Action_t = cell(NAction,1);
+Psth_KDEfilteredSU_Action = cell(NAction,1);
+Average_Psth_KDEfiltered_TAction = cell(NAction,1);
+Average_Psth_KDEfiltered_SUAction = cell(NAction,1);
+Overall_Psth_KDEfilteredT_Action_t = cell(NAction,1);
+Overall_Psth_KDEfilteredT_Action = cell(NAction,1);
+ Overall_Psth_KDEfilteredT_Action_confb95 = cell(NAction,1);
+Overall_Psth_KDEfilteredSU_Action_t = cell(NAction,1);
+Overall_Psth_KDEfilteredSU_Action = cell(NAction,1);
+ Overall_Psth_KDEfilteredSU_Action_confb95 = cell(NAction,1);
+Overall_KDE_duration = nan(NAction,1);
+for nn=1:NAction
+    aa = GoodEvents(nn);
+    % extracting neural data around the event
+    fprintf(1,'Extracting neural data for %s events\n', UActionText{aa});
+    [~ ,LFP_Action{nn}, SpikesTimesT_Action{nn},SpikesTimesSU_Action{nn}] = extract_timeslot_LFP_spikes(ExtData_dir, AllActions{aa}, Buffer, MaxEventDur, [0 1 1 1]);
+    
+    % calculate event duration
+    Event_duration{nn} = AllActions{aa}(:,2) - AllActions{aa}(:,1);
+    Event_duration{nn}(Event_duration{nn}>= (MaxEventDur + Buffer)) = MaxEventDur + Buffer;
+    
+    % calculate event PSTH
+    % calculate the density estimate for each event and each unit
+    Nevents = length(Event_duration{nn});
+    NSU = size(SpikesTimesSU_Action{nn},2);
+    NT = size(SpikesTimesT_Action{nn},2);
+    Psth_KDEfilteredT_Action_t{nn} = cell(Nevents, NT);
+    Psth_KDEfilteredT_Action{nn} = cell(Nevents, NT);
+    Psth_KDEfilteredT_Action_scalef{nn} = nan(Nevents, NT);
+    for ee=1:Nevents
+        % Calculate the t for KDE
+        t=-Buffer: Bin_ms : round((Event_duration{nn}(ee) + Buffer)/Bin_ms)*Bin_ms;
+        % Calculate the kde for each Unit
+        for uu=1:NT
+            [y,Psth_KDEfilteredT_Action_t{nn}{ee,uu},~]=ssvkernel(SpikesTimesT_Action{nn}{ee,uu},t);
+            % y is a density function that sums to 1
+            % multiplying by the total number of spikes gives the number of expecting spike per time bin (here 10 ms)
+            % multiplying by the response sampling rate in kHz gives the expected spike rate to one stimulus presentation in spike/ms
+            Psth_KDEfilteredT_Action{nn}{ee,uu} =  y * length(SpikesTimesT_Action{nn}{ee,uu}) * Response_samprate/1000;
+            Psth_KDEfilteredT_Action_scalef{nn}(ee,uu) = max(Psth_KDEfilteredT_Action{nn}{ee,uu});
+        end
+    end
 
-if sum(Ncall)
-        % calculate a weighted average PSTH for each unit or tetrode across all vocalizations
+    Psth_KDEfilteredSU_Action_t{nn} = cell(Nevents, NSU);
+    Psth_KDEfilteredSU_Action{nn} = cell(Nevents, NSU);
+    Psth_KDEfilteredSU_Action_scalef{nn} = nan(Nevents, NSU);
+    for ee=1:Nevents
+        % Calculate the t for KDE
+        t=-Buffer: Bin_ms : round((Event_duration{nn}(ee) + Buffer)/Bin_ms)*Bin_ms;
+        % Calculate the kde for each Unit
+        for uu=1:NSU
+            [y,Psth_KDEfilteredSU_Action_t{nn}{ee,uu},~]=ssvkernel(SpikesTimesSU_Action{nn}{ee,uu},t);
+            % y is a density function that sums to 1
+            % multiplying by the total number of spikes gives the number of expecting spike per time bin (here 10 ms)
+            % multiplying by the response sampling rate in kHz gives the expected spike rate to one stimulus presentation in spike/ms
+            Psth_KDEfilteredSU_Action{nn}{ee,uu} =  y * length(SpikesTimesSU_Action{nn}{ee,uu}) * Response_samprate/1000;
+            Psth_KDEfilteredSU_Action_scalef{nn}(ee,uu) = max(Psth_KDEfilteredSU_Action{nn}{ee,uu});
+        end
+    end
+    
+    % calculate the density estimate across all events for each unit for
+    % the common event duration
+    Overall_KDE_duration(nn) = min(Event_duration{nn})+Buffer;
+    t=-Buffer: Bin_ms : round(Overall_KDE_duration(nn)/Bin_ms)*Bin_ms;
+    Overall_Psth_KDEfilteredT_Action_t{nn} = cell(NT,1);
+    Overall_Psth_KDEfilteredT_Action_confb95{nn} = cell(NT,1);
+    Overall_Psth_KDEfilteredT_Action{nn} = cell(NT,1);
+    for uu=1:NT
+            % the output of ssvkernel is a density function that sums to 1
+            % multiplying by the total number of spikes gives the number of expected spike per time bin (here 10 ms)
+            % dividing by the number of events gives the number of expected spike per time bin (here 10 ms) per event 
+            % multiplying by the response sampling rate in kHz gives the expected spike rate to one stimulus presentation in spike/ms
+            try
+                LocalSpikes = cell2mat(SpikesTimesT_Action{nn}(:,uu));
+            catch
+                LocalSpikes = cell2mat(SpikesTimesT_Action{nn}(:,uu)');
+            end
+            [y,Overall_Psth_KDEfilteredT_Action_t{nn}{uu},~, ~,~,Overall_Psth_KDEfilteredT_Action_confb95{nn}{uu}, ~]=ssvkernel(LocalSpikes,t);
+            Overall_Psth_KDEfilteredT_Action{nn}{uu} =  y * length(LocalSpikes)/Nevents * Response_samprate/1000;
+    end
+    Overall_Psth_KDEfilteredSU_Action_t{nn} = cell(NT,1);
+    Overall_Psth_KDEfilteredSU_Action_confb95{nn} = cell(NT,1);
+    Overall_Psth_KDEfilteredSU_Action{nn} = cell(NT,1);
+    for uu=1:NSU
+        try
+            LocalSpikes = cell2mat(SpikesTimesSU_Action{nn}(:,uu));
+        catch
+            LocalSpikes = cell2mat(SpikesTimesSU_Action{nn}(:,uu)');
+        end
+        [y,Overall_Psth_KDEfilteredSU_Action_t{nn}{uu},~, ~, ~,Overall_Psth_KDEfilteredSU_Action_confb95{nn}{uu},~]=ssvkernel(LocalSpikes,t);
+        % the output of ssvkernel is a density function that sums to 1
+        % multiplying by the total number of spikes gives the number of expected spike per time bin (here 10 ms)
+        % dividing by the number of events gives the number of expected spike per time bin (here 10 ms) per event
+        % multiplying by the response sampling rate in kHz gives the expected spike rate to one stimulus presentation in spike/ms
+        Overall_Psth_KDEfilteredSU_Action{nn}{uu} =  y * length(LocalSpikes)/Nevents * Response_samprate/1000;
+    end
+    
+    % calculate a weighted average PSTH for each unit or tetrode across all vocalizations
     % First organize tha data into a matrix where each column represent a time
     % bin and each row a vocalization for each tetrode/unit then calculate the
     % nanmean and nanste over rows.
-    if Flags(1)
-        Average_Psth_KDEfiltered_TVocCall=cell(NT,1);
-        for uu=1:NT
-            t=-Delay: Bin_ms : round((max(VocDuration) + Delay)/Bin_ms)*Bin_ms;
-            Average_Psth_KDEfiltered_TVocCall{uu} = nan(3,length(t));
-            PSTH_local = nan(length(VocDuration),length(t));
-            for vv=1:length(VocDuration)
-                for tt=1:length(Psth_KDEfiltered_TVocCall_t{vv,uu})
-                    Ind = find(t==Psth_KDEfiltered_TVocCall_t{vv,uu}(tt));
-                    PSTH_local(vv,Ind) = Psth_KDEfiltered_TVocCall{vv,uu}(tt); %#ok<FNDSB>
-                end
-            end
-            Average_Psth_KDEfiltered_TVocCall{uu}(1,:) = t;
-            Average_Psth_KDEfiltered_TVocCall{uu}(2,:) = nanmean(PSTH_local);
-            Average_Psth_KDEfiltered_TVocCall{uu}(3,:) = nanstd(PSTH_local)./(sum(~isnan(PSTH_local))).^0.5;
-        end
-    end
-
-    if Flags(2)
-        Average_Psth_KDEfiltered_VocCall=cell(NSU,1);
-        for uu=1:NSU
-            t=-Delay: Bin_ms : round((max(VocDuration) + Delay)/Bin_ms)*Bin_ms;
-            Average_Psth_KDEfiltered_VocCall{uu} = nan(3,length(t));
-            PSTH_local = nan(length(VocDuration),length(t));
-            for vv=1:length(VocDuration)
-                for tt=1:length(Psth_KDEfiltered_VocCall_t{vv,uu})
-                    Ind = find(t==Psth_KDEfiltered_VocCall_t{vv,uu}(tt));
-                    PSTH_local(vv,Ind) = Psth_KDEfiltered_VocCall{vv,uu}(tt); %#ok<FNDSB>
-                end
-            end
-            Average_Psth_KDEfiltered_VocCall{uu}(1,:) = t;
-            Average_Psth_KDEfiltered_VocCall{uu}(2,:) = nanmean(PSTH_local);
-            Average_Psth_KDEfiltered_VocCall{uu}(3,:) = nanstd(PSTH_local)./(sum(~isnan(PSTH_local))).^0.5;
-        end
-    end
-
-
-
-    % Now plot Raster
-    if Flags(1)
-        for uu=1:NT
-            Fig=figure();
-            subplot(2,1,1)
-            for cc=1:VocCall
-                hold on
-                yyaxis left
-                plot([0 VocDuration(cc)], cc-[0.5 0.5], '-','LineWidth',250/VocCall,'Color', [1 0.8 0.8]) % vocalization
-                %         for dd=1:size(DataDeletion_VocCall{VocCall},1)
-                %             hold on
-                %             plot(DataDeletion_VocCall{VocCall}(dd,:), cc-[0.5 0.5], '-','LineWidth',250/VocCall,'Color', [0.8 0.8 0.8]) % RF artefact period
-                %         end
-                for spike=1:length(SpikesTTimes_VocCall{cc,uu})
-                    hold on
-                    plot(SpikesTTimes_VocCall{cc,uu}(spike)*ones(2,1), cc-[0.9 0.1], 'k-', 'LineWidth',1)
-                end
-                hold on
-%                 yyaxis right
-%                 plot(Psth_KDEfiltered_TVocCall_t{cc,uu}, Psth_KDEfiltered_TVocCall{cc,uu}/max(Psth_KDEfiltered_TVocCall_scalef(:,uu))+cc-1, 'r-', 'LineWidth',2)
-            end
-            xlabel('Time centered at production onset (ms)')
-            yyaxis left
-            ylim([0 VocCall+1])
-            xlim(XLIM)
-            ylabel('Vocalization production renditions')
-            title(sprintf('Raster Tetrode %d on %s', uu, Date))
-            hold off
-
-            subplot(2,1,2)
-            shadedErrorBar(Average_Psth_KDEfiltered_TVocCall{uu}(1,:), Average_Psth_KDEfiltered_TVocCall{uu}(2,:), Average_Psth_KDEfiltered_TVocCall{uu}(3,:), {'r-', 'LineWidth',2})
-            xlim(XLIM)
-            ylim(YLIM_T)
-            xlabel('Time centered at production onset (ms)')
-            ylabel('Spike rate (/ms)')
-            orient(Fig,'landscape')
-            Fig.PaperPositionMode = 'auto';
-            set(Fig,'Units', 'centimeters', 'Position', get(0, 'screensize'));
-            set(Fig,'PaperOrientation','landscape');
-            set(Fig,'PaperUnits','normalized');
-            set(Fig,'PaperPosition', [0 0 1 1]);
-            
-            print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocProdPSTH_Tetrode%d_%d.pdf', Date, NeuroLoggerID,uu,Delay)),'-dpdf')
-        end
-    end
-
-    if Flags(2)
-        for uu=1:NSU
-            Fig=figure();
-            subplot(2,1,1)
-            for cc=1:VocCall
-                hold on
-                yyaxis left
-                plot([0 VocDuration(cc)], cc-[0.5 0.5], '-','LineWidth',250/VocCall,'Color', [1 0.8 0.8]) % vocalizations
-                %         for dd=1:size(DataDeletion_VocCall{cc},1)
-                %             hold on
-                %             plot(DataDeletion_VocCall{cc}(dd,:), cc-[0.5 0.5], '-','LineWidth',250/VocCall,'Color', [0.8 0.8 0.8]) % RF artefact period
-                %         end
-                for spike=1:length(SpikesTimes_VocCall{cc,uu})
-                    hold on
-                    plot(SpikesTimes_VocCall{cc,uu}(spike)*ones(2,1), cc-[0.9 0.1], 'k-', 'LineWidth',1)
-                end
-                hold on
-%                 yyaxis right
-%                 plot(Psth_KDEfiltered_VocCall_t{cc,uu}, Psth_KDEfiltered_VocCall{cc,uu}/max(Psth_KDEfiltered_VocCall_scalef(:,uu))+cc-1, 'r-', 'LineWidth',2)
-            end
-            yyaxis left
-            xlabel('Time centered at production onset (ms)')
-            ylim([0 VocCall+1])
-            xlim(XLIM)
-            ylabel('Vocalization production renditions')
-            title(sprintf('Raster Single Unit %d on %s', uu, Date))
-            hold off
-
-            subplot(2,1,2)
-            shadedErrorBar(Average_Psth_KDEfiltered_VocCall{uu}(1,:), Average_Psth_KDEfiltered_VocCall{uu}(2,:), Average_Psth_KDEfiltered_VocCall{uu}(3,:), {'r-', 'LineWidth',2})
-            xlim(XLIM)
-            ylim(YLIM_SU)
-            xlabel('Time centered at production onset (ms)')
-            ylabel('Spike rate (/ms)')
-            orient(Fig,'landscape')
-            Fig.PaperPositionMode = 'auto';
-            set(Fig,'Units', 'centimeters', 'Position', get(0, 'screensize'));
-            set(Fig,'PaperOrientation','landscape');
-            set(Fig,'PaperUnits','normalized');
-            set(Fig,'PaperPosition', [0 0 1 1]);
-            print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocProdPSTH_SU%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf')
-        end
-    end
-else
-    fprintf('No vocalization production of the target bat on that day\n')
-end
-
-%% extract the spike arrival times from NeuroLoggerID for each vocalization cut of all other audiologgers
-% centering them on the vocalization cut onset
-NV = length(VocFilename);
-
-% Count the number of vocalization cuts where the targeted animal is
-%  hearing for preallocation of space
-HearCall = 0;
-% find the vocalizations heared by the vocalizer of interest
-OthInd = find(~contains(Fns_AL, AudioLoggerID));
-for vv=1:NV
-    for ll=1:length(OthInd)
-        HearCall = HearCall + length(IndVocStartRaw_merged{vv}{OthInd(ll)});
-    end
-end
-
-% Now loop through calls and gather data
-if Flags(2)
-    NSU = size(Neuro_spikes.(Fns_Neuro{FocIndNeuro}),2);
-    SpikesTimes_HearCall = cell(HearCall,NSU);
-    Psth_KDEfiltered_HearCall = cell(HearCall,NSU);
-    Psth_KDEfiltered_HearCall_t = cell(HearCall,NSU);
-    Psth_KDEfiltered_HearCall_scalef = nan(HearCall,NSU);
-end
-if Flags(1)
-    NT = size(Neuro_spikesT.(Fns_Neuro{FocIndNeuro}),2);
-    SpikesTTimes_HearCall = cell(HearCall,NT);
-    Psth_KDEfiltered_THearCall = cell(HearCall,NT);
-    Psth_KDEfiltered_THearCall_t = cell(HearCall,NT);
-    Psth_KDEfiltered_THearCall_scalef = nan(HearCall,NT);
-end
-HearDuration = nan(1,HearCall);
-% DataDeletion_HearCall = cell(VocCall,1); % This cell array contains the onset offset times (1st and 2nd column) of data deletion periods (RF Artefact) that happens during each vocalization
-HearOnly = nan(1,HearCall);
-HearCall = 0;
-for vv=1:NV
-    for ll=1:length(OthInd)
-        NcallHear = length(IndVocStartRaw_merged{vv}{OthInd(ll)});
-        if NcallHear
-            for nn=1:NcallHear
-                HearCall = HearCall+1;
-                HearDuration(HearCall) = (IndVocStopRaw_merged{vv}{OthInd(ll)}(nn) -IndVocStartRaw_merged{vv}{OthInd(ll)}(nn))/FS*1000;
-                % Identify if any deletion period fall within the spike sequence for the call
-%                 VocStartTransc = Voc_transc_time_refined(vv,1) + IndVocStartRaw_merged{vv}{OthInd(ll)}(nn)/FS*1000 - Delay;
-%                 VocStopTransc = Voc_transc_time_refined(vv,1) + IndVocStopRaw_merged{vv}{OthInd(ll)}(nn)/FS*1000 + Delay;
-%                 DelOnsetInd = find((DataDeletionOnsetOffset_usec_sync(:,1)/1000 > VocStartTransc) .* (DataDeletionOnsetOffset_usec_sync(:,1)/1000 < VocStopTransc));
-%                 DelOffsetInd = find((DataDeletionOnsetOffset_usec_sync(:,2)/1000 > VocStartTransc) .* (DataDeletionOnsetOffset_usec_sync(:,2)/1000 < VocStopTransc));
-%                 DelOnOffsetInd = intersect(DelOnsetInd, DelOffsetInd); % deletion periods starting and stoping within the time of the vocalization spike sequence
-%                 DelOnsetInd = setdiff(DelOnsetInd, DelOnOffsetInd);  % deletion periods starting within the time of the vocalization spike sequence
-%                 DelOffsetInd = setdiff(DelOffsetInd, DelOnOffsetInd);  % deletion periods stoping within the time of the vocalization spike sequence
-%                 DataDeletion_HearCall{HearCall} = [DataDeletionOnsetOffset_usec_sync(DelOnOffsetInd,:)/1000; DataDeletionOnsetOffset_usec_sync(DelOnsetInd,1)/1000 VocStopTransc.*ones(length(DelOnsetInd),1) ; VocStartTransc.*ones(length(DelOffsetInd),1) DataDeletionOnsetOffset_usec_sync(DelOffsetInd,1)/1000] - VocStartTransc - Delay; % The deletion periods are time centered at vocalization onset
-%                 
-                t=-Delay: Bin_ms : round((HearDuration(HearCall) + Delay)/Bin_ms)*Bin_ms;
-                % Is this call heard at the same time the focal bat is
-                % producing a call  within the window 100ms before 100ms after a vocalization?
-                OnsetSync = sum(((IndVocStartRaw_merged{vv}{FocIndAudio} - Delay*FS/1000) < IndVocStartRaw_merged{vv}{OthInd(ll)}(nn)) .* ((IndVocStopRaw_merged{vv}{FocIndAudio} + Delay*FS/1000) > IndVocStartRaw_merged{vv}{OthInd(ll)}(nn)));
-                OffsetSync = sum(((IndVocStartRaw_merged{vv}{FocIndAudio} - Delay*FS/1000) < IndVocStopRaw_merged{vv}{OthInd(ll)}(nn)) .* ((IndVocStopRaw_merged{vv}{FocIndAudio} + Delay*FS/1000) > IndVocStopRaw_merged{vv}{OthInd(ll)}(nn)));
-                if OnsetSync || OffsetSync % there is an overlap
-                    HearOnly(HearCall) = 0;
-                else % No overlap
-                    HearOnly(HearCall) = 1;
-                end
-                if Flags(1)
-                    for uu=1:NT
-                        IndT01 = logical((Neuro_spikesT.(Fns_Neuro{FocIndNeuro}){vv,uu}>(IndVocStartRaw_merged{vv}{OthInd(ll)}(nn)/FS*1000 - Delay)) .* (Neuro_spikesT.(Fns_Neuro{FocIndNeuro}){vv,uu}<(IndVocStopRaw_merged{vv}{OthInd(ll)}(nn)/FS*1000 + Delay)));
-                        SpikesTTimes_HearCall{HearCall,uu} = Neuro_spikesT.(Fns_Neuro{FocIndNeuro}){vv,uu}(IndT01)- IndVocStartRaw_merged{vv}{OthInd(ll)}(nn)/FS*1000;
-                        % calculate the density estimate
-                        [y,Psth_KDEfiltered_THearCall_t{HearCall,uu},~]=ssvkernel(SpikesTTimes_HearCall{HearCall,uu},t);
-                        % y is a density function that sums to 1
-                        % multiplying by the total number of spikes gives the number of expecting spike per time bin (here 10 ms)
-                        % multiplying by the response sampling rate in kHz gives the expected spike rate to one stimulus presentation in spike/ms
-                        Psth_KDEfiltered_THearCall{HearCall,uu} =  y * length(SpikesTTimes_HearCall{HearCall,uu}) * Response_samprate/1000;
-                        Psth_KDEfiltered_THearCall_scalef(HearCall,uu) = max(Psth_KDEfiltered_THearCall{HearCall,uu});
-                    end
-                end
-                if Flags(2)
-                    for uu=1:NSU
-                        IndSU01 = logical((Neuro_spikes.(Fns_Neuro{FocIndNeuro}){vv,uu}>(IndVocStartRaw_merged{vv}{OthInd(ll)}(nn)/FS*1000 - Delay)) .* (Neuro_spikes.(Fns_Neuro{FocIndNeuro}){vv,uu}<(IndVocStopRaw_merged{vv}{OthInd(ll)}(nn)/FS*1000 + Delay)));
-                        SpikesTimes_HearCall{HearCall,uu} = Neuro_spikes.(Fns_Neuro{FocIndNeuro}){vv,uu}(IndSU01) - IndVocStartRaw_merged{vv}{OthInd(ll)}(nn)/FS*1000;
-                        % calculate the density estimate
-                        [y,Psth_KDEfiltered_HearCall_t{HearCall,uu},~]=ssvkernel(SpikesTimes_HearCall{HearCall,uu},t);
-                        % y is a density function that sums to 1
-                        % multiplying by the total number of spikes gives the number of expecting spike per time bin (here 10 ms)
-                        % multiplying by the response sampling rate in kHz gives the expected spike rate to one stimulus presentation in spike/ms
-                        Psth_KDEfiltered_HearCall{HearCall,uu} =  y * length(SpikesTimes_HearCall{HearCall,uu}) * Response_samprate/1000;
-                        Psth_KDEfiltered_HearCall_scalef(HearCall,uu) = max(Psth_KDEfiltered_HearCall{HearCall,uu});
-                    end
-                end
-            end
-        end
-    end
-end
-
-
-% calculate a weighted average PSTH for each unit or tetrode across all vocalizations
-% First organize the data into a matrix where each column represent a time
-% bin and each row a vocalization for each tetrode/unit then calculate the
-% nanmean and nanste over rows.
-if Flags(1)
-    Average_Psth_KDEfiltered_THearCall=cell(NT,1);
-    HearOnlyInd = find(HearOnly);
+    Average_Psth_KDEfiltered_TAction{nn}=cell(NT,1);
     for uu=1:NT
-        t=-Delay: Bin_ms : round((max(HearDuration(HearOnlyInd)) + Delay)/Bin_ms)*Bin_ms;
-        Average_Psth_KDEfiltered_THearCall{uu} = nan(3,length(t));
-        PSTH_local = nan(length(HearOnlyInd),length(t));
-        for jj=1:length(HearOnlyInd)
-            vv=HearOnlyInd(jj);
-            for tt=1:length(Psth_KDEfiltered_THearCall_t{vv,uu})
-                Ind = find(t==Psth_KDEfiltered_THearCall_t{vv,uu}(tt));
-                PSTH_local(vv,Ind) = Psth_KDEfiltered_THearCall{vv,uu}(tt); %#ok<FNDSB>
+        t=-Buffer: Bin_ms : round((max(Event_duration{nn}) + Buffer)/Bin_ms)*Bin_ms;
+        Average_Psth_KDEfiltered_TAction{nn}{uu} = nan(3,length(t));
+        PSTH_local = nan(Nevents,length(t));
+        for ee=1:Nevents
+            for tt=1:length(Psth_KDEfilteredT_Action_t{nn}{ee,uu})
+                Ind = find(t==Psth_KDEfilteredT_Action_t{nn}{ee,uu}(tt));
+                PSTH_local(ee,Ind) = Psth_KDEfilteredT_Action{nn}{ee,uu}(tt); %#ok<FNDSB>
             end
         end
-        Average_Psth_KDEfiltered_THearCall{uu}(1,:) = t;
-        Average_Psth_KDEfiltered_THearCall{uu}(2,:) = nanmean(PSTH_local);
-        Average_Psth_KDEfiltered_THearCall{uu}(3,:) = nanstd(PSTH_local)./(sum(~isnan(PSTH_local))).^0.5;
+        Average_Psth_KDEfiltered_TAction{nn}{uu}(1,:) = t;
+        Average_Psth_KDEfiltered_TAction{nn}{uu}(2,:) = nanmean(PSTH_local);
+        Average_Psth_KDEfiltered_TAction{nn}{uu}(3,:) = nanstd(PSTH_local)./(sum(~isnan(PSTH_local))).^0.5;
     end
-end
-
-if Flags(2)
-    Average_Psth_KDEfiltered_HearCall=cell(NSU,1);
-    HearOnlyInd = find(HearOnly);
+    
+    Average_Psth_KDEfiltered_SUAction{nn}=cell(NSU,1);
     for uu=1:NSU
-        t=-Delay: Bin_ms : round((max(HearDuration(HearOnlyInd)) + Delay)/Bin_ms)*Bin_ms;
-        Average_Psth_KDEfiltered_HearCall{uu} = nan(3,length(t));
-        PSTH_local = nan(length(HearOnlyInd),length(t));
-        for jj=1:length(HearOnlyInd)
-            vv=HearOnlyInd(jj);
-            for tt=1:length(Psth_KDEfiltered_HearCall_t{vv,uu})
-                Ind = find(t==Psth_KDEfiltered_HearCall_t{vv,uu}(tt));
-                PSTH_local(vv,Ind) = Psth_KDEfiltered_HearCall{vv,uu}(tt); %#ok<FNDSB>
+        t=-Buffer: Bin_ms : round((max(Event_duration{nn}) + Buffer)/Bin_ms)*Bin_ms;
+        Average_Psth_KDEfiltered_SUAction{nn}{uu} = nan(3,length(t));
+        PSTH_local = nan(Nevents,length(t));
+        for vv=1:Nevents
+            for tt=1:length(Psth_KDEfilteredSU_Action_t{nn}{ee,uu})
+                Ind = find(t==Psth_KDEfilteredSU_Action_t{nn}{ee,uu}(tt));
+                PSTH_local(vv,Ind) = Psth_KDEfilteredSU_Action{nn}{ee,uu}(tt); %#ok<FNDSB>
             end
         end
-        Average_Psth_KDEfiltered_HearCall{uu}(1,:) = t;
-        Average_Psth_KDEfiltered_HearCall{uu}(2,:) = nanmean(PSTH_local);
-        Average_Psth_KDEfiltered_HearCall{uu}(3,:) = nanstd(PSTH_local)./(sum(~isnan(PSTH_local))).^0.5;
+        Average_Psth_KDEfiltered_SUAction{nn}{uu}(1,:) = t;
+        Average_Psth_KDEfiltered_SUAction{nn}{uu}(2,:) = nanmean(PSTH_local);
+        Average_Psth_KDEfiltered_SUAction{nn}{uu}(3,:) = nanstd(PSTH_local)./(sum(~isnan(PSTH_local))).^0.5;
     end
-end
-
-% Now plot Rasters and PSTH
-if Flags(1)
+    
+    %% Now plot Raster and KDE of the spike rate
+    % Raster and average PSTH for each tetrode
     for uu=1:NT
+        Fig = figure();
+        subplot(2,1,1)
+        for cc=1:Nevents
+            hold on
+            yyaxis left
+            plot([0 Event_duration{nn}(cc)], cc-[0.5 0.5], '-','LineWidth',250/Nevents,'Color', [1 0.8 0.8])
+            for spike=1:length(SpikesTimesT_Action{nn}{cc,uu})
+                hold on
+                plot(SpikesTimesT_Action{nn}{cc,uu}(spike)*ones(2,1), cc-[0.9 0.1], 'k-', 'LineWidth',1)
+            end
+            hold on
+%             yyaxis right
+%             plot(Psth_KDEfilteredT_Action_t{nn}{cc,uu}, Psth_KDEfilteredT_Action{nn}{cc,uu}/max(Psth_KDEfilteredT_Action_scalef{nn}(:,uu))+cc-1, 'r-', 'LineWidth',2)
+        end
+        xlabel('Time centered at production onset (ms)')
+        yyaxis left
+        ylim([0 Nevents+1])
+        ylabel(sprintf('%s renditions', UActionText{aa}))
+        title(sprintf('Raster Tetrode %d on %s for %s', uu, Date,UActionText{aa}))
+        hold off
+        subplot(2,1,2)
+        shadedErrorBar(Average_Psth_KDEfiltered_TAction{nn}{uu}(1,:), Average_Psth_KDEfiltered_TAction{nn}{uu}(2,:), Average_Psth_KDEfiltered_TAction{nn}{uu}(3,:), {'r-', 'LineWidth',2})
+        xlabel('Time centered at production onset (ms)')
+        ylabel('Spike rate (/ms)')
+        Ylim = get(gca, 'YLim');
+        set(gca, 'YLim', [0 Ylim(2)]);
+        orient(Fig,'landscape')
+        Fig.PaperPositionMode = 'auto';
+        set(Fig,'Units', 'centimeters', 'Position', get(0, 'screensize'));
+        set(Fig,'PaperOrientation','landscape');
+        set(Fig,'PaperUnits','normalized');
+        set(Fig,'PaperPosition', [0 0 1 1]);
+        
+        print(Fig,fullfile(Output_dir,sprintf('%s_%s_%sPSTH_Tetrode%d_%d.pdf', Date(3:end), LoggerID,UActionText{aa},uu,Buffer)),'-dpdf')
+   end
+    
+    % KDE over all events for each tetrode
+    figure()
+    for uu=1:NT
+        subplot(NT,1,uu)
+        shadedErrorBar(Overall_Psth_KDEfilteredT_Action_t{nn}{uu}, Overall_Psth_KDEfilteredT_Action{nn}{uu}, Overall_Psth_KDEfilteredT_Action_confb95{nn}{uu}, {'k-', 'LineWidth',2})
+        xlabel('Time centered at production onset (ms)')
+        ylabel('Spike rate (/ms)')
+        Ylim = get(gca, 'YLim');
+        set(gca, 'YLim', [0 Ylim(2)]);
+        title(sprintf('KDE for %s Tetrode %d on %s', UActionText{aa},uu, Date))
+    end
+    
+    % Raster and average PSTH for each Single unit
+    for uu=1:NSU
         Fig=figure();
         subplot(2,1,1)
-        for hh=1:length(HearOnlyInd)
-            cc = HearOnlyInd(hh);
-            yyaxis left
+        for cc=1:Nevents
             hold on
-            plot([0 HearDuration(cc)], hh-[0.5 0.5], '-','LineWidth',250/length(HearOnlyInd),'Color', [0.8 0.8 1])
-            %         for dd=1:size(DataDeletion_HearCall{cc},1)
-            %             hold on
-            %             plot(DataDeletion_HearCall{cc}(dd,:), hh-[0.5 0.5], '-','LineWidth',250/length(HearOnlyInd),'Color', [0.8 0.8 0.8]) % RF artefact period
-            %         end
-            for spike=1:length(SpikesTTimes_HearCall{cc,uu})
+            yyaxis left
+            plot([0 Event_duration{nn}(cc)], cc-[0.5 0.5], '-','LineWidth',250/Nevents,'Color', [1 0.8 0.8])
+            for spike=1:length(SpikesTimesSU_Action{nn}{cc,uu})
                 hold on
-                plot(SpikesTTimes_HearCall{cc,uu}(spike)*ones(2,1), hh-[0.9 0.1], 'k-', 'LineWidth',1)
+                plot(SpikesTimesSU_Action{nn}{cc,uu}(spike)*ones(2,1), cc-[0.9 0.1], 'k-', 'LineWidth',1)
             end
             hold on
 %             yyaxis right
-%             plot(Psth_KDEfiltered_THearCall_t{cc,uu}, Psth_KDEfiltered_THearCall{cc,uu}/max(Psth_KDEfiltered_THearCall_scalef(HearOnlyInd,uu))+hh-1, 'r-', 'LineWidth',2)
+%             plot(Psth_KDEfilteredSU_Action_t{nn}{cc,uu}, Psth_KDEfilteredSU_Action{nn}{cc,uu}/max(Psth_KDEfilteredSU_Action_scalef{nn}(:,uu))+cc-1, 'r-', 'LineWidth',2)
         end
         yyaxis left
-        xlabel('Time centered at hearing onset (ms)')
-        ylim([0 length(HearOnlyInd)+1])
-        xlim(XLIM)
-        ylabel('Vocalization hearing renditions')
-        title(sprintf('Raster Tetrode %d on %s', uu, Date))
+        xlabel('Time centered at production onset (ms)')
+        ylim([0 Nevents+1])
+        ylabel(sprintf('%s renditions', UActionText{aa}))
+        title(sprintf('Raster Single Unit %d on %s for %s', uu, Date,UActionText{aa}))
         hold off
-        
         subplot(2,1,2)
-        shadedErrorBar(Average_Psth_KDEfiltered_THearCall{uu}(1,:), Average_Psth_KDEfiltered_THearCall{uu}(2,:), Average_Psth_KDEfiltered_THearCall{uu}(3,:), {'b-', 'LineWidth',2})
-        xlim(XLIM)
-        ylim(YLIM_T)
-        xlabel('Time centered at hearing onset (ms)')
+        shadedErrorBar(Average_Psth_KDEfiltered_SUAction{nn}{uu}(1,:), Average_Psth_KDEfiltered_SUAction{nn}{uu}(2,:), Average_Psth_KDEfiltered_SUAction{nn}{uu}(3,:), {'r-', 'LineWidth',2})
+        xlabel('Time centered at production onset (ms)')
         ylabel('Spike rate (/ms)')
+        Ylim = get(gca, 'YLim');
+        set(gca, 'YLim', [0 Ylim(2)]);
         orient(Fig,'landscape')
         Fig.PaperPositionMode = 'auto';
         set(Fig,'Units', 'centimeters', 'Position', get(0, 'screensize'));
         set(Fig,'PaperOrientation','landscape');
         set(Fig,'PaperUnits','normalized');
         set(Fig,'PaperPosition', [0 0 1 1]);
-        print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocHearPSTH_Tetrode%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf')
+        
+        print(Fig,fullfile(Output_dir,sprintf('%s_%s_%sPSTH_SU%d_%d.pdf', Date(3:end), LoggerID,UActionText{aa},uu,Buffer)),'-dpdf')
     end
+    
+    % KDE of rate over all events for each single unit
+    figure()
+    for uu=1:NSU
+        subplot(NSU,1,uu)
+        shadedErrorBar(Overall_Psth_KDEfilteredSU_Action_t{nn}{uu}, Overall_Psth_KDEfilteredSU_Action{nn}{uu}, Overall_Psth_KDEfilteredSU_Action_confb95{nn}{uu}, {'k-', 'LineWidth',2})
+        xlabel('Time centered at production onset (ms)')
+        ylabel('Spike rate (/ms)')
+        Ylim = get(gca, 'YLim');
+        set(gca, 'YLim', [0 Ylim(2)]);
+        title(sprintf('KDE for %s Single Unit %d on %s', UActionText{aa},uu, Date))
+    end
+    
+    
+%     %Loop through events and plot LFP and RAW data for all channels for
+%     %each event
+%     
+%     Nchannels = size(LFP_Action{nn},2);
+%     for ee=1:Nevents
+%         F100=figure(100);
+%         for cc=1:Nchannels
+%             subplot(Nchannels/2,2,cc)
+%             plot(Raw_Action{nn}{ee,cc}(1:round(2*length(Raw_Action{nn}{ee,cc})/7)), '-k', 'LineWidth',2)
+%             title(sprintf('Voltage trace Ch %d event %d/%d', cc-1,ee, Nevents))
+%         end
+%         
+%         F101=figure(101);
+%         for cc=1:Nchannels
+%             subplot(Nchannels/2,2,cc)
+%             plot(LFP_Action{nn}{ee,cc}(1:round(2*length(LFP_Action{nn}{ee,cc})/7)), '-k', 'LineWidth',2)
+%             title(sprintf('LFP Ch %d event %d/%d', cc-1,ee, Nevents))
+%         end
+%         
+%         pause(1)
+%         clf(F100)
+%         clf(F101)
+%     end    
+    
 end
 
-if Flags(2)
-    for uu=1:NSU
-       Fig= figure();
-        subplot(2,1,1)
-        for hh=1:length(HearOnlyInd)
-            cc = HearOnlyInd(hh);
-            yyaxis left
-            hold on
-            plot([0 HearDuration(cc)], hh-[0.5 0.5], '-','LineWidth',250/length(HearOnlyInd),'Color', [0.8 0.8 1])
-            %         for dd=1:size(DataDeletion_HearCall{cc},1)
-            %             hold on
-            %             plot(DataDeletion_HearCall{cc}(dd,:), hh-[0.5 0.5], '-','LineWidth',250/length(HearOnlyInd),'Color', [0.8 0.8 0.8]) % RF artefact period
-            %         end
-            for spike=1:length(SpikesTimes_HearCall{cc,uu})
-                hold on
-                plot(SpikesTimes_HearCall{cc,uu}(spike)*ones(2,1), hh-[0.9 0.1], 'k-', 'LineWidth',1)
-            end
-            hold on
-%             yyaxis right
-%             plot(Psth_KDEfiltered_HearCall_t{cc,uu}, Psth_KDEfiltered_HearCall{cc,uu}/max(Psth_KDEfiltered_HearCall_scalef(HearOnlyInd,uu))+hh-1, 'r-', 'LineWidth',2)
-        end
-        yyaxis left
-        xlabel('Time centered at hearing onset (ms)')
-        ylim([0 length(HearOnlyInd)+1])
-        xlim(XLIM)
-        ylabel('Vocalization hearing renditions')
-        title(sprintf('Raster Single Unit %d on %s', uu, Date))
-        hold off
-        
-        subplot(2,1,2)
-        shadedErrorBar(Average_Psth_KDEfiltered_HearCall{uu}(1,:), Average_Psth_KDEfiltered_HearCall{uu}(2,:), Average_Psth_KDEfiltered_HearCall{uu}(3,:), {'b-', 'LineWidth',2})
-        xlim(XLIM)
-        ylim(YLIM_SU)
-        xlabel('Time centered at hearing onset (ms)')
-        ylabel('Spike rate (/ms)')
-        orient(Fig,'landscape')
-        Fig.PaperPositionMode = 'auto';
-        set(Fig,'Units', 'centimeters', 'Position', get(0, 'screensize'));
-        set(Fig,'PaperOrientation','landscape');
-        set(Fig,'PaperUnits','normalized');
-        set(Fig,'PaperPosition', [0 0 1 1]);
-        print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocHearPSTH_SU%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf')
-    end
-end
+               
+    
+
+
