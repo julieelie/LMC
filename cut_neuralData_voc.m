@@ -6,7 +6,7 @@ end
 MaxEventDur = NaN; % Set to NaN: The neural data is extracted for the whole duration of each event
 %% Identify Neural loggers and extract the neural data that correspond to the vocalizations
 % Get the number of loggers
-Logger_dirs = dir(fullfile(Loggers_dir, 'logger*'));
+Logger_dirs = dir(fullfile(Loggers_dir, '*ogger*'));
 NLogger = length(Logger_dirs);
 % Identify the type of logger and extract neural data
 LoggerType = cell(NLogger,1);
@@ -16,6 +16,17 @@ for ll=1:NLogger
     LData = load(fullfile(LDir(1).folder, LDir(1).name), 'logger_type', 'logger_serial_number');
     LoggerType{ll}  = LData.logger_type;
     if strcmp(LoggerType{ll}, 'Mous') || strcmp(LoggerType{ll}, 'Rat')
+        if Flags(4)    
+            SUFiles = dir(fullfile(LData_folder, '*TT*SS*.mat'));
+            if isempty(SUFiles)
+               SUNTTFiles = dir(fullfile(LData_folder, '*TT*SS*.ntt'));
+               if isempty(SUNTTFiles)
+                   error('No spike sorted files available although these data are requested\n');
+               else
+                   error('ntt files of spike sorted data need to be converted to mat files on a windows machine!\n');
+               end
+            end
+        end
         [~,Neuro_LFP.(sprintf('Logger%s', LData.logger_serial_number)), Neuro_spikesT.(sprintf('Logger%s', LData.logger_serial_number)),Neuro_spikes.(sprintf('Logger%s', LData.logger_serial_number))] = extract_timeslot_LFP_spikes(LData_folder, Voc_transc_time_refined, NeuroBuffer,MaxEventDur, Flags);
     end
 end
