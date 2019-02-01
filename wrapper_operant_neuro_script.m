@@ -1,8 +1,8 @@
 Path2ParamFile = '';
 addpath(genpath('/Users/elie/Documents/CODE/operant_bats'))
 addpath(genpath('/Users/elie/Documents/CODE/GeneralCode'))
-result_operant_bat(Path2ParamFile)
 
+%% Some important parameters, inputs
 % Get the path to audio data
 [AudioDataPath, DataFile ,~]=fileparts(Path2ParamFile);
 Date = DataFile(6:11);
@@ -15,6 +15,9 @@ Logger_dir = fullfile(AudioDataPath(1:(strfind(AudioDataPath, 'audio')-1)), 'log
 
 % Set the time buffer before behavior onset
 BufferBeforeOnset = 200; %ms
+
+%% RUN Behavioral and audio data EXtraction
+result_operant_bat(Path2ParamFile)
 
 %% Extract the neural data corresponding to the vocalizations
 fprintf(' EXTRACTING NEURAL DATA CORRESPONDING TO VOCALIZATIONS \n')
@@ -30,11 +33,11 @@ Header = RecTableData(1,:);
 BatIDCol = find(contains(Header, 'Bat'));
 NLCol = find(contains(Header, 'NL'));
 ALCol = find(contains(Header, 'AL-throat'));
-NL_ID = DataInfo{NLCol};
+NL_ID = cell2mat(DataInfo(NLCol));
 for nl=1:length(NL_ID)
-    NeuroLoggerID = ['Logger' NL_ID{nl}];
+    NeuroLoggerID = ['Logger' num2str(NL_ID(nl))];
     AL_ID = DataInfo{ALCol(find(ALCol<NLCol(nl),1,'last'))};
-    AudioLoggerID = ['Logger' AL_ID];
+    AudioLoggerID = ['Logger' num2str(AL_ID)];
     Flags=[1 1];
     fprintf(' PSTH of NEURAL DATA CORRESPONDING TO VOCALIZATIONS \n')
     plot_psth_voc(Logger_dir, Date, ExpStartTime, AudioLoggerID, NeuroLoggerID, Flags, BufferBeforeOnset)

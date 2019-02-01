@@ -12,7 +12,7 @@ FigureSize = [1 1 30 20];
 load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, Delay)), 'IndVocStartRaw_merged', 'IndVocStopRaw_merged', 'IndVocStartPiezo_merged', 'IndVocStopPiezo_merged','Neuro_LFP','Neuro_spikes','Neuro_spikesT');
 load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date, ExpStartTime)), 'FS','Piezo_FS','Piezo_wave','VocFilename','Voc_transc_time_refined');
 
-EventDir = dir(fullfile(Loggers_dir,sprintf('l%s', NeuroLoggerID(2:end)), 'extracted_data',sprintf('*%s*EVENTS.mat', Date)));
+EventDir = dir(fullfile(Loggers_dir,sprintf('*%s', NeuroLoggerID(2:end)), 'extracted_data',sprintf('*%s*EVENTS.mat', Date)));
 load(fullfile(EventDir.folder, EventDir.name), 'DataDeletionOnsetOffset_usec_sync')
 if nargin<7
     Delay = 500;% time in ms to extract data before and after vocalization onset/offset
@@ -26,7 +26,8 @@ YLIM_T = [0 0.1];
 
 %% extract the spike arrival times from NeuroLoggerID for each vocalization cut of AudioLoggerID
 % centering them on the vocalization cut onset
-NV = length(VocFilename);
+VocInd = find(~cellfun('isempty',IndVocStartRaw_merged));
+NV = length(VocInd);
 
 % Count the number of vocalization cuts where the targeted animal is
 % vocalizing vs hearing for preallocation of space
@@ -38,7 +39,7 @@ FocIndAudio = find(contains(Fns_AL, AudioLoggerID));
 FocIndNeuro = find(contains(Fns_Neuro, NeuroLoggerID));
 %     OthInd = find(~contains(Fns_AL, AudioLoggerID));
 for vv=1:NV
-   VocCall = VocCall + length(IndVocStartRaw_merged{vv}{FocIndAudio});%#ok<IDISVAR,USENS>
+   VocCall = VocCall + length(IndVocStartRaw_merged{VocInd(vv)}{FocIndAudio});%#ok<IDISVAR,USENS>
 end
 
 % Now loop through calls and gather data
@@ -61,11 +62,11 @@ end
 VocCall = 0;
 Ncall = nan(NV,1);
 for vv=1:NV
-    Ncall(vv) = length(IndVocStartRaw_merged{vv}{FocIndAudio});
+    Ncall(vv) = length(IndVocStartRaw_merged{VocInd(vv)}{FocIndAudio});
     if Ncall(vv)
         for nn=1:Ncall(vv)
             VocCall = VocCall+1;
-            VocDuration(VocCall) = (IndVocStopRaw_merged{vv}{FocIndAudio}(nn) -IndVocStartRaw_merged{vv}{FocIndAudio}(nn))/FS*1000; %#ok<IDISVAR,USENS>
+            VocDuration(VocCall) = (IndVocStopRaw_merged{VocInd(vv)}{FocIndAudio}(nn) -IndVocStartRaw_merged{VocInd(vv)}{FocIndAudio}(nn))/FS*1000; %#ok<IDISVAR,USENS>
             % Identify if any deletion period fall within the spike sequence for the call
 %             VocStartTransc = Voc_transc_time_refined(vv,1) + IndVocStartRaw_merged{vv}{FocIndAudio}(nn)/FS*1000 - Delay;
 %             VocStopTransc = Voc_transc_time_refined(vv,1) + IndVocStopRaw_merged{vv}{FocIndAudio}(nn)/FS*1000 + Delay;
@@ -80,8 +81,8 @@ for vv=1:NV
             t=-Delay: Bin_ms : round((VocDuration(VocCall) + Delay)/Bin_ms)*Bin_ms;
             if Flags(1)
                 for uu=1:NT
-                    IndT01 = logical((Neuro_spikesT.(Fns_Neuro{FocIndNeuro}){vv,uu}>(IndVocStartRaw_merged{vv}{FocIndAudio}(nn)/FS*1000 - Delay)) .* (Neuro_spikesT.(Fns_Neuro{FocIndNeuro}){vv,uu}<(IndVocStopRaw_merged{vv}{FocIndAudio}(nn)/FS*1000 + Delay)));
-                    SpikesTTimes_VocCall{VocCall,uu} = Neuro_spikesT.(Fns_Neuro{FocIndNeuro}){vv,uu}(IndT01)- IndVocStartRaw_merged{vv}{FocIndAudio}(nn)/FS*1000;
+                    IndT01 = logical((Neuro_spikesT.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}>(IndVocStartRaw_merged{VocInd(vv)}{FocIndAudio}(nn)/FS*1000 - Delay)) .* (Neuro_spikesT.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}<(IndVocStopRaw_merged{VocInd(vv)}{FocIndAudio}(nn)/FS*1000 + Delay)));
+                    SpikesTTimes_VocCall{VocCall,uu} = Neuro_spikesT.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}(IndT01)- IndVocStartRaw_merged{VocInd(vv)}{FocIndAudio}(nn)/FS*1000;
                     % calculate the density estimate
                     [y,Psth_KDEfiltered_TVocCall_t{VocCall,uu},~]=ssvkernel(SpikesTTimes_VocCall{VocCall,uu},t);
                     % y is a density function that sums to 1
@@ -93,8 +94,8 @@ for vv=1:NV
             end
             if Flags(2)
                 for uu=1:NSU
-                    IndSU01 = logical((Neuro_spikes.(Fns_Neuro{FocIndNeuro}){vv,uu}>(IndVocStartRaw_merged{vv}{FocIndAudio}(nn)/FS*1000 - Delay)) .* (Neuro_spikes.(Fns_Neuro{FocIndNeuro}){vv,uu}<(IndVocStopRaw_merged{vv}{FocIndAudio}(nn)/FS*1000 + Delay)));
-                    SpikesTimes_VocCall{VocCall,uu} = Neuro_spikes.(Fns_Neuro{FocIndNeuro}){vv,uu}(IndSU01) - IndVocStartRaw_merged{vv}{FocIndAudio}(nn)/FS*1000;
+                    IndSU01 = logical((Neuro_spikes.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}>(IndVocStartRaw_merged{VocInd(vv)}{FocIndAudio}(nn)/FS*1000 - Delay)) .* (Neuro_spikes.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}<(IndVocStopRaw_merged{VocInd(vv)}{FocIndAudio}(nn)/FS*1000 + Delay)));
+                    SpikesTimes_VocCall{VocCall,uu} = Neuro_spikes.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}(IndSU01) - IndVocStartRaw_merged{VocInd(vv)}{FocIndAudio}(nn)/FS*1000;
                     % calculate the density estimate
                     [y,Psth_KDEfiltered_VocCall_t{VocCall,uu},~]=ssvkernel(SpikesTimes_VocCall{VocCall,uu},t);
                     % y is a density function that sums to 1
@@ -247,7 +248,8 @@ end
 
 %% extract the spike arrival times from NeuroLoggerID for each vocalization cut of all other audiologgers
 % centering them on the vocalization cut onset
-NV = length(VocFilename);
+VocInd = find(~cellfun('isempty',IndVocStartRaw_merged));
+NV = length(VocInd);
 
 % Count the number of vocalization cuts where the targeted animal is
 %  hearing for preallocation of space
@@ -256,7 +258,7 @@ HearCall = 0;
 OthInd = find(~contains(Fns_AL, AudioLoggerID));
 for vv=1:NV
     for ll=1:length(OthInd)
-        HearCall = HearCall + length(IndVocStartRaw_merged{vv}{OthInd(ll)});
+        HearCall = HearCall + length(IndVocStartRaw_merged{VocInd(vv)}{OthInd(ll)});
     end
 end
 
@@ -281,11 +283,11 @@ HearOnly = nan(1,HearCall);
 HearCall = 0;
 for vv=1:NV
     for ll=1:length(OthInd)
-        NcallHear = length(IndVocStartRaw_merged{vv}{OthInd(ll)});
+        NcallHear = length(IndVocStartRaw_merged{VocInd(vv)}{OthInd(ll)});
         if NcallHear
             for nn=1:NcallHear
                 HearCall = HearCall+1;
-                HearDuration(HearCall) = (IndVocStopRaw_merged{vv}{OthInd(ll)}(nn) -IndVocStartRaw_merged{vv}{OthInd(ll)}(nn))/FS*1000;
+                HearDuration(HearCall) = (IndVocStopRaw_merged{VocInd(vv)}{OthInd(ll)}(nn) -IndVocStartRaw_merged{VocInd(vv)}{OthInd(ll)}(nn))/FS*1000;
                 % Identify if any deletion period fall within the spike sequence for the call
 %                 VocStartTransc = Voc_transc_time_refined(vv,1) + IndVocStartRaw_merged{vv}{OthInd(ll)}(nn)/FS*1000 - Delay;
 %                 VocStopTransc = Voc_transc_time_refined(vv,1) + IndVocStopRaw_merged{vv}{OthInd(ll)}(nn)/FS*1000 + Delay;
@@ -299,8 +301,8 @@ for vv=1:NV
                 t=-Delay: Bin_ms : round((HearDuration(HearCall) + Delay)/Bin_ms)*Bin_ms;
                 % Is this call heard at the same time the focal bat is
                 % producing a call  within the window 100ms before 100ms after a vocalization?
-                OnsetSync = sum(((IndVocStartRaw_merged{vv}{FocIndAudio} - Delay*FS/1000) < IndVocStartRaw_merged{vv}{OthInd(ll)}(nn)) .* ((IndVocStopRaw_merged{vv}{FocIndAudio} + Delay*FS/1000) > IndVocStartRaw_merged{vv}{OthInd(ll)}(nn)));
-                OffsetSync = sum(((IndVocStartRaw_merged{vv}{FocIndAudio} - Delay*FS/1000) < IndVocStopRaw_merged{vv}{OthInd(ll)}(nn)) .* ((IndVocStopRaw_merged{vv}{FocIndAudio} + Delay*FS/1000) > IndVocStopRaw_merged{vv}{OthInd(ll)}(nn)));
+                OnsetSync = sum(((IndVocStartRaw_merged{VocInd(vv)}{FocIndAudio} - Delay*FS/1000) < IndVocStartRaw_merged{VocInd(vv)}{OthInd(ll)}(nn)) .* ((IndVocStopRaw_merged{VocInd(vv)}{FocIndAudio} + Delay*FS/1000) > IndVocStartRaw_merged{VocInd(vv)}{OthInd(ll)}(nn)));
+                OffsetSync = sum(((IndVocStartRaw_merged{VocInd(vv)}{FocIndAudio} - Delay*FS/1000) < IndVocStopRaw_merged{VocInd(vv)}{OthInd(ll)}(nn)) .* ((IndVocStopRaw_merged{VocInd(vv)}{FocIndAudio} + Delay*FS/1000) > IndVocStopRaw_merged{VocInd(vv)}{OthInd(ll)}(nn)));
                 if OnsetSync || OffsetSync % there is an overlap
                     HearOnly(HearCall) = 0;
                 else % No overlap
@@ -308,8 +310,8 @@ for vv=1:NV
                 end
                 if Flags(1)
                     for uu=1:NT
-                        IndT01 = logical((Neuro_spikesT.(Fns_Neuro{FocIndNeuro}){vv,uu}>(IndVocStartRaw_merged{vv}{OthInd(ll)}(nn)/FS*1000 - Delay)) .* (Neuro_spikesT.(Fns_Neuro{FocIndNeuro}){vv,uu}<(IndVocStopRaw_merged{vv}{OthInd(ll)}(nn)/FS*1000 + Delay)));
-                        SpikesTTimes_HearCall{HearCall,uu} = Neuro_spikesT.(Fns_Neuro{FocIndNeuro}){vv,uu}(IndT01)- IndVocStartRaw_merged{vv}{OthInd(ll)}(nn)/FS*1000;
+                        IndT01 = logical((Neuro_spikesT.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}>(IndVocStartRaw_merged{VocInd(vv)}{OthInd(ll)}(nn)/FS*1000 - Delay)) .* (Neuro_spikesT.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}<(IndVocStopRaw_merged{VocInd(vv)}{OthInd(ll)}(nn)/FS*1000 + Delay)));
+                        SpikesTTimes_HearCall{HearCall,uu} = Neuro_spikesT.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}(IndT01)- IndVocStartRaw_merged{VocInd(vv)}{OthInd(ll)}(nn)/FS*1000;
                         % calculate the density estimate
                         [y,Psth_KDEfiltered_THearCall_t{HearCall,uu},~]=ssvkernel(SpikesTTimes_HearCall{HearCall,uu},t);
                         % y is a density function that sums to 1
@@ -321,8 +323,8 @@ for vv=1:NV
                 end
                 if Flags(2)
                     for uu=1:NSU
-                        IndSU01 = logical((Neuro_spikes.(Fns_Neuro{FocIndNeuro}){vv,uu}>(IndVocStartRaw_merged{vv}{OthInd(ll)}(nn)/FS*1000 - Delay)) .* (Neuro_spikes.(Fns_Neuro{FocIndNeuro}){vv,uu}<(IndVocStopRaw_merged{vv}{OthInd(ll)}(nn)/FS*1000 + Delay)));
-                        SpikesTimes_HearCall{HearCall,uu} = Neuro_spikes.(Fns_Neuro{FocIndNeuro}){vv,uu}(IndSU01) - IndVocStartRaw_merged{vv}{OthInd(ll)}(nn)/FS*1000;
+                        IndSU01 = logical((Neuro_spikes.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}>(IndVocStartRaw_merged{VocInd(vv)}{OthInd(ll)}(nn)/FS*1000 - Delay)) .* (Neuro_spikes.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}<(IndVocStopRaw_merged{VocInd(vv)}{OthInd(ll)}(nn)/FS*1000 + Delay)));
+                        SpikesTimes_HearCall{HearCall,uu} = Neuro_spikes.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}(IndSU01) - IndVocStartRaw_merged{VocInd(vv)}{OthInd(ll)}(nn)/FS*1000;
                         % calculate the density estimate
                         [y,Psth_KDEfiltered_HearCall_t{HearCall,uu},~]=ssvkernel(SpikesTimes_HearCall{HearCall,uu},t);
                         % y is a density function that sums to 1
