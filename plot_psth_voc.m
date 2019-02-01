@@ -344,7 +344,7 @@ end
 % First organize the data into a matrix where each column represent a time
 % bin and each row a vocalization for each tetrode/unit then calculate the
 % nanmean and nanste over rows.
-if Flags(1)
+if Flags(1) && (HearCall>1)
     Average_Psth_KDEfiltered_THearCall=cell(NT,1);
     HearOnlyInd = find(HearOnly);
     for uu=1:NT
@@ -364,7 +364,7 @@ if Flags(1)
     end
 end
 
-if Flags(2)
+if Flags(2) && (HearCall>1)
     Average_Psth_KDEfiltered_HearCall=cell(NSU,1);
     HearOnlyInd = find(HearOnly);
     for uu=1:NSU
@@ -385,7 +385,7 @@ if Flags(2)
 end
 
 % Now plot Rasters and PSTH
-if Flags(1)
+if Flags(1) && (HearCall>1)
     for uu=1:NT
         Fig=figure();
         subplot(2,1,1)
@@ -413,13 +413,14 @@ if Flags(1)
         ylabel('Vocalization hearing renditions')
         title(sprintf('Raster Tetrode %d on %s', uu, Date))
         hold off
-        
-        subplot(2,1,2)
-        shadedErrorBar(Average_Psth_KDEfiltered_THearCall{uu}(1,:), Average_Psth_KDEfiltered_THearCall{uu}(2,:), Average_Psth_KDEfiltered_THearCall{uu}(3,:), {'b-', 'LineWidth',2})
-        xlim(XLIM)
-        ylim(YLIM_T)
-        xlabel('Time centered at hearing onset (ms)')
-        ylabel('Spike rate (/ms)')
+        if (HearCall>1)
+            subplot(2,1,2)
+            shadedErrorBar(Average_Psth_KDEfiltered_THearCall{uu}(1,:), Average_Psth_KDEfiltered_THearCall{uu}(2,:), Average_Psth_KDEfiltered_THearCall{uu}(3,:), {'b-', 'LineWidth',2})
+            xlim(XLIM)
+            ylim(YLIM_T)
+            xlabel('Time centered at hearing onset (ms)')
+            ylabel('Spike rate (/ms)')
+         end
         orient(Fig,'landscape')
         Fig.PaperPositionMode = 'auto';
         set(Fig,'Units', 'centimeters', 'Position', get(0, 'screensize'));
@@ -430,7 +431,7 @@ if Flags(1)
     end
 end
 
-if Flags(2)
+if Flags(2) && (HearCall>1)
     for uu=1:NSU
        Fig= figure();
         subplot(2,1,1)
@@ -459,12 +460,15 @@ if Flags(2)
         title(sprintf('Raster Single Unit %d on %s', uu, Date))
         hold off
         
-        subplot(2,1,2)
-        shadedErrorBar(Average_Psth_KDEfiltered_HearCall{uu}(1,:), Average_Psth_KDEfiltered_HearCall{uu}(2,:), Average_Psth_KDEfiltered_HearCall{uu}(3,:), {'b-', 'LineWidth',2})
-        xlim(XLIM)
-        ylim(YLIM_SU)
-        xlabel('Time centered at hearing onset (ms)')
-        ylabel('Spike rate (/ms)')
+        if (HearCall>1)
+            subplot(2,1,2)
+            shadedErrorBar(Average_Psth_KDEfiltered_HearCall{uu}(1,:), Average_Psth_KDEfiltered_HearCall{uu}(2,:), Average_Psth_KDEfiltered_HearCall{uu}(3,:), {'b-', 'LineWidth',2})
+            xlim(XLIM)
+            ylim(YLIM_SU)
+            xlabel('Time centered at hearing onset (ms)')
+            ylabel('Spike rate (/ms)')
+        end
+        
         orient(Fig,'landscape')
         Fig.PaperPositionMode = 'auto';
         set(Fig,'Units', 'centimeters', 'Position', get(0, 'screensize'));
