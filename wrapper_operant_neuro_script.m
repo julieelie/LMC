@@ -13,19 +13,32 @@ Path2RecordingTable = '/Users/elie/Google Drive/BatmanData/RecordingLogs/recordi
 % Set the path to logger data
 Logger_dir = fullfile(AudioDataPath(1:(strfind(AudioDataPath, 'audio')-1)), 'logger',['20' Date]);
 
+% Set the time buffer before behavior onset
+BufferBeforeOnset = 200; %ms
+
 %% Extract the neural data corresponding to the vocalizations
 fprintf(' EXTRACTING NEURAL DATA CORRESPONDING TO VOCALIZATIONS \n')
-BufferBeforeOnset = 200; %ms
 FlagsExtr = [0 1 1 1]; % FlagsExtr(1)= Raw data, FlagsExtr(2) = LFP, FlagsExtr(3) = Tetrodes, FlagsExtr(4) = single units
 cut_neuralData_voc(Logger_dir,Date, ExpStartTime,FlagsExtr,BufferBeforeOnset);
 
 %% Plot PSTH of the bats hearing or producing a vocalization
-
-AudioLoggerID = {'Logger5';'Logger5' ; 'Logger7' ;'Logger7';'Logger5';'Logger5';'Logger5';'Logger5';'Logger5';'Logger5';'Logger5'};
-NeuroLoggerID = 'Logger16';
-Flags=[1 1];
-fprintf(' PSTH of NEURAL DATA CORRESPONDING TO VOCALIZATIONS \n')
-plot_psth_voc(Logger_dir, Date, ExpStartTime, AudioLoggerID{dd}, NeuroLoggerID, Flags, 200)
+% Find the ID of the Neural loggers and corresponding audiologger for each implanted bat
+[~,~,RecTableData]=xlsread(Path2RecordingTable,1,'A1:O200','basic');
+RowData = find((cell2mat(RecTableData(2:end,1))== str2double(Date))) +1;
+DataInfo = RecTableData(RowData,:);
+Header = RecTableData(1,:);
+BatIDCol = find(contains(Header, 'Bat'));
+NLCol = find(contains(Header, 'NL'));
+ALCol = find(contains(Header, 'AL-throat'));
+NL_ID = DataInfo{NLCol};
+for nl=1:length(NL_ID)
+    NeuroLoggerID = ['Logger' NL_ID{nl}];
+    AL_ID = DataInfo{ALCol(find(ALCol<NLCol(nl),1,'last'))};
+    AudioLoggerID = ['Logger' AL_ID];
+    Flags=[1 1];
+    fprintf(' PSTH of NEURAL DATA CORRESPONDING TO VOCALIZATIONS \n')
+    plot_psth_voc(Logger_dir, Date, ExpStartTime, AudioLoggerID, NeuroLoggerID, Flags, BufferBeforeOnset)
+end
 close all
 %     pause()
 
