@@ -1,4 +1,7 @@
-Path2ParamFile = '';
+%Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190202/HoHa_190202_1046_VocTrigger_param.txt';
+% Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190131/HoHa_190131_1108_VocTrigger_param.txt';
+Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190129/HoHa_190129_1023_VocTrigger_param.txt';
+
 addpath(genpath('/Users/elie/Documents/CODE/operant_bats'))
 addpath(genpath('/Users/elie/Documents/CODE/GeneralCode'))
 
@@ -26,7 +29,7 @@ cut_neuralData_voc(Logger_dir,Date, ExpStartTime,FlagsExtr,BufferBeforeOnset);
 
 %% Plot PSTH of the bats hearing or producing a vocalization
 % Find the ID of the Neural loggers and corresponding audiologger for each implanted bat
-[~,~,RecTableData]=xlsread(Path2RecordingTable,1,'A1:O200','basic');
+[~,~,RecTableData]=xlsread(Path2RecordingTable,1,'A1:P200','basic');
 RowData = find((cell2mat(RecTableData(2:end,1))== str2double(Date))) +1;
 DataInfo = RecTableData(RowData,:);
 Header = RecTableData(1,:);

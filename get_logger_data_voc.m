@@ -1,4 +1,24 @@
-function get_logger_data_voc(Audio_dir, Loggers_dir, Date, ExpStartTime)
+function get_logger_data_voc(Audio_dir, Loggers_dir, Date, ExpStartTime, varargin)
+%% This function extract the piezo data of the vocalization identified by voc_localize and voc_localize_operant
+% First it uses the output of these last codes, voc_transc_time, to extract
+% in the logger recordings,
+% the corresponding snippets of sound extracted by voc-localize and
+% voc_localize_operant in the environmental microphone recordings, adding
+% 100 ms of extra logger data before and after the exact sound section.
+% Second it performs for each sound section a better allignment of the data by performing a
+% cross-correlation between the logger signal that most likely correspond
+% to the vocalizer and the ambient microphone signal. Among other things, it returns a beter
+% estimate of the onset and offset times of the sound extract in
+% transceiver time, Voc_transc_time_refined, the Mic recording of the
+% corresponding sound extract (Raw_wave), the audio-loggers recording of
+% the corresponding sound extract (Piezo_wave). Data are saved in an output
+% file.
+
+% Optional argument: SerialNumber indicate the serial number of the audio
+% loggers for which you want to extract data
+pnames = {'SerialNumber'};
+dflts  = {[]};
+[SerialNumber] = internal.stats.parseArgs(pnames,dflts,varargin{:});
 
 Buffer = 100; % Let's cut the audio extracts Buffer ms before and after the predicted time according to audio/transceiver allignment to better allign
 BandPassFilter = [1000 5000 9000];
@@ -18,11 +38,17 @@ Logger_dirs = dir(fullfile(Loggers_dir, '*ogger*'));
 NLogger = length(Logger_dirs);
 % Identify the type of logger and initialize output variables
 LoggerType = cell(NLogger,1);
+SerialNumber_of_interest = nan(NLogger,1);
 for ll=1:NLogger
     LDir = dir(fullfile(Logger_dirs(ll).folder, Logger_dirs(ll).name, 'extracted_data', '*CSC*.mat'));
     LData = load(fullfile(LDir(1).folder, LDir(1).name), 'logger_type', 'logger_serial_number');
     LoggerType{ll}  = LData.logger_type;
-    if strcmp(LoggerType{ll}, 'Audi')
+    if isempty(SerialNumber)
+        SerialNumber_of_interest(ll) = 1;
+    else
+        SerialNumber_of_interest(ll) = sum(SerialNumber==str2num(LData.logger_serial_number));
+    end
+    if strcmp(LoggerType{ll}, 'Audi') && SerialNumber_of_interest(ll)
         Piezo_wave.(sprintf('Logger%s', LData.logger_serial_number)) = cell(Nvoc,1);
         Piezo_FS.(sprintf('Logger%s', LData.logger_serial_number)) = nan(Nvoc,1);
     end
@@ -31,7 +57,7 @@ Raw_wave = cell(Nvoc,1);
 
 %% Extract the audio loggers data that correspond to the vocalizations
 fprintf(1, '*** Extract audio loggers data for each vocalization ***\n');
-AudioLogs = find(contains(LoggerType, 'Audi'));
+AudioLogs = find(contains(LoggerType, 'Audi') .* SerialNumber_of_interest);
 for ll=1:length(AudioLogs)
     fprintf(1, 'AL %d/%d\n', ll, length(AudioLogs));
     % load the audio data
@@ -85,8 +111,16 @@ for ll=1:length(AudioLogs)
             IndTSOff = find(LData.Timestamps_of_first_samples_usec>(VocOffset_time*10^3), 1, 'First');
             if ~isempty(IndTSOff)
                 % deduct the corresponding onset and offset samples
-                IndSampOn = round(LData.Indices_of_first_and_last_samples(IndTSOn,1) + LData.Estimated_channelFS_Transceiver(IndTSOn)*(10^-6)*(VocOnset_time*10^3 - LData.Timestamps_of_first_samples_usec(IndTSOn)));
-                IndSampOff = round(LData.Indices_of_first_and_last_samples(IndTSOff,1) - LData.Estimated_channelFS_Transceiver(IndTSOff)*(10^-6)*(LData.Timestamps_of_first_samples_usec(IndTSOff) - VocOffset_time*10^3));
+                if ~isnan(LData.Estimated_channelFS_Transceiver(IndTSOn))
+                    IndSampOn = round(LData.Indices_of_first_and_last_samples(IndTSOn,1) + LData.Estimated_channelFS_Transceiver(IndTSOn)*(10^-6)*(VocOnset_time*10^3 - LData.Timestamps_of_first_samples_usec(IndTSOn)));
+                else
+                    IndSampOn = round(LData.Indices_of_first_and_last_samples(IndTSOn,1) + nanmean(LData.Estimated_channelFS_Transceiver)*(10^-6)*(VocOnset_time*10^3 - LData.Timestamps_of_first_samples_usec(IndTSOn)));
+                end
+                if ~isnan(LData.Estimated_channelFS_Transceiver(IndTSOff))
+                    IndSampOff = round(LData.Indices_of_first_and_last_samples(IndTSOff,1) - LData.Estimated_channelFS_Transceiver(IndTSOff)*(10^-6)*(LData.Timestamps_of_first_samples_usec(IndTSOff) - VocOffset_time*10^3));
+                else
+                    IndSampOff = round(LData.Indices_of_first_and_last_samples(IndTSOff,1) - nanmean(LData.Estimated_channelFS_Transceiver)*(10^-6)*(LData.Timestamps_of_first_samples_usec(IndTSOff) - VocOffset_time*10^3));
+                end
             else
                 % find the time stamp on the logger that is closest to before
                 % the snippet of sound offset
@@ -199,9 +233,8 @@ for vv=1:Nvoc
     else
            HRMS_Ind = find(RMS_audioLog == max(RMS_audioLog));
         fprintf('The %dth logger is chosen as the loudest vocalizer\n',HRMS_Ind);
-        Agree = 0;
-        Agree = input('Do you agree? yes (1), No (0)\n');
-        if ~Agree
+        Agree = input('Do you agree? yes (leave empty), No (any input)\n');
+        if ~isempty(Agree)
             HRMS_Ind = input('Indicate your choice:\n');
         end
 
@@ -225,6 +258,7 @@ for vv=1:Nvoc
             legend(sprintf('BandPass + Resampled %d Hz', 4*BandPassFilter(2)))
             hold off
         end
+        
         %Resamp_Filt_Logger_wav{ll}(109365:(length(t2)-14937))=zeros(size((109365:(length(t2)-14937))));
         % Localize vocalizations on the selected loggers and set to zero the
         % signal outside of putative vocalizations.
@@ -307,9 +341,9 @@ for vv=1:Nvoc
             title(sprintf('Logger filtered resampled data Voc %d/%d',vv,Nvoc))
         end
         pause(1)
-        Player= audioplayer((Resamp_Filt_Raw_wav -mean(Resamp_Filt_Raw_wav))/std(Resamp_Filt_Raw_wav), 4*BandPassFilter(2)); %#ok<TNMLP>
-        play(Player)
-        pause()
+%         Player= audioplayer((Resamp_Filt_Raw_wav -mean(Resamp_Filt_Raw_wav))/std(Resamp_Filt_Raw_wav), 4*BandPassFilter(2)); %#ok<TNMLP>
+%         play(Player)
+%         pause(2)
         clf(F1)
         clf(F2)
         clf(F3)
@@ -318,8 +352,8 @@ for vv=1:Nvoc
         % calculating the portion of data to erase or add in front of the
         % vocalization on the logger recordings.
         TimeDiff_audio = LagDiff/(4*BandPassFilter(2)); % this should be negative the reference being the vocalization onset -buffer of 100ms
-        OnsetAudiosamp(vv) = round(-TimeDiff_audio*Piezo_FS.(Fns_AL{ll})(vv));
-        OffsetAudiosamp(vv) = round(length(Piezo_wave.(Fns_AL{ll}){vv}) - (2*Buffer*(10^-3)*Piezo_FS.(Fns_AL{ll})(vv) - OnsetAudiosamp(vv)));
+        OnsetAudiosamp(vv) = round(-TimeDiff_audio*Piezo_FS.(Fns_AL{ll})(vv)); % This new onset is taking into account the Buffer that was added at the beginning, suppressing it
+        OffsetAudiosamp(vv) = round(OnsetAudiosamp(vv) + length(Piezo_wave.(Fns_AL{ll}){vv}) - 2*Buffer*(10^-3)*Piezo_FS.(Fns_AL{ll})(vv));
         Voc_transc_time_refined(vv,1) = Buffer + LagDiff/(4*BandPassFilter(2)) + VocExt.Voc_transc_time(vv,1); % This is the new estimate of VocExt.Voc_transc_time(vv,1) in ms
         Voc_transc_time_refined(vv,2) = Voc_transc_time_refined(vv,1) + diff(VocExt.Voc_transc_time(vv,:)); % This is the new estimate of VocExt.Voc_transc_time(vv,2) in ms
     end

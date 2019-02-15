@@ -18,7 +18,7 @@ if nargin<7
     Delay = 500;% time in ms to extract data before and after vocalization onset/offset
 end
 Response_samprate = 100;% Sampling rate of the KDE in Hz
-Bin_ms = 10; % size of the KDE binning
+Bin_ms = 1; % size of the KDE binning
 
 XLIM = [-Delay 3*Delay];
 YLIM_SU = [0 0.004];
@@ -344,7 +344,9 @@ end
 % First organize the data into a matrix where each column represent a time
 % bin and each row a vocalization for each tetrode/unit then calculate the
 % nanmean and nanste over rows.
-if Flags(1) && (HearCall>1)
+% Focus only on vocalizations that were heard while the bat was not
+% vocalizaing itself
+if Flags(1) && (HearCall>1) && sum(HearOnly)
     Average_Psth_KDEfiltered_THearCall=cell(NT,1);
     HearOnlyInd = find(HearOnly);
     for uu=1:NT
@@ -362,9 +364,11 @@ if Flags(1) && (HearCall>1)
         Average_Psth_KDEfiltered_THearCall{uu}(2,:) = nanmean(PSTH_local);
         Average_Psth_KDEfiltered_THearCall{uu}(3,:) = nanstd(PSTH_local)./(sum(~isnan(PSTH_local))).^0.5;
     end
+else
+    fprintf('No vocalization heard\n')
 end
 
-if Flags(2) && (HearCall>1)
+if Flags(2) && (HearCall>1) && sum(HearOnly)
     Average_Psth_KDEfiltered_HearCall=cell(NSU,1);
     HearOnlyInd = find(HearOnly);
     for uu=1:NSU
@@ -382,10 +386,12 @@ if Flags(2) && (HearCall>1)
         Average_Psth_KDEfiltered_HearCall{uu}(2,:) = nanmean(PSTH_local);
         Average_Psth_KDEfiltered_HearCall{uu}(3,:) = nanstd(PSTH_local)./(sum(~isnan(PSTH_local))).^0.5;
     end
+else
+    fprintf('No vocalization heard\n')
 end
 
 % Now plot Rasters and PSTH
-if Flags(1) && (HearCall>1)
+if Flags(1) && (HearCall>1) && sum(HearOnly)
     for uu=1:NT
         Fig=figure();
         subplot(2,1,1)
@@ -431,7 +437,7 @@ if Flags(1) && (HearCall>1)
     end
 end
 
-if Flags(2) && (HearCall>1)
+if Flags(2) && (HearCall>1) && sum(HearOnly)
     for uu=1:NSU
        Fig= figure();
         subplot(2,1,1)

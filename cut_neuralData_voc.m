@@ -7,6 +7,7 @@ MaxEventDur = NaN; % Set to NaN: The neural data is extracted for the whole dura
 %% Identify Neural loggers and extract the neural data that correspond to the vocalizations
 % Get the number of loggers
 Logger_dirs = dir(fullfile(Loggers_dir, '*ogger*'));
+Logger_dirs=Logger_dirs([Logger_dirs.isdir]);
 NLogger = length(Logger_dirs);
 % Identify the type of logger and extract neural data
 LoggerType = cell(NLogger,1);
