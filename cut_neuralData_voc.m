@@ -1,4 +1,6 @@
 function cut_neuralData_voc(Loggers_dir, Date, ExpStartTime, Flags, NeuroBuffer)
+%% This function uses the better estimation of vocalization onset/offset in transceiver time calculated by get_logger_data_voc
+% (Voc_transc_time_refined) And extract the corresponding neural data in the neural loggers
 load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date, ExpStartTime)), 'Voc_transc_time_refined');
 if nargin<5
     NeuroBuffer = 100; % NeuroBuffer ms will be added before the onset and after the offset of the behavioral event when extracting neural data and spikes times will be alligned to behavioral event onset
