@@ -1,7 +1,7 @@
 function cut_neuralData_voc(Loggers_dir, Date, ExpStartTime, Flags, NeuroBuffer)
 %% This function uses the better estimation of vocalization onset/offset in transceiver time calculated by get_logger_data_voc
 % (Voc_transc_time_refined) And extract the corresponding neural data in the neural loggers
-load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date, ExpStartTime)), 'Voc_transc_time_refined');
+load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date, ExpStartTime)), 'Voc_transc_time_refined', 'Raw_wave','Piezo_wave', 'FS');
 if nargin<5
     NeuroBuffer = 100; % NeuroBuffer ms will be added before the onset and after the offset of the behavioral event when extracting neural data and spikes times will be alligned to behavioral event onset
 end
@@ -31,6 +31,8 @@ for ll=1:NLogger
             end
         end
         [~,Neuro_LFP.(sprintf('Logger%s', LData.logger_serial_number)), Neuro_spikesT.(sprintf('Logger%s', LData.logger_serial_number)),Neuro_spikes.(sprintf('Logger%s', LData.logger_serial_number))] = extract_timeslot_LFP_spikes(LData_folder, Voc_transc_time_refined, NeuroBuffer,MaxEventDur, Flags);
+        % Plot PSTH for each vocalization
+        plot_psth_one_voc(Neuro_spikesT.(sprintf('Logger%s', LData.logger_serial_number)), Raw_wave, FS)
     end
 end
 if Flags(2)
