@@ -30,10 +30,13 @@ for ll=1:NLogger
                end
             end
         end
-        [~,Neuro_LFP.(sprintf('Logger%s', LData.logger_serial_number)), Neuro_spikesT.(sprintf('Logger%s', LData.logger_serial_number)),Neuro_spikes.(sprintf('Logger%s', LData.logger_serial_number))] = extract_timeslot_LFP_spikes(LData_folder, Voc_transc_time_refined, NeuroBuffer,MaxEventDur, Flags);
+        [Neuro_Raw.(sprintf('Logger%s', LData.logger_serial_number)), Neuro_LFP.(sprintf('Logger%s', LData.logger_serial_number)), Neuro_spikesT.(sprintf('Logger%s', LData.logger_serial_number)),Neuro_spikes.(sprintf('Logger%s', LData.logger_serial_number))] = extract_timeslot_LFP_spikes(LData_folder, Voc_transc_time_refined, NeuroBuffer,MaxEventDur, Flags);
         % Plot PSTH for each vocalization
         plot_psth_one_voc(Neuro_spikesT.(sprintf('Logger%s', LData.logger_serial_number)), Raw_wave, FS)
     end
+end
+if Flags(1)
+    save(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, NeuroBuffer)), 'Neuro_Raw', '-append');
 end
 if Flags(2)
     save(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, NeuroBuffer)), 'Neuro_LFP', '-append');

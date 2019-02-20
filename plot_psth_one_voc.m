@@ -23,7 +23,7 @@ Psth_KDEfiltered_VocCall_scalef = nan(NV,NU);
 
 
 for vv=1:NV
-    VocDuration(vv) = length(Raw_wave{vv}/FS)*1000; %#ok<IDISVAR,USENS>
+    VocDuration(vv) = length(Raw_wave{vv}/FS)*1000;
     
     % Calculate the t for KDE
     t=0: Bin_ms : round(VocDuration(vv));
@@ -39,7 +39,6 @@ for vv=1:NV
     end
 end
 
-XLIM = [0 max(VocDuration)];
 
 % calculate a weighted average PSTH for each unit or tetrode across all vocalizations
 % First organize tha data into a matrix where each column represent a time
@@ -73,7 +72,7 @@ for vv=1:NV
     % bandpass filter the ambient mic recording
     Filt_RawVoc = filtfilt(sos_raw_band,1,Raw_wave{vv});
     Amp_env_Mic = running_rms(Filt_RawVoc, FS, Fhigh_power, Fs_env);
-    Fig=figure();
+    Fig=figure(); %#ok<NASGU>
     subplot(2,1,1)
     [~] = spec_only_bats(Filt_RawVoc, FS, DB_noise, FHigh_spec);
     hold on
@@ -97,7 +96,6 @@ for vv=1:NV
     xlabel('Time centered at productionsection onset (ms)')
     yyaxis left
     ylim([0 NU+1])
-    xlim(XLIM)
     ylabel('Units')
     title(sprintf('Raster sound %d on %s', vv, Date))
     hold off

@@ -24,7 +24,7 @@ result_operant_bat(Path2ParamFile)
 
 %% Extract the neural data corresponding to the vocalizations
 fprintf(' EXTRACTING NEURAL DATA CORRESPONDING TO VOCALIZATIONS \n')
-FlagsExtr = [0 1 1 1]; % FlagsExtr(1)= Raw data, FlagsExtr(2) = LFP, FlagsExtr(3) = Tetrodes, FlagsExtr(4) = single units
+FlagsExtr = [1 1 1 1]; % FlagsExtr(1)= Raw data, FlagsExtr(2) = LFP, FlagsExtr(3) = Tetrodes, FlagsExtr(4) = single units
 cut_neuralData_voc(Logger_dir,Date, ExpStartTime,FlagsExtr,BufferBeforeOnset);
 
 %% Plot PSTH of the bats hearing or producing a vocalization
