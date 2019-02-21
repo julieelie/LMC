@@ -167,12 +167,17 @@ if sum(Ncall)
     
     % Now plot Raster
     if Flags(1)
+        % We want to plot data with increasing duration of
+        % vocalizations.
+        [~,IDur] = sort(VocDuration);
         for uu=1:NT
             Fig=figure();
             if KDE_Cal
                 subplot(2,1,1)
             end
-            for cc=1:VocCall
+            
+            for oo=1:VocCall
+                cc=IDur(oo);
                 hold on
                 yyaxis left
                 plot([0 VocDuration(cc)], cc-[0.5 0.5], '-','LineWidth',250/VocCall,'Color', [1 0.8 0.8]) % vocalization
@@ -210,18 +215,25 @@ if sum(Ncall)
             set(Fig,'PaperOrientation','landscape');
             set(Fig,'PaperUnits','normalized');
             set(Fig,'PaperPosition', [0 0 1 1]);
-            
-            print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocProdPSTH_Tetrode%d_%d.pdf', Date, NeuroLoggerID,uu,Delay)),'-dpdf')
+            if KDE_Cal
+                print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocProdPSTH_KDE_Tetrode%d_%d.pdf', Date, NeuroLoggerID,uu,Delay)),'-dpdf')
+            else
+                print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocProdPSTH_Tetrode%d_%d.pdf', Date, NeuroLoggerID,uu,Delay)),'-dpdf')
+            end
         end
     end
     
     if Flags(2)
+        % We want to plot data with increasing duration of
+        % vocalizations.
+        [~,IDur] = sort(VocDuration);
         for uu=1:NSU
             Fig=figure();
             if KDE_Cal
                 subplot(2,1,1)
             end
-            for cc=1:VocCall
+            for oo=1:VocCall
+                cc=IDur(oo);
                 hold on
                 yyaxis left
                 plot([0 VocDuration(cc)], cc-[0.5 0.5], '-','LineWidth',250/VocCall,'Color', [1 0.8 0.8]) % vocalizations
@@ -259,7 +271,11 @@ if sum(Ncall)
             set(Fig,'PaperOrientation','landscape');
             set(Fig,'PaperUnits','normalized');
             set(Fig,'PaperPosition', [0 0 1 1]);
-            print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocProdPSTH_SU%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf')
+            if KDE_Cal
+                print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocProdPSTH_KDE_SU%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf')
+            else
+                print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocProdPSTH_SU%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf')
+            end
         end
     end
 else
@@ -423,13 +439,16 @@ end
 
 % Now plot Rasters and PSTH
 if Flags(1) && (HearCall>1) && sum(HearOnly)
+    HearOnlyDuration=HearDuration(HearOnlyInd);
+    % We want to plot PSTH with increasing duration of vocalizations
+    [~, IDurH] = sort(HearOnlyDuration);
     for uu=1:NT
         Fig=figure();
         if KDE_Cal
             subplot(2,1,1)
         end
         for hh=1:length(HearOnlyInd)
-            cc = HearOnlyInd(hh);
+            cc = HearOnlyInd(IDurH(hh));
             yyaxis left
             hold on
             plot([0 HearDuration(cc)], hh-[0.5 0.5], '-','LineWidth',250/length(HearOnlyInd),'Color', [0.8 0.8 1])
@@ -466,18 +485,25 @@ if Flags(1) && (HearCall>1) && sum(HearOnly)
         set(Fig,'PaperOrientation','landscape');
         set(Fig,'PaperUnits','normalized');
         set(Fig,'PaperPosition', [0 0 1 1]);
-        print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocHearPSTH_Tetrode%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf')
+        if KDE_Cal
+            print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocHearPSTH_KDE_Tetrode%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf')
+        else
+            print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocHearPSTH_Tetrode%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf')
+        end
     end
 end
 
 if Flags(2) && (HearCall>1) && sum(HearOnly)
+    HearOnlyDuration=HearDuration(HearOnlyInd);
+    % We want to plot PSTH with increasing duration of vocalizations
+    [~, IDurH] = sort(HearOnlyDuration);
     for uu=1:NSU
        Fig= figure();
        if KDE_Cal
            subplot(2,1,1)
        end
         for hh=1:length(HearOnlyInd)
-            cc = HearOnlyInd(hh);
+            cc = HearOnlyInd(IDurH(hh));
             yyaxis left
             hold on
             plot([0 HearDuration(cc)], hh-[0.5 0.5], '-','LineWidth',250/length(HearOnlyInd),'Color', [0.8 0.8 1])
@@ -516,6 +542,10 @@ if Flags(2) && (HearCall>1) && sum(HearOnly)
         set(Fig,'PaperOrientation','landscape');
         set(Fig,'PaperUnits','normalized');
         set(Fig,'PaperPosition', [0 0 1 1]);
-        print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocHearPSTH_SU%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf')
+        if KDE_Cal
+            print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocHearPSTH_KDE_SU%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf')
+        else
+            print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocHearPSTH_SU%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf')
+        end
     end
 end
