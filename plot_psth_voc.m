@@ -439,6 +439,7 @@ end
 
 % Now plot Rasters and PSTH
 if Flags(1) && (HearCall>1) && sum(HearOnly)
+    HearOnlyInd = find(HearOnly);
     HearOnlyDuration=HearDuration(HearOnlyInd);
     % We want to plot PSTH with increasing duration of vocalizations
     [~, IDurH] = sort(HearOnlyDuration);
@@ -494,6 +495,7 @@ if Flags(1) && (HearCall>1) && sum(HearOnly)
 end
 
 if Flags(2) && (HearCall>1) && sum(HearOnly)
+    HearOnlyInd = find(HearOnly);
     HearOnlyDuration=HearDuration(HearOnlyInd);
     % We want to plot PSTH with increasing duration of vocalizations
     [~, IDurH] = sort(HearOnlyDuration);
