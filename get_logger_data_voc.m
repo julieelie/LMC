@@ -35,6 +35,9 @@ fprintf('****** Realligning and extracting data for %d vocalizations. ******\n',
 %% Get loggers info and initialize output variables
 % Get the number of loggers
 Logger_dirs = dir(fullfile(Loggers_dir, '*ogger*'));
+DirFlags = [Logger_dirs.isdir];
+% Extract only those that are directories.
+Logger_dirs = Logger_dirs(DirFlags);
 NLogger = length(Logger_dirs);
 % Identify the type of logger and initialize output variables
 LoggerType = cell(NLogger,1);

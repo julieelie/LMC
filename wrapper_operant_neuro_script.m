@@ -18,7 +18,7 @@ Path2RecordingTable = '/Users/elie/Google Drive/BatmanData/RecordingLogs/recordi
 Logger_dir = fullfile(AudioDataPath(1:(strfind(AudioDataPath, 'audio')-1)), 'logger',['20' Date]);
 
 % Set the time buffer before behavior onset
-BufferBeforeOnset = 200; %ms
+BufferBeforeOnset = 0; %ms
 
 %% RUN Behavioral and audio data EXtraction
 result_operant_bat(Path2ParamFile)
