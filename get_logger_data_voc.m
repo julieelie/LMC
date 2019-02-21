@@ -354,7 +354,7 @@ for vv=1:Nvoc
         TimeDiff_audio = LagDiff/(4*BandPassFilter(2)); % this should be negative the reference being the vocalization onset -buffer of 100ms
         OnsetAudiosamp(vv) = round(-TimeDiff_audio*Piezo_FS.(Fns_AL{ll})(vv)); % This new onset is taking into account the Buffer that was added at the beginning, suppressing it
         OffsetAudiosamp(vv) = round(OnsetAudiosamp(vv) + length(Piezo_wave.(Fns_AL{ll}){vv}) - 2*Buffer*(10^-3)*Piezo_FS.(Fns_AL{ll})(vv));
-        Voc_transc_time_refined(vv,1) = Buffer + LagDiff/(4*BandPassFilter(2)) + VocExt.Voc_transc_time(vv,1); % This is the new estimate of VocExt.Voc_transc_time(vv,1) in ms
+        Voc_transc_time_refined(vv,1) =VocExt.Voc_transc_time(vv,1) - Buffer -TimeDiff_audio; % This is the new estimate of VocExt.Voc_transc_time(vv,1) in ms
         Voc_transc_time_refined(vv,2) = Voc_transc_time_refined(vv,1) + diff(VocExt.Voc_transc_time(vv,:)); % This is the new estimate of VocExt.Voc_transc_time(vv,2) in ms
     end
 end
