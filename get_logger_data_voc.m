@@ -175,6 +175,7 @@ for vv=1:Nvoc
     plot(Raw_wave{vv}, '-k')
     hold on
     plot(Filt_Raw_wav, '-r')
+    set(gca, 'XLim', [0 length(Raw_wave{vv})])
     title('Environmental Mic filtering and resampling')
     legend('Raw voltage trace', sprintf('BandPass %d %d Hz', BandPassFilter(1:2)))
     
@@ -222,6 +223,7 @@ for vv=1:Nvoc
             plot(Piezo_wave.(Fns_AL{ll}){vv} - mean(Piezo_wave.(Fns_AL{ll}){vv}), 'k-');
             hold on
             plot(Filt_Logger_wav{ll}, 'r-')
+            set(gca, 'XLim', [0 length(Piezo_wave.(Fns_AL{ll}){vv})]);
             if ll==1
                 title('Loggers signal filtering and resampling')
                 legend('centered voltage trace', sprintf('BandPass %d %d Hz', BandPassFilter(1:2)))
@@ -311,19 +313,21 @@ for vv=1:Nvoc
         Xcor = cell(length(HRMS_Ind),1);
         Lag = cell(length(HRMS_Ind),1);
         LagDiff = nan(length(HRMS_Ind),1);
+        TimeDiff_audio_temp = nan(length(HRMS_Ind),1);
         F2 = figure(2);
         for ll=1:length(HRMS_Ind)
             [Xcor{ll},Lag{ll}] = xcorr(Resamp_Filt_Raw_wav,Clean_Resamp_Filt_Logger_wav{ll}, (Buffer*2)*4*BandPassFilter(2)); % Running a cross correlation between the raw signal and each audio logger signal with a maximum lag equal to twice the Buffer size
             [~,I] = max(abs(Xcor{ll}));
             LagDiff(ll) = Lag{ll}(I);
+            TimeDiff_audio_temp(ll) = LagDiff(ll)/(4*BandPassFilter(2));
             subplot(length(HRMS_Ind),1,ll)
             plot(Lag{ll},Xcor{ll})
             hold on
             line([LagDiff(ll) LagDiff(ll)], [min(Xcor{ll}) max(Xcor{ll})], 'Color','r', 'LineStyle','--');
-            text(LagDiff(ll) , mean(Xcor{ll}), sprintf('%d',LagDiff(ll)))
+            text(LagDiff(ll) , mean(Xcor{ll}), sprintf('%d    %.1fms',LagDiff(ll), TimeDiff_audio_temp(ll)*1000))
             hold off
         end
-        if (LagDiff<-2000) || LagDiff>-1000
+        if (mean(LagDiff)<-1.5*Buffer*4*BandPassFilter(2)/1000) || mean(LagDiff)>-0.5*Buffer*4*BandPassFilter(2)/1000
             fprintf('The result of the cross-correlation is most likely abherrent: LagDiff=%d\n', LagDiff);
             LagDiff = input('You want to input another value (suggested -1970):\n');
         end
@@ -357,7 +361,7 @@ for vv=1:Nvoc
         TimeDiff_audio = LagDiff/(4*BandPassFilter(2)); % this should be negative the reference being the vocalization onset -buffer of 100ms
         OnsetAudiosamp(vv) = round(-TimeDiff_audio*Piezo_FS.(Fns_AL{ll})(vv)); % This new onset is taking into account the Buffer that was added at the beginning, suppressing it
         OffsetAudiosamp(vv) = round(OnsetAudiosamp(vv) + length(Piezo_wave.(Fns_AL{ll}){vv}) - 2*Buffer*(10^-3)*Piezo_FS.(Fns_AL{ll})(vv));
-        Voc_transc_time_refined(vv,1) =VocExt.Voc_transc_time(vv,1) - Buffer -TimeDiff_audio; % This is the new estimate of VocExt.Voc_transc_time(vv,1) in ms
+        Voc_transc_time_refined(vv,1) =VocExt.Voc_transc_time(vv,1) - Buffer -TimeDiff_audio*1000; % This is the new estimate of VocExt.Voc_transc_time(vv,1) in ms
         Voc_transc_time_refined(vv,2) = Voc_transc_time_refined(vv,1) + diff(VocExt.Voc_transc_time(vv,:)); % This is the new estimate of VocExt.Voc_transc_time(vv,2) in ms
     end
 end

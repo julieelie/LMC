@@ -1,7 +1,7 @@
 function cut_neuralData_voc(Loggers_dir, Date, ExpStartTime, Flags, NeuroBuffer)
 %% This function uses the better estimation of vocalization onset/offset in transceiver time calculated by get_logger_data_voc
 % (Voc_transc_time_refined) And extract the corresponding neural data in the neural loggers
-load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date, ExpStartTime)), 'Voc_transc_time_refined', 'Raw_wave','Piezo_wave', 'FS');
+load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date, ExpStartTime)), 'Voc_transc_time_refined', 'Raw_wave','Piezo_wave', 'FS', 'Piezo_FS');
 if nargin<5
     NeuroBuffer = 100; % NeuroBuffer ms will be added before the onset and after the offset of the behavioral event when extracting neural data and spikes times will be alligned to behavioral event onset
 end
@@ -30,9 +30,7 @@ for ll=1:NLogger
                end
             end
         end
-        [Neuro_Raw.(sprintf('Logger%s', LData.logger_serial_number)), Neuro_LFP.(sprintf('Logger%s', LData.logger_serial_number)), Neuro_spikesT.(sprintf('Logger%s', LData.logger_serial_number)),Neuro_spikes.(sprintf('Logger%s', LData.logger_serial_number))] = extract_timeslot_LFP_spikes(LData_folder, Voc_transc_time_refined, NeuroBuffer,MaxEventDur, Flags);
-        % Plot PSTH for each vocalization
-        plot_psth_one_voc(Neuro_spikesT.(sprintf('Logger%s', LData.logger_serial_number)), Raw_wave, Piezo_wave.(sprintf('Logger%s', LData.logger_serial_number)), Piezo_FS.(sprintf('Logger%s', LData.logger_serial_number)), FS)
+        [Neuro_Raw.(sprintf('Logger%s', LData.logger_serial_number)), Neuro_LFP.(sprintf('Logger%s', LData.logger_serial_number)), Neuro_spikesT.(sprintf('Logger%s', LData.logger_serial_number)),Neuro_spikes.(sprintf('Logger%s', LData.logger_serial_number))] = extract_timeslot_LFP_spikes(LData_folder, Voc_transc_time_refined, NeuroBuffer,MaxEventDur, Flags);       
     end
 end
 if Flags(1)
@@ -46,4 +44,15 @@ if Flags(3)
 end
 if Flags(4)
     save(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, NeuroBuffer)),'Neuro_spikes', '-append');
+end
+
+% Plot PSTH for each vocalization for each neural logger
+for ll=1:NLogger
+    LData_folder = fullfile(Logger_dirs(ll).folder, Logger_dirs(ll).name,'extracted_data');
+    LDir = dir(fullfile(LData_folder, '*CSC*.mat'));
+    LData = load(fullfile(LDir(1).folder, LDir(1).name), 'logger_type', 'logger_serial_number');
+    LoggerType{ll}  = LData.logger_type;
+    if strcmp(LoggerType{ll}, 'Mous') || strcmp(LoggerType{ll}, 'Rat')
+        plot_psth_one_voc(Neuro_spikesT.(sprintf('Logger%s', LData.logger_serial_number)), Raw_wave, Piezo_wave.(sprintf('Logger%s', LData.logger_serial_number)), Piezo_FS.(sprintf('Logger%s', LData.logger_serial_number)), FS)
+    end
 end

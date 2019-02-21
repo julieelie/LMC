@@ -18,14 +18,14 @@ Path2RecordingTable = '/Users/elie/Google Drive/BatmanData/RecordingLogs/recordi
 Logger_dir = fullfile(AudioDataPath(1:(strfind(AudioDataPath, 'audio')-1)), 'logger',['20' Date]);
 
 % Set the time buffer before behavior onset
-BufferBeforeOnset = 0; %ms
+BufferBeforeOnset = 200; %ms
 
 %% RUN Behavioral and audio data EXtraction
 result_operant_bat(Path2ParamFile)
 
 %% Extract the neural data corresponding to the vocalizations
 fprintf(' EXTRACTING NEURAL DATA CORRESPONDING TO VOCALIZATIONS \n')
-FlagsExtr = [1 1 1 1]; % FlagsExtr(1)= Raw data, FlagsExtr(2) = LFP, FlagsExtr(3) = Tetrodes, FlagsExtr(4) = single units
+FlagsExtr = [0 1 1 1]; % FlagsExtr(1)= Raw data, FlagsExtr(2) = LFP, FlagsExtr(3) = Tetrodes, FlagsExtr(4) = single units
 cut_neuralData_voc(Logger_dir,Date, ExpStartTime,FlagsExtr,BufferBeforeOnset);
 
 %% Plot PSTH of the bats hearing or producing a vocalization
