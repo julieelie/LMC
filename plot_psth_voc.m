@@ -180,14 +180,14 @@ if sum(Ncall)
                 cc=IDur(oo);
                 hold on
                 yyaxis left
-                plot([0 VocDuration(cc)], cc-[0.5 0.5], '-','LineWidth',250/VocCall,'Color', [1 0.8 0.8]) % vocalization
+                plot([0 VocDuration(cc)], oo-[0.5 0.5], '-','LineWidth',250/VocCall,'Color', [1 0.8 0.8]) % vocalization
                 %         for dd=1:size(DataDeletion_VocCall{VocCall},1)
                 %             hold on
                 %             plot(DataDeletion_VocCall{VocCall}(dd,:), cc-[0.5 0.5], '-','LineWidth',250/VocCall,'Color', [0.8 0.8 0.8]) % RF artefact period
                 %         end
                 for spike=1:length(SpikesTTimes_VocCall{cc,uu})
                     hold on
-                    plot(SpikesTTimes_VocCall{cc,uu}(spike)*ones(2,1), cc-[0.9 0.1], 'k-', 'LineWidth',1)
+                    plot(SpikesTTimes_VocCall{cc,uu}(spike)*ones(2,1), oo-[0.9 0.1], 'k-', 'LineWidth',1)
                 end
                 hold on
                 %                 yyaxis right
@@ -236,14 +236,14 @@ if sum(Ncall)
                 cc=IDur(oo);
                 hold on
                 yyaxis left
-                plot([0 VocDuration(cc)], cc-[0.5 0.5], '-','LineWidth',250/VocCall,'Color', [1 0.8 0.8]) % vocalizations
+                plot([0 VocDuration(cc)], oo-[0.5 0.5], '-','LineWidth',250/VocCall,'Color', [1 0.8 0.8]) % vocalizations
                 %         for dd=1:size(DataDeletion_VocCall{cc},1)
                 %             hold on
                 %             plot(DataDeletion_VocCall{cc}(dd,:), cc-[0.5 0.5], '-','LineWidth',250/VocCall,'Color', [0.8 0.8 0.8]) % RF artefact period
                 %         end
                 for spike=1:length(SpikesTimes_VocCall{cc,uu})
                     hold on
-                    plot(SpikesTimes_VocCall{cc,uu}(spike)*ones(2,1), cc-[0.9 0.1], 'k-', 'LineWidth',1)
+                    plot(SpikesTimes_VocCall{cc,uu}(spike)*ones(2,1), oo-[0.9 0.1], 'k-', 'LineWidth',1)
                 end
                 hold on
                 %                 yyaxis right
