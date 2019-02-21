@@ -1,6 +1,6 @@
 %Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190202/HoHa_190202_1046_VocTrigger_param.txt';
-% Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190131/HoHa_190131_1108_VocTrigger_param.txt';
-Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190130/HoHa_190130_1007_VocTrigger_param.txt';
+Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190131/HoHa_190131_1108_VocTrigger_param.txt';
+% Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190130/HoHa_190130_1007_VocTrigger_param.txt';
 % Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190129/HoHa_190129_1023_VocTrigger_param.txt';
 
 addpath(genpath('/Users/elie/Documents/CODE/operant_bats'))
@@ -43,8 +43,9 @@ for nl=1:length(NL_ID)
     AL_ID = DataInfo{ALCol(find(ALCol<NLCol(nl),1,'last'))};
     AudioLoggerID = ['Logger' num2str(AL_ID)];
     Flags=[1 1];
+    KDE_Cal = 0;
     fprintf(' PSTH of NEURAL DATA CORRESPONDING TO VOCALIZATIONS \n')
-    plot_psth_voc(Logger_dir, Date, ExpStartTime, AudioLoggerID, NeuroLoggerID, Flags, BufferBeforeOnset)
+    plot_psth_voc(Logger_dir, Date, ExpStartTime, AudioLoggerID, NeuroLoggerID, Flags, BufferBeforeOnset, KDE_Cal)
 end
 close all
 %     pause()
