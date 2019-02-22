@@ -11,11 +11,13 @@ end
 FigureSize = [1 1 30 20];
 
 % load the data
+fprintf(1,'Loading data....')
 load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, Delay)), 'IndVocStartRaw_merged', 'IndVocStopRaw_merged', 'IndVocStartPiezo_merged', 'IndVocStopPiezo_merged','Neuro_LFP','Neuro_spikes','Neuro_spikesT');
 load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date, ExpStartTime)), 'FS','Piezo_FS','Piezo_wave','VocFilename','Voc_transc_time_refined');
-
 EventDir = dir(fullfile(Loggers_dir,sprintf('*%s', NeuroLoggerID(2:end)), 'extracted_data',sprintf('*%s*EVENTS.mat', Date)));
 load(fullfile(EventDir.folder, EventDir.name), 'DataDeletionOnsetOffset_usec_sync')
+fprintf(1,'DONE\n')
+
 if nargin<7
     Delay = 500;% time in ms to extract data before and after vocalization onset/offset
 end
@@ -27,6 +29,7 @@ YLIM_SU = [0 0.004];
 YLIM_T = [0 0.1];
 
 %% extract the spike arrival times from NeuroLoggerID for each vocalization cut of AudioLoggerID
+fprintf(1, 'Gathering vocalization data...')
 % centering them on the vocalization cut onset
 VocInd = find(~cellfun('isempty',IndVocStartRaw_merged));
 NV = length(VocInd);
@@ -118,8 +121,9 @@ for vv=1:NV
         end
     end
 end
+fprintf(1,'DONE\n')
 
-
+fprintf(1,'Plotting...')
 if sum(Ncall)
     if KDE_Cal
         % calculate a weighted average PSTH for each unit or tetrode across all vocalizations
@@ -198,7 +202,7 @@ if sum(Ncall)
             ylim([0 VocCall+1])
             xlim(XLIM)
             ylabel('Vocalization production renditions')
-            title(sprintf('Raster Tetrode %d on %s', uu, Date))
+            title(sprintf('Raster %s Tetrode %d on %s',NeuroLoggerID, uu, Date))
             hold off
             
             if KDE_Cal
@@ -211,15 +215,17 @@ if sum(Ncall)
             end
             orient(Fig,'landscape')
             Fig.PaperPositionMode = 'auto';
-            set(Fig,'Units', 'centimeters', 'Position', get(0, 'screensize'));
+%             set(Fig,'Units', 'centimeters', 'Position', get(0, 'screensize'));
             set(Fig,'PaperOrientation','landscape');
-            set(Fig,'PaperUnits','normalized');
-            set(Fig,'PaperPosition', [0 0 1 1]);
+%             set(Fig,'PaperUnits','normalized');
+%             set(Fig,'PaperPosition', [50 50 1200 800]);
+%             pause()
             if KDE_Cal
-                print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocProdPSTH_KDE_Tetrode%d_%d.pdf', Date, NeuroLoggerID,uu,Delay)),'-dpdf')
+                print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocProdPSTH_KDE_Tetrode%d_%d.pdf', Date, NeuroLoggerID,uu,Delay)),'-dpdf','-fillpage')
             else
-                print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocProdPSTH_Tetrode%d_%d.pdf', Date, NeuroLoggerID,uu,Delay)),'-dpdf')
+                print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocProdPSTH_Tetrode%d_%d.pdf', Date, NeuroLoggerID,uu,Delay)),'-dpdf','-fillpage')
             end
+            close all
         end
     end
     
@@ -254,7 +260,7 @@ if sum(Ncall)
             ylim([0 VocCall+1])
             xlim(XLIM)
             ylabel('Vocalization production renditions')
-            title(sprintf('Raster Single Unit %d on %s', uu, Date))
+            title(sprintf('Raster %s Single Unit %d on %s', NeuroLoggerID, uu, Date))
             hold off
             
             if KDE_Cal
@@ -267,22 +273,27 @@ if sum(Ncall)
             end
             orient(Fig,'landscape')
             Fig.PaperPositionMode = 'auto';
-            set(Fig,'Units', 'centimeters', 'Position', get(0, 'screensize'));
+%             set(Fig,'Units', 'centimeters', 'Position', get(0, 'screensize'));
             set(Fig,'PaperOrientation','landscape');
-            set(Fig,'PaperUnits','normalized');
-            set(Fig,'PaperPosition', [0 0 1 1]);
+%             set(Fig,'PaperUnits','normalized');
+%             set(Fig,'PaperPosition', [0 0 1 1]);
+%             pause()
             if KDE_Cal
-                print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocProdPSTH_KDE_SU%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf')
+                print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocProdPSTH_KDE_SU%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf', '-fillpage')
             else
-                print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocProdPSTH_SU%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf')
+                print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocProdPSTH_SU%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf', '-fillpage')
             end
+            close all
         end
     end
+    fprintf(1, 'DONE\n')
 else
     fprintf('No vocalization production of the target bat on that day\n')
 end
 
 %% extract the spike arrival times from NeuroLoggerID for each vocalization cut of all other audiologgers
+
+fprintf(1, 'Gathering Hearing data...')
 % centering them on the vocalization cut onset
 VocInd = find(~cellfun('isempty',IndVocStartRaw_merged));
 NV = length(VocInd);
@@ -436,8 +447,10 @@ if KDE_Cal
         fprintf('No vocalization heard\n')
     end
 end
+fprintf(1,'DONE\n')
 
 % Now plot Rasters and PSTH
+fprintf(1,'Plotting hearing data...')
 if Flags(1) && (HearCall>1) && sum(HearOnly)
     HearOnlyInd = find(HearOnly);
     HearOnlyDuration=HearDuration(HearOnlyInd);
@@ -470,7 +483,7 @@ if Flags(1) && (HearCall>1) && sum(HearOnly)
         ylim([0 length(HearOnlyInd)+1])
         xlim(XLIM)
         ylabel('Vocalization hearing renditions')
-        title(sprintf('Raster Tetrode %d on %s', uu, Date))
+        title(sprintf('Raster %s Tetrode %d on %s', NeuroLoggerID, uu, Date))
         hold off
         if (HearCall>1) && KDE_Cal
             subplot(2,1,2)
@@ -479,18 +492,20 @@ if Flags(1) && (HearCall>1) && sum(HearOnly)
             ylim(YLIM_T)
             xlabel('Time centered at hearing onset (ms)')
             ylabel('Spike rate (/ms)')
-         end
+        end
         orient(Fig,'landscape')
         Fig.PaperPositionMode = 'auto';
-        set(Fig,'Units', 'centimeters', 'Position', get(0, 'screensize'));
+%         set(Fig,'Units', 'centimeters', 'Position', get(0, 'screensize'));
         set(Fig,'PaperOrientation','landscape');
-        set(Fig,'PaperUnits','normalized');
-        set(Fig,'PaperPosition', [0 0 1 1]);
+%         set(Fig,'PaperUnits','normalized');
+%         set(Fig,'PaperPosition', [0 0 1 1]);
+%         pause()
         if KDE_Cal
-            print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocHearPSTH_KDE_Tetrode%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf')
+            print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocHearPSTH_KDE_Tetrode%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf','-fillpage')
         else
-            print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocHearPSTH_Tetrode%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf')
+            print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocHearPSTH_Tetrode%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf','-fillpage')
         end
+        close all
     end
 end
 
@@ -526,7 +541,7 @@ if Flags(2) && (HearCall>1) && sum(HearOnly)
         ylim([0 length(HearOnlyInd)+1])
         xlim(XLIM)
         ylabel('Vocalization hearing renditions')
-        title(sprintf('Raster Single Unit %d on %s', uu, Date))
+        title(sprintf('Raster %s Single Unit %d on %s', NeuroLoggerID, uu, Date))
         hold off
         
         if (HearCall>1) && KDE_Cal
@@ -540,14 +555,18 @@ if Flags(2) && (HearCall>1) && sum(HearOnly)
         
         orient(Fig,'landscape')
         Fig.PaperPositionMode = 'auto';
-        set(Fig,'Units', 'centimeters', 'Position', get(0, 'screensize'));
+%         set(Fig,'Units', 'centimeters', 'Position', get(0, 'screensize'));
         set(Fig,'PaperOrientation','landscape');
-        set(Fig,'PaperUnits','normalized');
-        set(Fig,'PaperPosition', [0 0 1 1]);
+%         set(Fig,'PaperUnits','normalized');
+%         set(Fig,'PaperPosition', [0 0 1 1]);
+%         pause()
         if KDE_Cal
-            print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocHearPSTH_KDE_SU%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf')
+            print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocHearPSTH_KDE_SU%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf','-fillpage')
         else
-            print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocHearPSTH_SU%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf')
+            print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocHearPSTH_SU%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf','-fillpage')
         end
+        close all
     end
+end
+fprintf(1,'DONE\n')
 end
