@@ -38,7 +38,11 @@ NV = length(VocInd);
 % vocalizing vs hearing for preallocation of space
 VocCall = 0;
 Fns_AL = fieldnames(Piezo_wave);
-Fns_Neuro = fieldnames(Neuro_spikes);
+if Flags(1)
+    Fns_Neuro = fieldnames(Neuro_spikesT);
+elseif Flags(2)
+    Fns_Neuro = fieldnames(Neuro_spikes);
+end
 % find the vocalizations emitted by the vocalizer of interest
 FocIndAudio = find(contains(Fns_AL, AudioLoggerID));
 FocIndNeuro = find(contains(Fns_Neuro, NeuroLoggerID));

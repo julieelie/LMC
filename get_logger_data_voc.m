@@ -124,6 +124,9 @@ for ll=1:length(AudioLogs)
                 else
                     IndSampOff = round(LData.Indices_of_first_and_last_samples(IndTSOff,1) - nanmean(LData.Estimated_channelFS_Transceiver)*(10^-6)*(LData.Timestamps_of_first_samples_usec(IndTSOff) - VocOffset_time*10^3));
                 end
+                if IndSampOff<=IndSampOn
+                    IndSampOff = round(LData.Indices_of_first_and_last_samples(IndTSOn,1) + nanmean(LData.Estimated_channelFS_Transceiver)*(10^-6)*(VocOffset_time*10^3 - LData.Timestamps_of_first_samples_usec(IndTSOn)));
+                end
             else
                 % find the time stamp on the logger that is closest to before
                 % the snippet of sound offset

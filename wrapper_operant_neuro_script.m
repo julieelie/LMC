@@ -1,11 +1,14 @@
 %Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190202/HoHa_190202_1046_VocTrigger_param.txt';
 % Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190131/HoHa_190131_1108_VocTrigger_param.txt';
-Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190130/HoHa_190130_1007_VocTrigger_param.txt';
+% Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190130/HoHa_190130_1007_VocTrigger_param.txt';
 % Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190129/HoHa_190129_1023_VocTrigger_param.txt';
+Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190201/HoHa_190201_1023_VocTrigger_param.txt';
 
 addpath(genpath('/Users/elie/Documents/CODE/operant_bats'))
 addpath(genpath('/Users/elie/Documents/CODE/GeneralCode'))
 addpath(genpath('/Users/elie/Documents/CODE/LMC'))
+addpath(genpath('/Users/elie/Documents/CODE/LoggerDataProcessing'))
+addpath(genpath('/Users/elie/Documents/CODE/SoundAnalysisBats'))
 
 %% Some important parameters, inputs
 % Get the path to audio data
@@ -43,7 +46,8 @@ for nl=1:length(NL_ID)
     NeuroLoggerID = ['Logger' num2str(NL_ID(nl))];
     AL_ID = DataInfo{ALCol(find(ALCol<NLCol(nl),1,'last'))};
     AudioLoggerID = ['Logger' num2str(AL_ID)];
-    Flags=[1 1];
+    Flags=[1 1];% Flags = whether to print PSTH of Tetrode (Flags(1)=1) and/or Single units
+% (Flags(2)=1))
     KDE_Cal = 0;
     fprintf(' PSTH of NEURAL DATA CORRESPONDING TO VOCALIZATIONS \n')
     plot_psth_voc(Logger_dir, Date, ExpStartTime, AudioLoggerID, NeuroLoggerID, Flags, BufferBeforeOnset, KDE_Cal)
@@ -51,7 +55,7 @@ end
 close all
 %     pause()
 
-%% Plot PSTH of the bats doing other actions!
+ %% Plot PSTH of the bats doing other actions!
 addpath(genpath('C:\Users\Julie\Documents\GitHub\GeneralCode\'))
 AudioLoggerID = {'Logger5';'Logger5' ; 'Logger7' ;'Logger7';'Logger5';'Logger5';'Logger5';'Logger5';'Logger5';'Logger5';'Logger5'};
 NeuroLoggerID = 'Logger16';
