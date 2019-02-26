@@ -23,58 +23,76 @@ for Tetrode_i=1:Num_tetrodes % for each of the electrode bundles, eg. tetrodes
         disp(['Saving spikes from tetrode '  TetrodeID '...'])
         MatClust_Filename=fullfile(OutputPath,sprintf('%s_%s_MatClust%s.mat', BatID, Date,TetrodeID));
         Snippets_dim = size(Snippets); % 1st dim = length one snippet, 2nd dim = # channels, 3rd dim = #spikes
-        Filedata.paramnames = cell(Snippets_dim(2)*6+1);
-        Filedata.params = nan(Snippets_dim(3), Snippets_dim(2)*6+1);
+        filedata.paramnames = cell(Snippets_dim(2)*6+1);
+        filedata.params = nan(Snippets_dim(3), Snippets_dim(2)*6+1);
         
         % save spike time
+        fprintf(1,'Saving spike times\n')
         pp=1;
-        Filedata.paramnames{pp} = 'Time';
-        Filedata.params(:,pp) = Spike_arrival_times;
+        filedata.paramnames{pp} = 'Time';
+        filedata.params(:,pp) = Spike_arrival_times;
         
         % save spike peaks
+        fprintf(1,'Saving spike peaks\n')
         for ch = 1:Snippets_dim(2)
             pp=pp+1;
-            Filedata.paramnames{pp} = ['Peak_',num2str(ch),' (uV)'];
-            Filedata.params(:,pp) = max(Snippets(:,ch,:),[],3);
+            filedata.paramnames{pp} = ['Peak_',num2str(ch),' (uV)'];
+            filedata.params(:,pp) = max(Snippets(:,ch,:),[],1);
         end
         
         % save valley
+        fprintf(1,'Saving spike valleys\n')
         for ch = 1:Snippets_dim(2)
             pp=pp+1;
-            Filedata.paramnames{pp} = ['Valley_',num2str(ch),' (uV)'];
-            Filedata.params(:,pp) = min(Snippets(:,ch,:),[],3);
+            filedata.paramnames{pp} = ['Valley_',num2str(ch),' (uV)'];
+            filedata.params(:,pp) = min(Snippets(:,ch,:),[],1);
         end
         
         % save amplitude
+        fprintf(1,'Saving spike amplitude\n')
         for ch = 1:Snippets_dim(2)
             pp=pp+1;
-            Filedata.paramnames{pp} = ['Amp_',num2str(ch),' (uV)'];
-            Filedata.params(:,pp) = max(Snippets(:,ch,:),[],3) - min(Snippets(:,ch,:),[],3);
+            filedata.paramnames{pp} = ['Amp_',num2str(ch),' (uV)'];
+            filedata.params(:,pp) = max(Snippets(:,ch,:),[],1) - min(Snippets(:,ch,:),[],1);
         end
         
         
         % Reorganize the spike data to perform a PCA accross channels
-        Spike_Allsnippets = nan(Snippets_dim(1)*Snippets_dim(2),Snippets_dim(3));
+        fprintf(1,'Running PCA on snippets.... ')
+        Spike_Allsnippets = nan(Snippets_dim(3),Snippets_dim(1)*Snippets_dim(2));
         for ss=1:Snippets_dim(3)
             Spike_Allsnippets(ss,:) = reshape(Snippets(:,:,ss),1, Snippets_dim(1)*Snippets_dim(2));
         end
-        [~, PC] = pca(Spike_Allsnippets);
+        % z-score the snippets per electrode
+        for ee=1:Snippets_dim(2)
+            local_data = reshape(Spike_Allsnippets(:,(1+(ee-1)*Snippets_dim(1)):ee*Snippets_dim(1)),1,Snippets_dim(1)*Snippets_dim(3));
+            Spike_Allsnippets(:,(1+(ee-1)*Snippets_dim(1)):ee*Snippets_dim(1)) = (Spike_Allsnippets(:,(1+(ee-1)*Snippets_dim(1)):ee*Snippets_dim(1))-nanmean(local_data))/nanstd(local_data);
+        end
+        [PC, Projections] = pca(Spike_Allsnippets);
+        
+        % Plot the PCs
+        figure();plot(PC(:,1),'k-','LineWidth',2)
+        hold on;plot(PC(:,2),'r-','LineWidth',2)
+        hold on;plot(PC(:,3),'b-','LineWidth',2)
+        legend({'PC1' 'PC2' 'PC3'})
         
         % save PCA values
+        fprintf(1,'Saving PCA values\n')
         for pc = 1:3
             pp=pp+1;
-            Filedata.paramnames{pp} = ['PC' num2str(pc)];
-            Filedata.params(:,pp) = PC(:,pc);
+            filedata.paramnames{pp} = ['PC' num2str(pc)];
+            filedata.params(:,pp) = Projections(:,pc);
         end
     else
         disp('No data for this file');
-        Filedata = [];
+        filedata = [];
     end
     
     
     %-----------------------------------
-    if (~isempty(Filedata))
-        Filedata.filename = MatClust_Filename;
-        save(MatClust_Filename, '-v7.3', 'Filedata');
+    if (~isempty(filedata))
+        filedata.filename = MatClust_Filename;
+        save(MatClust_Filename, '-v7.3', 'filedata');
     end
+    fprintf(1,'ALL DONE\n')
 end
