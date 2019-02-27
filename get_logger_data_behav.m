@@ -117,7 +117,7 @@ TTL = load(fullfile(TTL_dir.folder, TTL_dir.name));
 
 %% Identify individual actions and gather onset and offset times of each behavior
 % Individualized actions:
-IndivActions = {'chewing' 'food_in_mooth' 'licking'};
+IndivActions = {'chewing' 'food_in_mooth' 'licking' 'teeth-cleaning'};
 UType_all = unique(Type); % unique labels
 % Isolate actions items
 StartInd= strfind(UType_all, 'start');

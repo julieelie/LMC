@@ -6,7 +6,7 @@ if nargin<5
     NeuroBuffer = 100; % NeuroBuffer ms will be added before the onset and after the offset of the behavioral event when extracting neural data and spikes times will be alligned to behavioral event onset
 end
 if nargin<6
-    BehaviorType = {'licking' 'chewing' 'quiet' 'teeth cleaning'};
+    BehaviorType = {'licking' 'chewing' 'quiet' 'teeth-cleaning'};
 end
 MaxEventDur = NaN; % Set to NaN: The neural data is extracted for the whole duration of each event
 %% Identify Neural loggers and extract the neural data that correspond to the Behaviors
