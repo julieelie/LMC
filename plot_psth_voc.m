@@ -1,4 +1,4 @@
-function plot_psth_voc(Loggers_dir, Date, ExpStartTime, AudioLoggerID, NeuroLoggerID, Flags, Delay, KDE_Cal)
+function [SpikeTrains] = plot_psth_voc(Loggers_dir, Date, ExpStartTime, AudioLoggerID, NeuroLoggerID, Flags, Delay, KDE_Cal)
 % AudioLoggerID = ID of the audio logger that the targeting animal is
 % wearing
 % NeuroLoggerID = ID of the neural logger that the targeting animal is
@@ -24,7 +24,6 @@ end
 Response_samprate = 100;% Sampling rate of the KDE in Hz
 Bin_ms = 1; % size of the KDE binning
 
-XLIM = [-Delay 3*Delay];
 YLIM_SU = [0 0.004];
 YLIM_T = [0 0.1];
 
@@ -48,7 +47,7 @@ FocIndAudio = find(contains(Fns_AL, AudioLoggerID));
 FocIndNeuro = find(contains(Fns_Neuro, NeuroLoggerID));
 %     OthInd = find(~contains(Fns_AL, AudioLoggerID));
 for vv=1:NV
-    VocCall = VocCall + length(IndVocStartRaw_merged{VocInd(vv)}{FocIndAudio});%#ok<IDISVAR,USENS>
+    VocCall = VocCall + length(IndVocStartRaw_merged{VocInd(vv)}{FocIndAudio});
 end
 
 % Now loop through calls and gather data
@@ -79,7 +78,7 @@ for vv=1:NV
     if Ncall(vv)
         for nn=1:Ncall(vv)
             VocCall = VocCall+1;
-            VocDuration(VocCall) = (IndVocStopRaw_merged{VocInd(vv)}{FocIndAudio}(nn) -IndVocStartRaw_merged{VocInd(vv)}{FocIndAudio}(nn))/FS*1000; %#ok<IDISVAR,USENS>
+            VocDuration(VocCall) = (IndVocStopRaw_merged{VocInd(vv)}{FocIndAudio}(nn) -IndVocStartRaw_merged{VocInd(vv)}{FocIndAudio}(nn))/FS*1000;
             % Identify if any deletion period fall within the spike sequence for the call
             %             VocStartTransc = Voc_transc_time_refined(vv,1) + IndVocStartRaw_merged{vv}{FocIndAudio}(nn)/FS*1000 - Delay;
             %             VocStopTransc = Voc_transc_time_refined(vv,1) + IndVocStopRaw_merged{vv}{FocIndAudio}(nn)/FS*1000 + Delay;
@@ -201,6 +200,7 @@ if sum(Ncall)
                 %                 yyaxis right
                 %                 plot(Psth_KDEfiltered_TVocCall_t{cc,uu}, Psth_KDEfiltered_TVocCall{cc,uu}/max(Psth_KDEfiltered_TVocCall_scalef(:,uu))+cc-1, 'r-', 'LineWidth',2)
             end
+            XLIM = [-Delay min(VocDuration)+Delay];
             xlabel('Time centered at production onset (ms)')
             yyaxis left
             ylim([0 VocCall+1])
@@ -259,6 +259,7 @@ if sum(Ncall)
                 %                 yyaxis right
                 %                 plot(Psth_KDEfiltered_VocCall_t{cc,uu}, Psth_KDEfiltered_VocCall{cc,uu}/max(Psth_KDEfiltered_VocCall_scalef(:,uu))+cc-1, 'r-', 'LineWidth',2)
             end
+            XLIM = [-Delay min(VocDuration)+Delay];
             yyaxis left
             xlabel('Time centered at production onset (ms)')
             ylim([0 VocCall+1])
@@ -294,6 +295,7 @@ if sum(Ncall)
 else
     fprintf('No vocalization production of the target bat on that day\n')
 end
+
 
 %% extract the spike arrival times from NeuroLoggerID for each vocalization cut of all other audiologgers
 
@@ -482,6 +484,7 @@ if Flags(1) && (HearCall>1) && sum(HearOnly)
 %             yyaxis right
 %             plot(Psth_KDEfiltered_THearCall_t{cc,uu}, Psth_KDEfiltered_THearCall{cc,uu}/max(Psth_KDEfiltered_THearCall_scalef(HearOnlyInd,uu))+hh-1, 'r-', 'LineWidth',2)
         end
+        XLIM = [-Delay min(HearDuration)+Delay];
         yyaxis left
         xlabel('Time centered at hearing onset (ms)')
         ylim([0 length(HearOnlyInd)+1])
@@ -540,6 +543,7 @@ if Flags(2) && (HearCall>1) && sum(HearOnly)
 %             yyaxis right
 %             plot(Psth_KDEfiltered_HearCall_t{cc,uu}, Psth_KDEfiltered_HearCall{cc,uu}/max(Psth_KDEfiltered_HearCall_scalef(HearOnlyInd,uu))+hh-1, 'r-', 'LineWidth',2)
         end
+        XLIM = [-Delay min(HearDuration)+Delay];
         yyaxis left
         xlabel('Time centered at hearing onset (ms)')
         ylim([0 length(HearOnlyInd)+1])
@@ -573,4 +577,16 @@ if Flags(2) && (HearCall>1) && sum(HearOnly)
     end
 end
 fprintf(1,'DONE\n')
+
+% prepare output for return
+if Flags(1)
+    SpikeTrains.SpikesTTimes_VocCall = SpikesTTimes_VocCall;
+    SpikeTrains.SpikesTTimes_HearCall = SpikesTTimes_HearCall;
+end
+if Flags(2)
+    SpikeTrains.SpikesTimes_VocCall = SpikesTimes_VocCall;
+    SpikeTrains.SpikesTimes_HearCall = SpikesTimes_HearCall;
+end
+SpikeTrains.VocDuration = VocDuration;
+SpikeTrains.HearDuration = HearDuration;
 end

@@ -32,15 +32,18 @@ for ff = 1:NF
     textscan(DataFile, '%s\t%s\t%s\n',1);
     Data = textscan(DataFile, '%s\t%s\t%f');
     fclose(DataFile);
-    LastRow = find(strcmp(Data{:,1},'stop')); %%%%%%% CHECK%%%%%
+    LastRow = find(strcmp(Data{:,1},'stop'));
+    if isempty(LastRow)
+        LastRow = length(Data{1})+1;
+    end
     Type{ff} = Data{1}(1:(LastRow-1));
     Stamp{ff} = Data{2}(1:(LastRow-1));
     IndRec = strfind(InputFiles(ff).name, 'RecOnly');
     Batname = InputFiles(ff).name((IndRec-3):(IndRec-2));
     if strcmp(Batname, 'Ha')
-        BatID{ff} = 59882*ones(flip(size(1:(LastRow-1))));
+        BatID{ff} = 59882*ones(LastRow-1,1);
     elseif strcmp(Batname, 'Ho')
-        BatID{ff} = 11689*ones(flip(size(1:(LastRow-1))));
+        BatID{ff} = 11689*ones(LastRow-1,1);
     else
         BatIDLocal = input(sprintf('Imposible to identify Bat ID, please enter Chip ID for file %s', InputFiles(ff).name));
         BatID{ff} = BatIDLocal*ones(flip(size(1:(LastRow-1))));
@@ -53,6 +56,25 @@ Type = vertcat(Type{:});
 %% Convert computer time stamps to transceiver time
 % Covert computer time stamps to sample stamps on the sound card
 FS = 192000; % Sample frequency of the sound card (Not nice to set that hard here, but better than taking the time to load a wavfile to get the FS)
+FormatIn = 'yyyymmddTHHMMSSFFF';% Format of the time in the raw files
+% get the onset of the task
+ParamFile = dir(fullfile(Audio_dir, sprintf('*%s_%s*RecOnly_param.txt', Date, ExpStartTime)));
+if length(ParamFile)>1
+    fprintf(1,'Several RecOnly sessions occured, which one do you want to look at?\n')
+    for ee=1:length(ParamFile)
+        fprintf(1,'%d: %s\n',ee,ParamFile(ee).name);
+    end
+    E_input = input('Your Choice:\n');
+    ParamFile = ParamFile(E_input);
+end
+ParamF = fopen(fullfile(ParamFile.folder, ParamFile.name));
+ParamData = textscan(ParamF, '%s', 'Delimiter','\n');
+fclose(ParamF);
+IndLine = find(contains(ParamData{1}, 'Task starts at '));
+IndChar = length('Task starts at ')+1;
+FirstFile = ParamData{1}{IndLine}(IndChar:end); %#ok<FNDSB>
+
+% get the file changes time
 EventFile = dir(fullfile(Audio_dir, sprintf('*%s_%s*RecOnly_events.txt', Date, ExpStartTime)));
 if length(EventFile)>1
     fprintf(1,'Several RecOnly sessions occured, which one do you want to look at?\n')
@@ -81,7 +103,6 @@ end
 TTL = load(fullfile(TTL_dir.folder, TTL_dir.name));
 
  % loop through behavioral events and get the time in audio samples
- FormatIn = 'yyyymmddTHHMMSSFFF';
  NE = length(Stamp);
  Event_AudioFileID = nan(NE,1);% File # during which each behavioral event happened
  Event_AudioStamp = nan(NE,1);% Time in sample of audiofile of each behavioral event
@@ -93,7 +114,11 @@ TTL = load(fullfile(TTL_dir.folder, TTL_dir.name));
          Elapsed=etime(LocalStamp, FSt);
          if Elapsed<0
              Event_AudioFileID(ee) = fc;
-             FSt = datevec(ChangeFileStamp{fc-1}, FormatIn);
+             if fc==1 % This event happened during the first file
+                 FSt = datevec(FirstFile, FormatIn);
+             else
+                FSt = datevec(ChangeFileStamp{fc-1}, FormatIn);
+             end
              Elapsed=etime(LocalStamp, FSt);
              Event_AudioStamp(ee) = round(Elapsed*FS);
              break
@@ -117,7 +142,7 @@ TTL = load(fullfile(TTL_dir.folder, TTL_dir.name));
 
 %% Identify individual actions and gather onset and offset times of each behavior
 % Individualized actions:
-IndivActions = {'chewing' 'food_in_mooth' 'licking' 'teeth-cleaning'};
+IndivActions = {'chewing' 'food-in-mouth' 'licking' 'teeth-cleaning' 'quiet'};
 UType_all = unique(Type); % unique labels
 % Isolate actions items
 StartInd= strfind(UType_all, 'start');
@@ -138,7 +163,7 @@ UActionText = unique(UActionText);% different types of behaviors
 % % Find the reference time to plot the ethogram
 % RefTime = Eventfile.event_timestamps_usec(find(contains(Eventfile.event_types_and_details, 'Started recording'),1))*10^-3;
 NAction = length(UActionText);
-AllActions_Time = cell(NAction,1);% onset/offset Time in ms of each long behavioral event or just time in sec for ponctual events at the scale of annotations (vocalizations for instance)
+AllActions_Time = cell(NAction,1);% onset/offset Time in ms of each long behavioral event or just time in msec for ponctual events at the scale of annotations (vocalizations for instance)
 AllActions_ID = cell(NAction,1);
 
 % Get the indices of all the starting points
@@ -157,7 +182,7 @@ for aa=1:NAction
         fprintf('Saving ponctual events\n')
         AllActions_Time{aa} = Event_TranscTime(IndAction);
         % save the bat ID for that behavior if it is individualized
-        if sum(contains(IndivActions, UActionText{aa}))
+        if sum(strcmp(IndivActions, UActionText{aa}))
             AllActions_ID{aa} = BatID(IndAction);
         else
             AllActions_ID{aa} = nan(size(IndAction));
@@ -169,7 +194,7 @@ for aa=1:NAction
         IndActionStop = intersect(IndAction, IndStop);
         AllActions_Time{aa} = nan(max(length(IndActionStop), length(IndActionStart)),2);
         % allocate space for the bat ID for that behavior
-        AllActions_ID{aa} = nan(max(length(IndActionStop), length(IndActionStart)),2);
+        AllActions_ID{aa} = nan(max(length(IndActionStop), length(IndActionStart)),1);
         
         % loop through action starts and figure out if a stop is closer to
         % it than the next start
@@ -186,13 +211,13 @@ for aa=1:NAction
             end
             if isempty(IndActionStopBat)  % This start misses a stop, consider the next action as
                 % being a potential stop
-                IndActionStop = IndActionStart(ii)+1;
-                if diff(Event_TranscTime(IndActionStart(ii):IndActionStop)>1000)% only keep this behavioral event if the next behavior happens 1 sec later
+                IndActionStop_local = IndActionStart(ii)+1;
+                if diff(Event_TranscTime(IndActionStart(ii):IndActionStop_local))>1000% only keep this behavioral event if the next behavior happens 1 sec later
                     e_count= e_count+1;
                     AllActions_Time{aa}(e_count,1) = Event_TranscTime(IndActionStart(ii));
-                    AllActions_Time{aa}(e_count,2) = Event_TranscTime(IndActionStop) - 1000;
+                    AllActions_Time{aa}(e_count,2) = Event_TranscTime(IndActionStop_local) - 1000;
                     % save the bat ID for that behavior if it is individualized
-                    if sum(contains(IndivActions, UActionText{aa}))
+                    if sum(strcmp(IndivActions, UActionText{aa}))
                         AllActions_ID{aa}(e_count) = BatID_local;
                     end
                 end
@@ -201,7 +226,7 @@ for aa=1:NAction
                 AllActions_Time{aa}(e_count,1) = Event_TranscTime(IndActionStart(ii));
                 AllActions_Time{aa}(e_count,2) = Event_TranscTime(IndActionStopBat(mm));
                 % save the bat ID for that behavior if it is individualized
-                if sum(contains(IndivActions, UActionText{aa}))
+                if sum(strcmp(IndivActions, UActionText{aa}))
                     AllActions_ID{aa}(e_count) = BatID_local;
                 end
                 if ii<length(IndActionStart)
