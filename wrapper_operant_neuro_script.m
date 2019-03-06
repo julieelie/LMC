@@ -127,6 +127,6 @@ for nl=1:length(NL_ID)
     Flags=[1 1];% Flags = whether to print PSTH of Tetrode (Flags(1)=1) and/or Single units
 % (Flags(2)=1))
     KDE_Cal = 0;
-    fprintf(' PSTH of NEURAL DATA CORRESPONDING TO  BEHAVIORS DURING FREE SOCIALIZATION \n')
-    [SpikeTimesBehav.(NeuroLoggerID)]= plot_psth_behav(Logger_dir, Date, ExpStartTime, NeuroLoggerID,Bat_ID, Flags, MaxDur, KDE_Cal);
+    fprintf(' PSTH of NEURAL DATA CORRESPONDING TO BEHAVIORS DURING FREE SOCIALIZATION AND VOCAL ACTIVITY DURING OPERANT CONDITIONING \n')
+    plot_psth_voc_and_behav(SpikeTimesBehav.(NeuroLoggerID),SpikeTimesVoc.(NeuroLoggerID), Flags, MaxDur, KDE_Cal);
 end
