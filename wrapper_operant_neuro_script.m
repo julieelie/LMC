@@ -75,9 +75,31 @@ get_logger_data_behav(AudioDataPath, Logger_dir, Date, ExpStartTime)
 fprintf(' EXTRACTING NEURAL DATA CORRESPONDING TO OTHER BEHAVIORS DURING FREE SESSION \n')
 FlagsExtr = [0 0 1 1]; % FlagsExtr(1)= Raw data, FlagsExtr(2) = LFP, FlagsExtr(3) = Tetrodes, FlagsExtr(4) = single units
 BufferBeforeBehavOnset = 0;
+RecOnlySession = dir(fullfile(AudioDataPath, '*RecOnly_events.txt'));
+if length(RecOnlySession)>1
+    fprintf(1, 'Several RecOnly session were done on that day:\n')
+    for ss=1:length(RecOnlySession)
+        fprintf(1, '%d. %s\n', ss, RecOnlySession(ss).name);
+    end
+    Inputss = input('Your choice:\n');
+    RecOnlySession = RecOnlySession(Inputss);
+end
+Date = RecOnlySession.name(6:11);
+ExpStartTime = RecOnlySession.name(13:16);
 cut_neuralData_behav(Logger_dir,Date, ExpStartTime,FlagsExtr,BufferBeforeBehavOnset);
 
  %% Plot PSTH of the bats doing other actions during free socialization!
+ RecOnlySession = dir(fullfile(AudioDataPath, '*RecOnly_events.txt'));
+if length(RecOnlySession)>1
+    fprintf(1, 'Several RecOnly session were done on that day:\n')
+    for ss=1:length(RecOnlySession)
+        fprintf(1, '%d. %s\n', ss, RecOnlySession(ss).name);
+    end
+    Inputss = input('Your choice:\n');
+    RecOnlySession = RecOnlySession(Inputss);
+end
+Date = RecOnlySession.name(6:11);
+ExpStartTime = RecOnlySession.name(13:16);
  % Find the ID of the Neural loggers and corresponding ID tag of each implanted bat
 MaxDur = 500; % duration by which each long behavioral sequence should be cut
 [~,~,RecTableData]=xlsread(Path2RecordingTable,1,'A1:P200','basic');
@@ -97,3 +119,14 @@ for nl=1:length(NL_ID)
     [SpikeTimesBehav.(NeuroLoggerID)]= plot_psth_behav(Logger_dir, Date, ExpStartTime, NeuroLoggerID,Bat_ID, Flags, MaxDur, KDE_Cal);
 end
 close all
+
+%% Plot one PSTH per unit with all actions
+for nl=1:length(NL_ID)
+    NeuroLoggerID = ['Logger' num2str(NL_ID(nl))];
+    Bat_ID = DataInfo{BatIDCol(find(BatIDCol<NLCol(nl),1,'last'))};
+    Flags=[1 1];% Flags = whether to print PSTH of Tetrode (Flags(1)=1) and/or Single units
+% (Flags(2)=1))
+    KDE_Cal = 0;
+    fprintf(' PSTH of NEURAL DATA CORRESPONDING TO  BEHAVIORS DURING FREE SOCIALIZATION \n')
+    [SpikeTimesBehav.(NeuroLoggerID)]= plot_psth_behav(Logger_dir, Date, ExpStartTime, NeuroLoggerID,Bat_ID, Flags, MaxDur, KDE_Cal);
+end
