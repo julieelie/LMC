@@ -1,4 +1,4 @@
-function [] = plot_psth_voc_and_behav(SpikeTrainsBehav, SpikeTrainsVoc, Date, NeuroLoggerID, Flags, Delay, KDE_Cal)
+function [] = plot_psth_voc_and_behav(SpikeTrainsBehav, SpikeTrainsVoc, Loggers_dir,Date, NeuroLoggerID, Flags, Delay, KDE_Cal)
 % AudioLoggerID = ID of the audio logger that the targeting animal is
 % wearing
 % NeuroLoggerID = ID of the neural logger that the targeting animal is
@@ -68,6 +68,7 @@ if Flags(1)
         
         % plotting hearing data during conditioning
         if isnan(HearOnlyInd)
+            HearOnlyDuration = Inf;
             fprintf(1,' ->No hearing data from the operant conditioning\n')
         else
             fprintf(1,' -> hearing\n')
@@ -78,7 +79,7 @@ if Flags(1)
                 cc = HearOnlyInd(IDurH(hh));
                 yyaxis left
                 hold on
-                plot([0 HearDuration(cc)], RowCount+hh-[0.5 0.5], '-','LineWidth',250/length(HearOnlyInd),'Color', [0.8 0.8 1])
+                plot([0 HearDuration(cc)], RowCount+hh-[0.5 0.5], '-','LineWidth',250/(length(HearOnlyInd)+ RowCount),'Color', [0.8 0.8 1])
                 %         for dd=1:size(DataDeletion_HearCall{cc},1)
                 %             hold on
                 %             plot(DataDeletion_HearCall{cc}(dd,:), hh-[0.5 0.5], '-','LineWidth',250/length(HearOnlyInd),'Color', [0.8 0.8 0.8]) % RF artefact period
@@ -107,7 +108,7 @@ if Flags(1)
             cc = IDurV(hh);
             yyaxis left
             hold on
-            plot([0 VocDuration(cc)], RowCount+hh-[0.5 0.5], '-','LineWidth',250/length(VocDuration),'Color', [1 0.8 0.8])
+            plot([0 VocDuration(cc)], RowCount+hh-[0.5 0.5], '-','LineWidth',250/(length(VocDuration)+ RowCount),'Color', [1 0.8 0.8])
             %         for dd=1:size(DataDeletion_HearCall{cc},1)
             %             hold on
             %             plot(DataDeletion_HearCall{cc}(dd,:), hh-[0.5 0.5], '-','LineWidth',250/length(HearOnlyInd),'Color', [0.8 0.8 0.8]) % RF artefact period
@@ -216,7 +217,7 @@ if Flags(2)
                 cc = HearOnlyInd(IDurH(hh));
                 yyaxis left
                 hold on
-                plot([0 HearDuration(cc)], RowCount+hh-[0.5 0.5], '-','LineWidth',250/length(HearOnlyInd),'Color', [0.8 0.8 1])
+                plot([0 HearDuration(cc)], RowCount+hh-[0.5 0.5], '-','LineWidth',250/(length(HearOnlyInd)+ RowCount),'Color', [0.8 0.8 1])
                 %         for dd=1:size(DataDeletion_HearCall{cc},1)
                 %             hold on
                 %             plot(DataDeletion_HearCall{cc}(dd,:), hh-[0.5 0.5], '-','LineWidth',250/length(HearOnlyInd),'Color', [0.8 0.8 0.8]) % RF artefact period
@@ -242,10 +243,10 @@ if Flags(2)
         fprintf(1,' -> vocalizing\n')
         [~, IDurV] = sort(VocDuration, 'descend');
         for hh=1:length(VocDuration)
-            cc = VocDuration(IDurV(hh));
+            cc = IDurV(hh);
             yyaxis left
             hold on
-            plot([0 VocDuration(cc)], RowCount+hh-[0.5 0.5], '-','LineWidth',250/length(VocDuration),'Color', [1 0.8 0.8])
+            plot([0 VocDuration(cc)], RowCount+hh-[0.5 0.5], '-','LineWidth',250/(length(VocDuration)+ RowCount),'Color', [1 0.8 0.8])
             %         for dd=1:size(DataDeletion_HearCall{cc},1)
             %             hold on
             %             plot(DataDeletion_HearCall{cc}(dd,:), hh-[0.5 0.5], '-','LineWidth',250/length(HearOnlyInd),'Color', [0.8 0.8 0.8]) % RF artefact period

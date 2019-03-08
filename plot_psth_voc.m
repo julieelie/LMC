@@ -96,13 +96,23 @@ for vv=1:NV
                     IndT01 = logical((Neuro_spikesT.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}>(IndVocStartRaw_merged{VocInd(vv)}{FocIndAudio}(nn)/FS*1000 - Delay)) .* (Neuro_spikesT.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}<(IndVocStopRaw_merged{VocInd(vv)}{FocIndAudio}(nn)/FS*1000 + Delay)));
                     SpikesTTimes_VocCall{VocCall,uu} = Neuro_spikesT.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}(IndT01)- IndVocStartRaw_merged{VocInd(vv)}{FocIndAudio}(nn)/FS*1000;
                     if KDE_Cal
-                        % calculate the density estimate
-                        [y,Psth_KDEfiltered_TVocCall_t{VocCall,uu},~]=ssvkernel(SpikesTTimes_VocCall{VocCall,uu},t);
-                        % y is a density function that sums to 1
-                        % multiplying by the total number of spikes gives the number of expecting spike per time bin (here 10 ms)
-                        % multiplying by the response sampling rate in kHz gives the expected spike rate to one stimulus presentation in spike/ms
-                        Psth_KDEfiltered_TVocCall{VocCall,uu} =  y * length(SpikesTTimes_VocCall{VocCall,uu}) * Response_samprate/1000;
-                        Psth_KDEfiltered_TVocCall_scalef(VocCall,uu) = max(Psth_KDEfiltered_TVocCall{VocCall,uu});
+                        if isempty(SpikesTTimes_VocCall{VocCall,uu})
+                            y=ones(1,length(t))./(2*length(t));
+                            Psth_KDEfiltered_TVocCall{VocCall,uu} =  y * Response_samprate/1000;
+                            Psth_KDEfiltered_TVocCall_scalef(VocCall,uu) = max(Psth_KDEfiltered_TVocCall{VocCall,uu});
+                        else
+                            if length(SpikesTimes_VocCall{VocCall,uu})==1
+                                y=ones(1,length(t))./length(t);
+                            else
+                                % calculate the density estimate
+                                [y,Psth_KDEfiltered_TVocCall_t{VocCall,uu},~]=sskernel(SpikesTTimes_VocCall{VocCall,uu},t);
+                            end
+                            % y is a density function that sums to 1
+                            % multiplying by the total number of spikes gives the number of expecting spike per time bin (here 10 ms)
+                            % multiplying by the response sampling rate in kHz gives the expected spike rate to one stimulus presentation in spike/ms
+                            Psth_KDEfiltered_TVocCall{VocCall,uu} =  y * length(SpikesTTimes_VocCall{VocCall,uu}) * Response_samprate/1000;
+                            Psth_KDEfiltered_TVocCall_scalef(VocCall,uu) = max(Psth_KDEfiltered_TVocCall{VocCall,uu});
+                        end
                     end
                 end
             end
@@ -111,13 +121,24 @@ for vv=1:NV
                     IndSU01 = logical((Neuro_spikes.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}>(IndVocStartRaw_merged{VocInd(vv)}{FocIndAudio}(nn)/FS*1000 - Delay)) .* (Neuro_spikes.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}<(IndVocStopRaw_merged{VocInd(vv)}{FocIndAudio}(nn)/FS*1000 + Delay)));
                     SpikesTimes_VocCall{VocCall,uu} = Neuro_spikes.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}(IndSU01) - IndVocStartRaw_merged{VocInd(vv)}{FocIndAudio}(nn)/FS*1000;
                     if KDE_Cal
-                        % calculate the density estimate
-                        [y,Psth_KDEfiltered_VocCall_t{VocCall,uu},~]=ssvkernel(SpikesTimes_VocCall{VocCall,uu},t);
-                        % y is a density function that sums to 1
-                        % multiplying by the total number of spikes gives the number of expecting spike per time bin (here 10 ms)
-                        % multiplying by the response sampling rate in kHz gives the expected spike rate to one stimulus presentation in spike/ms
-                        Psth_KDEfiltered_VocCall{VocCall,uu} =  y * length(SpikesTimes_VocCall{VocCall,uu}) * Response_samprate/1000;
-                        Psth_KDEfiltered_VocCall_scalef(VocCall,uu) = max(Psth_KDEfiltered_VocCall{VocCall,uu});
+                        if isempty(SpikesTimes_VocCall{VocCall,uu})
+                            y=ones(1,length(t))./(2*length(t));
+                            Psth_KDEfiltered_VocCall{VocCall,uu} =  y * Response_samprate/1000;
+                            Psth_KDEfiltered_VocCall_scalef(VocCall,uu) = max(Psth_KDEfiltered_VocCall{VocCall,uu});
+                            
+                        else
+                            if length(SpikesTimes_VocCall{VocCall,uu})==1
+                                y=ones(1,length(t))./length(t);
+                            else
+                                % calculate the density estimate
+                                [y,Psth_KDEfiltered_VocCall_t{VocCall,uu},~]=sskernel(SpikesTimes_VocCall{VocCall,uu},t);
+                            end
+                            % y is a density function that sums to 1
+                            % multiplying by the total number of spikes gives the number of expecting spike per time bin (here 10 ms)
+                            % multiplying by the response sampling rate in kHz gives the expected spike rate to one stimulus presentation in spike/ms
+                            Psth_KDEfiltered_VocCall{VocCall,uu} =  y * length(SpikesTimes_VocCall{VocCall,uu}) * Response_samprate/1000;
+                            Psth_KDEfiltered_VocCall_scalef(VocCall,uu) = max(Psth_KDEfiltered_VocCall{VocCall,uu});
+                        end
                     end
                 end
             end
@@ -370,13 +391,23 @@ for vv=1:NV
                         IndT01 = logical((Neuro_spikesT.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}>(IndVocStartRaw_merged{VocInd(vv)}{OthInd(ll)}(nn)/FS*1000 - Delay)) .* (Neuro_spikesT.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}<(IndVocStopRaw_merged{VocInd(vv)}{OthInd(ll)}(nn)/FS*1000 + Delay)));
                         SpikesTTimes_HearCall{HearCall,uu} = Neuro_spikesT.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}(IndT01)- IndVocStartRaw_merged{VocInd(vv)}{OthInd(ll)}(nn)/FS*1000;
                         if KDE_Cal
-                            % calculate the density estimate
-                            [y,Psth_KDEfiltered_THearCall_t{HearCall,uu},~]=ssvkernel(SpikesTTimes_HearCall{HearCall,uu},t);
-                            % y is a density function that sums to 1
-                            % multiplying by the total number of spikes gives the number of expecting spike per time bin (here 10 ms)
-                            % multiplying by the response sampling rate in kHz gives the expected spike rate to one stimulus presentation in spike/ms
-                            Psth_KDEfiltered_THearCall{HearCall,uu} =  y * length(SpikesTTimes_HearCall{HearCall,uu}) * Response_samprate/1000;
-                            Psth_KDEfiltered_THearCall_scalef(HearCall,uu) = max(Psth_KDEfiltered_THearCall{HearCall,uu});
+                            if isempty(SpikesTTimes_HearCall{HearCall,uu})
+                                y=ones(1,length(t))./(2*length(t));
+                                Psth_KDEfiltered_THearCall{HearCall,uu} =  y * Response_samprate/1000;
+                                Psth_KDEfiltered_THearCall_scalef(HearCall,uu) = max(Psth_KDEfiltered_THearCall{HearCall,uu});
+                            else
+                                if length(SpikesTTimes_HearCall{HearCall,uu})==1
+                                    y=ones(1,length(t))./(length(t));
+                                else
+                                    % calculate the density estimate
+                                    [y,Psth_KDEfiltered_THearCall_t{HearCall,uu},~]=sskernel(SpikesTTimes_HearCall{HearCall,uu},t);
+                                end
+                                % y is a density function that sums to 1
+                                % multiplying by the total number of spikes gives the number of expecting spike per time bin (here 10 ms)
+                                % multiplying by the response sampling rate in kHz gives the expected spike rate to one stimulus presentation in spike/ms
+                                Psth_KDEfiltered_THearCall{HearCall,uu} =  y * length(SpikesTTimes_HearCall{HearCall,uu}) * Response_samprate/1000;
+                                Psth_KDEfiltered_THearCall_scalef(HearCall,uu) = max(Psth_KDEfiltered_THearCall{HearCall,uu});
+                            end
                         end
                     end
                 end
@@ -385,13 +416,23 @@ for vv=1:NV
                         IndSU01 = logical((Neuro_spikes.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}>(IndVocStartRaw_merged{VocInd(vv)}{OthInd(ll)}(nn)/FS*1000 - Delay)) .* (Neuro_spikes.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}<(IndVocStopRaw_merged{VocInd(vv)}{OthInd(ll)}(nn)/FS*1000 + Delay)));
                         SpikesTimes_HearCall{HearCall,uu} = Neuro_spikes.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}(IndSU01) - IndVocStartRaw_merged{VocInd(vv)}{OthInd(ll)}(nn)/FS*1000;
                         if KDE_Cal
-                            % calculate the density estimate
-                            [y,Psth_KDEfiltered_HearCall_t{HearCall,uu},~]=ssvkernel(SpikesTimes_HearCall{HearCall,uu},t);
-                            % y is a density function that sums to 1
-                            % multiplying by the total number of spikes gives the number of expecting spike per time bin (here 10 ms)
-                            % multiplying by the response sampling rate in kHz gives the expected spike rate to one stimulus presentation in spike/ms
-                            Psth_KDEfiltered_HearCall{HearCall,uu} =  y * length(SpikesTimes_HearCall{HearCall,uu}) * Response_samprate/1000;
-                            Psth_KDEfiltered_HearCall_scalef(HearCall,uu) = max(Psth_KDEfiltered_HearCall{HearCall,uu});
+                            if isempty(SpikesTimes_HearCall{HearCall,uu})
+                                y=ones(1,length(t))./(2*length(t));
+                                Psth_KDEfiltered_HearCall{HearCall,uu} =  y * Response_samprate/1000;
+                                Psth_KDEfiltered_HearCall_scalef(HearCall,uu) = max(Psth_KDEfiltered_HearCall{HearCall,uu});
+                            else
+                                if length(SpikesTimes_HearCall{HearCall,uu})==1
+                                    y=ones(1,length(t))./(length(t));
+                                else
+                                    % calculate the density estimate
+                                    [y,Psth_KDEfiltered_HearCall_t{HearCall,uu},~]=sskernel(SpikesTimes_HearCall{HearCall,uu},t);
+                                end
+                                % y is a density function that sums to 1
+                                % multiplying by the total number of spikes gives the number of expecting spike per time bin (here 10 ms)
+                                % multiplying by the response sampling rate in kHz gives the expected spike rate to one stimulus presentation in spike/ms
+                                Psth_KDEfiltered_HearCall{HearCall,uu} =  y * length(SpikesTimes_HearCall{HearCall,uu}) * Response_samprate/1000;
+                                Psth_KDEfiltered_HearCall_scalef(HearCall,uu) = max(Psth_KDEfiltered_HearCall{HearCall,uu});
+                            end
                         end
                     end
                 end
@@ -582,15 +623,27 @@ fprintf(1,'DONE\n')
 if Flags(1)
     SpikeTrains.SpikesTTimes_VocCall = SpikesTTimes_VocCall;
     SpikeTrains.SpikesTTimes_HearCall = SpikesTTimes_HearCall;
+    if KDE_Cal
+        SpikeTrains.Average_Psth_KDEfiltered_TVocCall = Average_Psth_KDEfiltered_TVocCall;
+    end
 end
 if Flags(2)
     SpikeTrains.SpikesTimes_VocCall = SpikesTimes_VocCall;
     SpikeTrains.SpikesTimes_HearCall = SpikesTimes_HearCall;
+    if KDE_Cal
+        SpikeTrains.Average_Psth_KDEfiltered_VocCall = Average_Psth_KDEfiltered_VocCall;
+    end
 end
 SpikeTrains.VocDuration = VocDuration;
 if (HearCall>1) && sum(HearOnly)
     SpikeTrains.HearDuration = HearDuration;
     SpikeTrains.HearOnlyInd = HearOnlyInd;
+    if Flags(1) && KDE_Cal
+        SpikeTrains.Average_Psth_KDEfiltered_THearCall = Average_Psth_KDEfiltered_THearCall;
+    end
+    if Flags(2) && KDE_Cal
+        SpikeTrains.Average_Psth_KDEfiltered_HearCall = Average_Psth_KDEfiltered_HearCall;
+    end
 else
     SpikeTrains.HearDuration = NaN;
     SpikeTrains.HearOnlyInd = NaN;

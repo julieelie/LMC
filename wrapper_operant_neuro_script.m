@@ -48,7 +48,7 @@ for nl=1:length(NL_ID)
     AudioLoggerID = ['Logger' num2str(AL_ID)];
     Flags=[1 1];% Flags = whether to print PSTH of Tetrode (Flags(1)=1) and/or Single units
 % (Flags(2)=1))
-    KDE_Cal = 0;
+    KDE_Cal = 1;
     fprintf(' PSTH of NEURAL DATA CORRESPONDING TO VOCALIZATIONS DURING OPERANT \n')
     [SpikeTimesVoc.(NeuroLoggerID)]=plot_psth_voc(Logger_dir, Date, ExpStartTime, AudioLoggerID, NeuroLoggerID, Flags, BufferBeforeOnset, KDE_Cal);
 end
@@ -101,7 +101,7 @@ end
 Date = RecOnlySession.name(6:11);
 ExpStartTime = RecOnlySession.name(13:16);
  % Find the ID of the Neural loggers and corresponding ID tag of each implanted bat
-MaxDur = 500; % duration by which each long behavioral sequence should be cut
+MaxDur = 600; % duration by which each long behavioral sequence should be cut
 [~,~,RecTableData]=xlsread(Path2RecordingTable,1,'A1:P200','basic');
 RowData = find((cell2mat(RecTableData(2:end,1))== str2double(Date))) +1;
 DataInfo = RecTableData(RowData,:);
@@ -114,7 +114,7 @@ for nl=1:length(NL_ID)
     Bat_ID = DataInfo{BatIDCol(find(BatIDCol<NLCol(nl),1,'last'))};
     Flags=[1 1];% Flags = whether to print PSTH of Tetrode (Flags(1)=1) and/or Single units
 % (Flags(2)=1))
-    KDE_Cal = 0;
+    KDE_Cal = 1;
     fprintf(' PSTH of NEURAL DATA CORRESPONDING TO OTHER BEHAVIORS DURING FREE SOCIALIZATION \n')
     [SpikeTimesBehav.(NeuroLoggerID)]= plot_psth_behav(Logger_dir, Date, ExpStartTime, NeuroLoggerID,Bat_ID, Flags, MaxDur, KDE_Cal);
 end
@@ -128,5 +128,5 @@ for nl=1:length(NL_ID)
 % (Flags(2)=1))
     KDE_Cal = 0;
     fprintf(' PSTH of NEURAL DATA CORRESPONDING TO BEHAVIORS DURING FREE SOCIALIZATION AND VOCAL ACTIVITY DURING OPERANT CONDITIONING \n')
-    plot_psth_voc_and_behav(SpikeTimesBehav.(NeuroLoggerID),SpikeTimesVoc.(NeuroLoggerID),Date, NeuroLoggerID,Flags, BufferBeforeOnset, KDE_Cal);
+    plot_psth_voc_and_behav(SpikeTimesBehav.(NeuroLoggerID),SpikeTimesVoc.(NeuroLoggerID),Logger_dir,Date, NeuroLoggerID,Flags, BufferBeforeOnset, KDE_Cal);
 end
