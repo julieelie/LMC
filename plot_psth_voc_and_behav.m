@@ -1,0 +1,302 @@
+function [] = plot_psth_voc_and_behav(SpikeTrainsBehav, SpikeTrainsVoc, Date, NeuroLoggerID, Flags, Delay, KDE_Cal)
+% AudioLoggerID = ID of the audio logger that the targeting animal is
+% wearing
+% NeuroLoggerID = ID of the neural logger that the targeting animal is
+% wearing
+% Flags = whether to print PSTH of Tetrode (Flags(1)=1) and/or Single units
+% (Flags(2)=1))
+if nargin<7
+    KDE_Cal = 0;
+end
+
+
+% Reorganizing input Data
+if Flags(1)
+    SpikesTTimes_VocCall = SpikeTrainsVoc.SpikesTTimes_VocCall;
+    SpikesTTimes_HearCall = SpikeTrainsVoc.SpikesTTimes_HearCall;
+    SpikesTTimes_Behav = SpikeTrainsBehav.SpikesTTimes_Behav;
+    NT = size(SpikesTTimes_Behav{1},2);
+end
+if Flags(2)
+    SpikesTimes_VocCall = SpikeTrainsVoc.SpikesTimes_VocCall;
+    SpikesTimes_HearCall = SpikeTrainsVoc.SpikesTimes_HearCall;
+    SpikesTimes_Behav = SpikeTrainsBehav.SpikesTimes_Behav;
+    NU = size(SpikesTimes_Behav{1},2);
+end
+VocDuration = SpikeTrainsVoc.VocDuration;
+HearDuration = SpikeTrainsVoc.HearDuration;
+UActionBehav = SpikeTrainsBehav.UActionBehav;
+HearOnlyInd = SpikeTrainsVoc.HearOnlyInd;
+
+MaxInstances = 150; % Max number of instances to plot for behavioral events other than hearing and vocalizing
+
+%% Now plotting PSTH
+fprintf(1, 'Plotting PSTH\n')
+% Now plot Raster for tetrodes
+if Flags(1)
+    for uu=1:NT
+        Fig = figure();
+        if KDE_Cal
+            subplot(2,1,1)
+        end
+        RowCount = 0;
+        
+        % plotting behavioral action in freely interacting bats
+        for bb=1:length(UActionBehav)
+            NBehav = min(size(SpikesTTimes_Behav{bb},1), MaxInstances);
+            
+            % Plotting spikes
+            for cc=1:NBehav
+                hold on
+                for spike=1:length(SpikesTTimes_Behav{bb}{cc,uu})
+                    hold on
+                    plot(SpikesTTimes_Behav{bb}{cc,uu}(spike)*ones(2,1)-Delay, RowCount+cc-[0.9 0.1], 'k-', 'LineWidth',1)
+                end
+                hold on
+                %                 yyaxis right
+                %                 plot(Psth_KDEfiltered_TVocCall_t{cc,uu}, Psth_KDEfiltered_TVocCall{cc,uu}/max(Psth_KDEfiltered_TVocCall_scalef(:,uu))+cc-1, 'r-', 'LineWidth',2)
+            end
+            % plotting the legend for that particular behavior
+            h=text(-10, RowCount + NBehav/3 ,sprintf('%s', UActionBehav{bb}));
+            set(h,'Rotation',90);
+            RowCount = RowCount + NBehav + 1; % Increment the row count and add 1 to leave one row space between 2 behavior types
+            
+        end
+        
+        % plotting hearing data during conditioning
+        if isnan(HearOnlyInd)
+            fprintf(1,'No hearing data from the operant conditioning\n')
+        else
+            HearOnlyDuration=HearDuration(HearOnlyInd); % Only taking heard vocalizations when the bat is not vocalizing itself.
+            % We want to plot PSTH with increasing duration of vocalizations
+            [~, IDurH] = sort(HearOnlyDuration, 'descend');
+            for hh=1:length(HearOnlyInd)
+                cc = HearOnlyInd(IDurH(hh));
+                yyaxis left
+                hold on
+                plot([0 HearDuration(cc)], RowCount+hh-[0.5 0.5], '-','LineWidth',250/length(HearOnlyInd),'Color', [0.8 0.8 1])
+                %         for dd=1:size(DataDeletion_HearCall{cc},1)
+                %             hold on
+                %             plot(DataDeletion_HearCall{cc}(dd,:), hh-[0.5 0.5], '-','LineWidth',250/length(HearOnlyInd),'Color', [0.8 0.8 0.8]) % RF artefact period
+                %         end
+                for spike=1:length(SpikesTTimes_HearCall{cc,uu})
+                    hold on
+                    plot(SpikesTTimes_HearCall{cc,uu}(spike)*ones(2,1), RowCount+hh-[0.9 0.1], 'k-', 'LineWidth',1)
+                end
+                hold on
+                %             yyaxis right
+                %             plot(Psth_KDEfiltered_THearCall_t{cc,uu}, Psth_KDEfiltered_THearCall{cc,uu}/max(Psth_KDEfiltered_THearCall_scalef(HearOnlyInd,uu))+hh-1, 'r-', 'LineWidth',2)
+            end
+            % plotting a line at onset
+            line([0 0], [RowCount-0.5 RowCount+length(HearOnlyInd)+0.5], 'b-', 'LineWidth',2)
+            % plotting the legend for that particular behavior
+            h=text(-10, RowCount + length(HearOnlyInd)/3 ,'Hearing');
+            set(h,'Rotation',90);
+            RowCount = RowCount + length(HearOnlyInd) + 1; % Increment the row count and add 1 to leave one row space between 2 behavior types
+        end
+        
+        % plotting vocalization production data during conditioning
+        % We want to plot PSTH with increasing duration of vocalizations
+        [~, IDurV] = sort(VocDuration, 'descend');
+        for hh=1:length(VocDuration)
+            cc = VocDuration(IDurV(hh));
+            yyaxis left
+            hold on
+            plot([0 VocDuration(cc)], RowCount+hh-[0.5 0.5], '-','LineWidth',250/length(VocDuration),'Color', [1 0.8 0.8])
+            %         for dd=1:size(DataDeletion_HearCall{cc},1)
+            %             hold on
+            %             plot(DataDeletion_HearCall{cc}(dd,:), hh-[0.5 0.5], '-','LineWidth',250/length(HearOnlyInd),'Color', [0.8 0.8 0.8]) % RF artefact period
+            %         end
+            for spike=1:length(SpikesTTimes_VocCall{cc,uu})
+                hold on
+                plot(SpikesTTimes_VocCall{cc,uu}(spike)*ones(2,1), RowCount+hh-[0.9 0.1], 'k-', 'LineWidth',1)
+            end
+            hold on
+            %             yyaxis right
+            %             plot(Psth_KDEfiltered_THearCall_t{cc,uu}, Psth_KDEfiltered_THearCall{cc,uu}/max(Psth_KDEfiltered_THearCall_scalef(HearOnlyInd,uu))+hh-1, 'r-', 'LineWidth',2)
+        end
+        % plotting a line at onset
+        line([0 0], [RowCount-0.5 RowCount+length(VocDuration)+0.5], 'r-', 'LineWidth',2)
+        % plotting the legend for that particular behavior
+        h=text(-10, RowCount + length(VocDuration)/3 ,'Vocalizing');
+        set(h,'Rotation',90);
+        RowCount = RowCount + length(VocDuration) + 1;
+        
+        % Set the parameters of the figure
+        XLIM = [-Delay min(min(HearOnlyDuration), min(VocDuration))+Delay];
+        xlabel('Time (ms)')
+        ylim([0 RowCount])
+        xlim(XLIM)
+        title(sprintf('Raster %s Tetrode %d on %s', NeuroLoggerID, uu, Date))
+        hold off
+        
+        % Plot KDE if requested %% THIS NEEDS REVISIONS!!%%
+        if KDE_Cal
+            subplot(2,1,2)
+            shadedErrorBar(Average_Psth_KDEfiltered_TBehav{uu,bb}(1,:), Average_Psth_KDEfiltered_TBehav{uu,bb}(2,:), Average_Psth_KDEfiltered_TBehav{uu,bb}(3,:), {'r-', 'LineWidth',2})
+            xlim(XLIM)
+            ylim(YLIM_T)
+            xlabel('Time (ms)')
+            ylabel('Spike rate (/ms)')
+        end
+        if (length(HearOnlyInd)>1) && KDE_Cal
+            subplot(2,1,2)
+            shadedErrorBar(Average_Psth_KDEfiltered_THearCall{uu}(1,:), Average_Psth_KDEfiltered_THearCall{uu}(2,:), Average_Psth_KDEfiltered_THearCall{uu}(3,:), {'b-', 'LineWidth',2})
+            xlim(XLIM)
+            ylim(YLIM_T)
+            xlabel('Time centered at hearing onset (ms)')
+            ylabel('Spike rate (/ms)')
+        end
+        
+        % Save figure
+        orient(Fig,'landscape')
+        Fig.PaperPositionMode = 'auto';
+        set(Fig,'PaperOrientation','landscape');
+        %             set(Fig,'PaperUnits','normalized');
+        %             set(Fig,'PaperPosition', [50 50 1200 800]);
+        %             pause()
+        if KDE_Cal
+            print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_ALL_PSTH_KDE_Tetrode%d.pdf', Date, NeuroLoggerID,uu)),'-dpdf','-fillpage')
+        else
+            print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_ALL_PSTH_Tetrode%d.pdf', Date, NeuroLoggerID,uu)),'-dpdf','-fillpage')
+        end
+        close all
+        
+    end
+    
+end
+
+        
+ % Now plot Raster for single units
+if Flags(2)
+    for uu=1:NU
+        Fig = figure();
+        if KDE_Cal
+            subplot(2,1,1)
+        end
+        RowCount = 0;
+        
+        % plotting behavioral action in freely interacting bats
+        for bb=1:length(UActionBehav)
+            NBehav = min(size(SpikesTimes_Behav{bb},1), MaxInstances);
+            
+            % Plotting spikes
+            for cc=1:NBehav
+                hold on
+                for spike=1:length(SpikesTimes_Behav{bb}{cc,uu})
+                    hold on
+                    plot(SpikesTimes_Behav{bb}{cc,uu}(spike)*ones(2,1)-Delay, RowCount+cc-[0.9 0.1], 'k-', 'LineWidth',1)
+                end
+                hold on
+                %                 yyaxis right
+                %                 plot(Psth_KDEfiltered_TVocCall_t{cc,uu}, Psth_KDEfiltered_TVocCall{cc,uu}/max(Psth_KDEfiltered_TVocCall_scalef(:,uu))+cc-1, 'r-', 'LineWidth',2)
+            end
+            % plotting the legend for that particular behavior
+            h=text(-10, RowCount + NBehav/3 ,sprintf('%s', UActionBehav{bb}));
+            set(h,'Rotation',90);
+            RowCount = RowCount + NBehav + 1; % Increment the row count and add 1 to leave one row space between 2 behavior types
+            
+        end
+        
+        % plotting hearing data during conditioning
+        HearOnlyDuration=HearDuration(HearOnlyInd); % Only taking heard vocalizations when the bat is not vocalizing itself. 
+        % We want to plot PSTH with increasing duration of vocalizations
+        [~, IDurH] = sort(HearOnlyDuration, 'descend');
+        for hh=1:length(HearOnlyInd)
+            cc = HearOnlyInd(IDurH(hh));
+            yyaxis left
+            hold on
+            plot([0 HearDuration(cc)], RowCount+hh-[0.5 0.5], '-','LineWidth',250/length(HearOnlyInd),'Color', [0.8 0.8 1])
+            %         for dd=1:size(DataDeletion_HearCall{cc},1)
+            %             hold on
+            %             plot(DataDeletion_HearCall{cc}(dd,:), hh-[0.5 0.5], '-','LineWidth',250/length(HearOnlyInd),'Color', [0.8 0.8 0.8]) % RF artefact period
+            %         end
+            for spike=1:length(SpikesTimes_HearCall{cc,uu})
+                hold on
+                plot(SpikesTimes_HearCall{cc,uu}(spike)*ones(2,1), RowCount+hh-[0.9 0.1], 'k-', 'LineWidth',1)
+            end
+            hold on
+            %             yyaxis right
+            %             plot(Psth_KDEfiltered_THearCall_t{cc,uu}, Psth_KDEfiltered_THearCall{cc,uu}/max(Psth_KDEfiltered_THearCall_scalef(HearOnlyInd,uu))+hh-1, 'r-', 'LineWidth',2)
+        end
+        % plotting a line at onset
+        line([0 0], [RowCount-0.5 RowCount+length(HearOnlyInd)+0.5], 'b-', 'LineWidth',2) 
+        % plotting the legend for that particular behavior
+        h=text(-10, RowCount + length(HearOnlyInd)/3 ,'Hearing');
+        set(h,'Rotation',90);
+        RowCount = RowCount + length(HearOnlyInd) + 1; % Increment the row count and add 1 to leave one row space between 2 behavior types
+        
+        
+        % plotting vocalization production data during conditioning
+        % We want to plot PSTH with increasing duration of vocalizations
+        [~, IDurV] = sort(VocDuration, 'descend');
+        for hh=1:length(VocDuration)
+            cc = VocDuration(IDurV(hh));
+            yyaxis left
+            hold on
+            plot([0 VocDuration(cc)], RowCount+hh-[0.5 0.5], '-','LineWidth',250/length(VocDuration),'Color', [1 0.8 0.8])
+            %         for dd=1:size(DataDeletion_HearCall{cc},1)
+            %             hold on
+            %             plot(DataDeletion_HearCall{cc}(dd,:), hh-[0.5 0.5], '-','LineWidth',250/length(HearOnlyInd),'Color', [0.8 0.8 0.8]) % RF artefact period
+            %         end
+            for spike=1:length(SpikesTimes_VocCall{cc,uu})
+                hold on
+                plot(SpikesTimes_VocCall{cc,uu}(spike)*ones(2,1), RowCount+hh-[0.9 0.1], 'k-', 'LineWidth',1)
+            end
+            hold on
+            %             yyaxis right
+            %             plot(Psth_KDEfiltered_THearCall_t{cc,uu}, Psth_KDEfiltered_THearCall{cc,uu}/max(Psth_KDEfiltered_THearCall_scalef(HearOnlyInd,uu))+hh-1, 'r-', 'LineWidth',2)
+        end
+        % plotting a line at onset
+        line([0 0], [RowCount-0.5 RowCount+length(VocDuration)+0.5], 'r-', 'LineWidth',2)
+        % plotting the legend for that particular behavior
+        h=text(-10, RowCount + length(VocDuration)/3 ,'Vocalizing');
+        set(h,'Rotation',90);
+        RowCount = RowCount + length(VocDuration) + 1;
+        
+        % Set the parameters of the figure
+        XLIM = [-Delay min(min(HearOnlyDuration), min(VocDuration))+Delay];
+        xlabel('Time (ms)')
+        ylim([0 RowCount])
+        xlim(XLIM)
+        title(sprintf('Raster %s Tetrode %d on %s', NeuroLoggerID, uu, Date))
+        hold off
+        
+        % Plot KDE if requested %% THIS NEEDS REVISIONS!!%%
+        if KDE_Cal
+            subplot(2,1,2)
+            shadedErrorBar(Average_Psth_KDEfiltered_Behav{uu,bb}(1,:), Average_Psth_KDEfiltered_TBehav{uu,bb}(2,:), Average_Psth_KDEfiltered_TBehav{uu,bb}(3,:), {'r-', 'LineWidth',2})
+            xlim(XLIM)
+            ylim(YLIM_T)
+            xlabel('Time (ms)')
+            ylabel('Spike rate (/ms)')
+        end
+        if (length(HearOnlyInd)>1) && KDE_Cal
+            subplot(2,1,2)
+            shadedErrorBar(Average_Psth_KDEfiltered_HearCall{uu}(1,:), Average_Psth_KDEfiltered_THearCall{uu}(2,:), Average_Psth_KDEfiltered_THearCall{uu}(3,:), {'b-', 'LineWidth',2})
+            xlim(XLIM)
+            ylim(YLIM_T)
+            xlabel('Time centered at hearing onset (ms)')
+            ylabel('Spike rate (/ms)')
+        end
+        
+        % Save figure
+        orient(Fig,'landscape')
+        Fig.PaperPositionMode = 'auto';
+        set(Fig,'PaperOrientation','landscape');
+        %             set(Fig,'PaperUnits','normalized');
+        %             set(Fig,'PaperPosition', [50 50 1200 800]);
+        %             pause()
+        if KDE_Cal
+            print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_ALL_PSTH_KDE_SU%d.pdf', Date, NeuroLoggerID,uu)),'-dpdf','-fillpage')
+        else
+            print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_ALL_PSTH_SU%d.pdf', Date, NeuroLoggerID,uu)),'-dpdf','-fillpage')
+        end
+        close all
+        
+    end
+    
+end
+fprintf(1, 'DONE\n')
+
+end

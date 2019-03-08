@@ -11,7 +11,7 @@ addpath(genpath('/Users/elie/Documents/CODE/LoggerDataProcessing'))
 addpath(genpath('/Users/elie/Documents/CODE/SoundAnalysisBats'))
 
 %% Some important parameters, inputs
-% Get the path to audio data
+% Get the path to audio data for operant conditioning experiment
 [AudioDataPath, DataFile ,~]=fileparts(Path2ParamFile);
 Date = DataFile(6:11);
 ExpStartTime = DataFile(13:16);
@@ -128,5 +128,5 @@ for nl=1:length(NL_ID)
 % (Flags(2)=1))
     KDE_Cal = 0;
     fprintf(' PSTH of NEURAL DATA CORRESPONDING TO BEHAVIORS DURING FREE SOCIALIZATION AND VOCAL ACTIVITY DURING OPERANT CONDITIONING \n')
-    plot_psth_voc_and_behav(SpikeTimesBehav.(NeuroLoggerID),SpikeTimesVoc.(NeuroLoggerID), Flags, MaxDur, KDE_Cal);
+    plot_psth_voc_and_behav(SpikeTimesBehav.(NeuroLoggerID),SpikeTimesVoc.(NeuroLoggerID),Date, NeuroLoggerID,Flags, BufferBeforeOnset, KDE_Cal);
 end

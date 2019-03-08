@@ -588,5 +588,11 @@ if Flags(2)
     SpikeTrains.SpikesTimes_HearCall = SpikesTimes_HearCall;
 end
 SpikeTrains.VocDuration = VocDuration;
-SpikeTrains.HearDuration = HearDuration;
+if (HearCall>1) && sum(HearOnly)
+    SpikeTrains.HearDuration = HearDuration;
+    SpikeTrains.HearOnlyInd = HearOnlyInd;
+else
+    SpikeTrains.HearDuration = NaN;
+    SpikeTrains.HearOnlyInd = NaN;
+end
 end
