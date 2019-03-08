@@ -29,12 +29,14 @@ UActionBehav = SpikeTrainsBehav.UActionBehav;
 HearOnlyInd = SpikeTrainsVoc.HearOnlyInd;
 
 MaxInstances = 150; % Max number of instances to plot for behavioral events other than hearing and vocalizing
-
+PSTH_spacer=10;
+BehaviorLegendX = -Delay - 50;
 %% Now plotting PSTH
 fprintf(1, 'Plotting PSTH\n')
 % Now plot Raster for tetrodes
 if Flags(1)
     for uu=1:NT
+        fprintf(1, 'Tetrode %d/%d...\n',uu,NT)
         Fig = figure();
         if KDE_Cal
             subplot(2,1,1)
@@ -43,6 +45,7 @@ if Flags(1)
         
         % plotting behavioral action in freely interacting bats
         for bb=1:length(UActionBehav)
+            fprintf(1,' -> %s\n', UActionBehav{bb})
             NBehav = min(size(SpikesTTimes_Behav{bb},1), MaxInstances);
             
             % Plotting spikes
@@ -57,16 +60,17 @@ if Flags(1)
                 %                 plot(Psth_KDEfiltered_TVocCall_t{cc,uu}, Psth_KDEfiltered_TVocCall{cc,uu}/max(Psth_KDEfiltered_TVocCall_scalef(:,uu))+cc-1, 'r-', 'LineWidth',2)
             end
             % plotting the legend for that particular behavior
-            h=text(-10, RowCount + NBehav/3 ,sprintf('%s', UActionBehav{bb}));
+            h=text(BehaviorLegendX, RowCount + NBehav/3 ,sprintf('%s', UActionBehav{bb}));
             set(h,'Rotation',90);
-            RowCount = RowCount + NBehav + 1; % Increment the row count and add 1 to leave one row space between 2 behavior types
+            RowCount = RowCount + NBehav + PSTH_spacer; % Increment the row count and add PSTH_spacer to leave PSTH_spacer row space between 2 behavior types
             
         end
         
         % plotting hearing data during conditioning
         if isnan(HearOnlyInd)
-            fprintf(1,'No hearing data from the operant conditioning\n')
+            fprintf(1,' ->No hearing data from the operant conditioning\n')
         else
+            fprintf(1,' -> hearing\n')
             HearOnlyDuration=HearDuration(HearOnlyInd); % Only taking heard vocalizations when the bat is not vocalizing itself.
             % We want to plot PSTH with increasing duration of vocalizations
             [~, IDurH] = sort(HearOnlyDuration, 'descend');
@@ -88,18 +92,19 @@ if Flags(1)
                 %             plot(Psth_KDEfiltered_THearCall_t{cc,uu}, Psth_KDEfiltered_THearCall{cc,uu}/max(Psth_KDEfiltered_THearCall_scalef(HearOnlyInd,uu))+hh-1, 'r-', 'LineWidth',2)
             end
             % plotting a line at onset
-            line([0 0], [RowCount-0.5 RowCount+length(HearOnlyInd)+0.5], 'b-', 'LineWidth',2)
+            line([0 0], [RowCount-0.5 RowCount+length(HearOnlyInd)+0.5], 'color','b','LineStyle','-', 'LineWidth',1)
             % plotting the legend for that particular behavior
-            h=text(-10, RowCount + length(HearOnlyInd)/3 ,'Hearing');
+            h=text(BehaviorLegendX, RowCount + length(HearOnlyInd)/3 ,'Hearing');
             set(h,'Rotation',90);
-            RowCount = RowCount + length(HearOnlyInd) + 1; % Increment the row count and add 1 to leave one row space between 2 behavior types
+            RowCount = RowCount + length(HearOnlyInd) + PSTH_spacer; % Increment the row count and add 1 to leave one row space between 2 behavior types
         end
         
         % plotting vocalization production data during conditioning
         % We want to plot PSTH with increasing duration of vocalizations
+        fprintf(1,' -> vocalizing\n')
         [~, IDurV] = sort(VocDuration, 'descend');
         for hh=1:length(VocDuration)
-            cc = VocDuration(IDurV(hh));
+            cc = IDurV(hh);
             yyaxis left
             hold on
             plot([0 VocDuration(cc)], RowCount+hh-[0.5 0.5], '-','LineWidth',250/length(VocDuration),'Color', [1 0.8 0.8])
@@ -116,11 +121,11 @@ if Flags(1)
             %             plot(Psth_KDEfiltered_THearCall_t{cc,uu}, Psth_KDEfiltered_THearCall{cc,uu}/max(Psth_KDEfiltered_THearCall_scalef(HearOnlyInd,uu))+hh-1, 'r-', 'LineWidth',2)
         end
         % plotting a line at onset
-        line([0 0], [RowCount-0.5 RowCount+length(VocDuration)+0.5], 'r-', 'LineWidth',2)
+        line([0 0], [RowCount-0.5 RowCount+length(VocDuration)+0.5], 'Color','r','LineStyle','-', 'LineWidth',1.5)
         % plotting the legend for that particular behavior
-        h=text(-10, RowCount + length(VocDuration)/3 ,'Vocalizing');
+        h=text(BehaviorLegendX, RowCount + length(VocDuration)/3 ,'Vocalizing');
         set(h,'Rotation',90);
-        RowCount = RowCount + length(VocDuration) + 1;
+        RowCount = RowCount + length(VocDuration)+1;
         
         % Set the parameters of the figure
         XLIM = [-Delay min(min(HearOnlyDuration), min(VocDuration))+Delay];
@@ -167,9 +172,10 @@ if Flags(1)
 end
 
         
- % Now plot Raster for single units
+ %% Now plot Raster for single units
 if Flags(2)
     for uu=1:NU
+        fprintf(1, 'Single Unit %d/%d...\n',uu,NU)
         Fig = figure();
         if KDE_Cal
             subplot(2,1,1)
@@ -179,7 +185,7 @@ if Flags(2)
         % plotting behavioral action in freely interacting bats
         for bb=1:length(UActionBehav)
             NBehav = min(size(SpikesTimes_Behav{bb},1), MaxInstances);
-            
+            fprintf(1,' -> %s\n', UActionBehav{bb})
             % Plotting spikes
             for cc=1:NBehav
                 hold on
@@ -192,43 +198,48 @@ if Flags(2)
                 %                 plot(Psth_KDEfiltered_TVocCall_t{cc,uu}, Psth_KDEfiltered_TVocCall{cc,uu}/max(Psth_KDEfiltered_TVocCall_scalef(:,uu))+cc-1, 'r-', 'LineWidth',2)
             end
             % plotting the legend for that particular behavior
-            h=text(-10, RowCount + NBehav/3 ,sprintf('%s', UActionBehav{bb}));
+            h=text(BehaviorLegendX, RowCount + NBehav/3 ,sprintf('%s', UActionBehav{bb}));
             set(h,'Rotation',90);
-            RowCount = RowCount + NBehav + 1; % Increment the row count and add 1 to leave one row space between 2 behavior types
+            RowCount = RowCount + NBehav + PSTH_spacer; % Increment the row count and add PSTH_spacer to leave PSTH_spacer row space between 2 behavior types
             
         end
         
         % plotting hearing data during conditioning
-        HearOnlyDuration=HearDuration(HearOnlyInd); % Only taking heard vocalizations when the bat is not vocalizing itself. 
-        % We want to plot PSTH with increasing duration of vocalizations
-        [~, IDurH] = sort(HearOnlyDuration, 'descend');
-        for hh=1:length(HearOnlyInd)
-            cc = HearOnlyInd(IDurH(hh));
-            yyaxis left
-            hold on
-            plot([0 HearDuration(cc)], RowCount+hh-[0.5 0.5], '-','LineWidth',250/length(HearOnlyInd),'Color', [0.8 0.8 1])
-            %         for dd=1:size(DataDeletion_HearCall{cc},1)
-            %             hold on
-            %             plot(DataDeletion_HearCall{cc}(dd,:), hh-[0.5 0.5], '-','LineWidth',250/length(HearOnlyInd),'Color', [0.8 0.8 0.8]) % RF artefact period
-            %         end
-            for spike=1:length(SpikesTimes_HearCall{cc,uu})
+        if isnan(HearOnlyInd)
+            fprintf(1,' -> No hearing data from the operant conditioning\n')
+        else
+            fprintf(1,' -> hearing\n')
+            HearOnlyDuration=HearDuration(HearOnlyInd); % Only taking heard vocalizations when the bat is not vocalizing itself.
+            % We want to plot PSTH with increasing duration of vocalizations
+            [~, IDurH] = sort(HearOnlyDuration, 'descend');
+            for hh=1:length(HearOnlyInd)
+                cc = HearOnlyInd(IDurH(hh));
+                yyaxis left
                 hold on
-                plot(SpikesTimes_HearCall{cc,uu}(spike)*ones(2,1), RowCount+hh-[0.9 0.1], 'k-', 'LineWidth',1)
+                plot([0 HearDuration(cc)], RowCount+hh-[0.5 0.5], '-','LineWidth',250/length(HearOnlyInd),'Color', [0.8 0.8 1])
+                %         for dd=1:size(DataDeletion_HearCall{cc},1)
+                %             hold on
+                %             plot(DataDeletion_HearCall{cc}(dd,:), hh-[0.5 0.5], '-','LineWidth',250/length(HearOnlyInd),'Color', [0.8 0.8 0.8]) % RF artefact period
+                %         end
+                for spike=1:length(SpikesTimes_HearCall{cc,uu})
+                    hold on
+                    plot(SpikesTimes_HearCall{cc,uu}(spike)*ones(2,1), RowCount+hh-[0.9 0.1], 'k-', 'LineWidth',1)
+                end
+                hold on
+                %             yyaxis right
+                %             plot(Psth_KDEfiltered_THearCall_t{cc,uu}, Psth_KDEfiltered_THearCall{cc,uu}/max(Psth_KDEfiltered_THearCall_scalef(HearOnlyInd,uu))+hh-1, 'r-', 'LineWidth',2)
             end
-            hold on
-            %             yyaxis right
-            %             plot(Psth_KDEfiltered_THearCall_t{cc,uu}, Psth_KDEfiltered_THearCall{cc,uu}/max(Psth_KDEfiltered_THearCall_scalef(HearOnlyInd,uu))+hh-1, 'r-', 'LineWidth',2)
+            % plotting a line at onset
+            line([0 0], [RowCount-0.5 RowCount+length(HearOnlyInd)+0.5],'color','b','LineStyle','-', 'LineWidth',1)
+            % plotting the legend for that particular behavior
+            h=text(BehaviorLegendX, RowCount + length(HearOnlyInd)/3 ,'Hearing');
+            set(h,'Rotation',90);
+            RowCount = RowCount + length(HearOnlyInd) + PSTH_spacer; % Increment the row count and add PSTH_spacer to leave PSTH_spacer row space between 2 behavior types
         end
-        % plotting a line at onset
-        line([0 0], [RowCount-0.5 RowCount+length(HearOnlyInd)+0.5], 'b-', 'LineWidth',2) 
-        % plotting the legend for that particular behavior
-        h=text(-10, RowCount + length(HearOnlyInd)/3 ,'Hearing');
-        set(h,'Rotation',90);
-        RowCount = RowCount + length(HearOnlyInd) + 1; % Increment the row count and add 1 to leave one row space between 2 behavior types
-        
         
         % plotting vocalization production data during conditioning
         % We want to plot PSTH with increasing duration of vocalizations
+        fprintf(1,' -> vocalizing\n')
         [~, IDurV] = sort(VocDuration, 'descend');
         for hh=1:length(VocDuration)
             cc = VocDuration(IDurV(hh));
@@ -248,9 +259,9 @@ if Flags(2)
             %             plot(Psth_KDEfiltered_THearCall_t{cc,uu}, Psth_KDEfiltered_THearCall{cc,uu}/max(Psth_KDEfiltered_THearCall_scalef(HearOnlyInd,uu))+hh-1, 'r-', 'LineWidth',2)
         end
         % plotting a line at onset
-        line([0 0], [RowCount-0.5 RowCount+length(VocDuration)+0.5], 'r-', 'LineWidth',2)
+        line([0 0], [RowCount-0.5 RowCount+length(VocDuration)+0.5], 'color','r','LineStyle','-', 'LineWidth',1)
         % plotting the legend for that particular behavior
-        h=text(-10, RowCount + length(VocDuration)/3 ,'Vocalizing');
+        h=text(BehaviorLegendX, RowCount + length(VocDuration)/3 ,'Vocalizing');
         set(h,'Rotation',90);
         RowCount = RowCount + length(VocDuration) + 1;
         
