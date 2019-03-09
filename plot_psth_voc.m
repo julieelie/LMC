@@ -200,7 +200,7 @@ if sum(Ncall)
                     % gives the number of expected spikes per behavioral event
                     % Multiplying by the response sampling rate in kHz gives the expected spike rate to one behavioral event in spike/ms
                     Sum_Psth_KDEfiltered_TVocCall{uu,2} =  y * length(AllSpikes_local) ./(sum(~isnan(PSTH_local))) * Response_samprate/1000;
-                    Sum_Psth_KDEfiltered_TVocCall{uu,3} =  bconf95 .* length(AllSpikes_local) ./(sum(~isnan(PSTH_local))) .* Response_samprate ./1000;
+                    Sum_Psth_KDEfiltered_TVocCall{uu,3} =  abs(flipud(bconf95) .* length(AllSpikes_local) ./(sum(~isnan(PSTH_local))) .* Response_samprate ./1000 - repmat(Sum_Psth_KDEfiltered_TVocCall{uu,2},2,1));
                 end
                 
             end
@@ -244,7 +244,7 @@ if sum(Ncall)
                     % gives the number of expected spikes per behavioral event
                     % Multiplying by the response sampling rate in kHz gives the expected spike rate to one behavioral event in spike/ms
                     Sum_Psth_KDEfiltered_VocCall{uu,2} =  y * length(AllSpikes_local) ./(sum(~isnan(PSTH_local))) * Response_samprate/1000;
-                    Sum_Psth_KDEfiltered_VocCall{uu,3} =  bconf95 * length(AllSpikes_local) ./(sum(~isnan(PSTH_local))) * Response_samprate/1000;
+                    Sum_Psth_KDEfiltered_VocCall{uu,3} =  abs(flipud(bconf95) .* length(AllSpikes_local) ./(sum(~isnan(PSTH_local))) .* Response_samprate/1000 - repmat(Sum_Psth_KDEfiltered_VocCall{uu,2},2,1));
                 end
             end
         end
@@ -299,7 +299,7 @@ if sum(Ncall)
 %                 legend({'Average KDE' 'Sum KDE'}, 'AutoUpdate','off')
 %                 shadedErrorBar(Average_Psth_KDEfiltered_TVocCall{uu}(1,:), Average_Psth_KDEfiltered_TVocCall{uu}(2,:), Average_Psth_KDEfiltered_TVocCall{uu}(3,:), {'r--', 'LineWidth',2})
 %                 hold on
-                shadedErrorBar(Sum_Psth_KDEfiltered_TVocCall{uu,1}, Sum_Psth_KDEfiltered_TVocCall{uu,2}, flipud(Sum_Psth_KDEfiltered_TVocCall{uu,3}-Sum_Psth_KDEfiltered_TVocCall{uu,2}), {'r-', 'LineWidth',2})
+                shadedErrorBar(Sum_Psth_KDEfiltered_TVocCall{uu,1}, Sum_Psth_KDEfiltered_TVocCall{uu,2}, Sum_Psth_KDEfiltered_TVocCall{uu,3}, {'r-', 'LineWidth',2})
                 xlim(XLIM)
                 ylim(YLIM_T)
                 xlabel('Time centered at production onset (ms)')
@@ -366,7 +366,7 @@ if sum(Ncall)
 %                 hold on
 %                 shadedErrorBar(Average_Psth_KDEfiltered_VocCall{uu}(1,:), Average_Psth_KDEfiltered_VocCall{uu}(2,:), Average_Psth_KDEfiltered_VocCall{uu}(3,:), {'r--', 'LineWidth',2})
 %                 hold on
-                shadedErrorBar(Sum_Psth_KDEfiltered_VocCall{uu,1}, Sum_Psth_KDEfiltered_VocCall{uu,2}, flipud(Sum_Psth_KDEfiltered_VocCall{uu,3})-Sum_Psth_KDEfiltered_VocCall{uu,2}, {'r-', 'LineWidth',2})
+                shadedErrorBar(Sum_Psth_KDEfiltered_VocCall{uu,1}, Sum_Psth_KDEfiltered_VocCall{uu,2}, Sum_Psth_KDEfiltered_VocCall{uu,3}, {'r-', 'LineWidth',2})
                 xlim(XLIM)
                 ylim(YLIM_SU)
                 xlabel('Time centered at production onset (ms)')
@@ -570,7 +570,7 @@ if KDE_Cal
                 % gives the number of expected spikes per behavioral event
                 % Multiplying by the response sampling rate in kHz gives the expected spike rate to one behavioral event in spike/ms
                 Sum_Psth_KDEfiltered_THearCall{uu,2} =  y * length(AllSpikes_local) ./(sum(~isnan(PSTH_local))) * Response_samprate/1000;
-                Sum_Psth_KDEfiltered_THearCall{uu,3} =  bconf95 .* length(AllSpikes_local) ./(sum(~isnan(PSTH_local))) .* Response_samprate ./1000;
+                Sum_Psth_KDEfiltered_THearCall{uu,3} =  abs(bconf95 .* length(AllSpikes_local) ./(sum(~isnan(PSTH_local))) .* Response_samprate ./1000 - repmat(Sum_Psth_KDEfiltered_THearCall{uu,2},2,1));
             end
             
         end
@@ -620,7 +620,7 @@ if KDE_Cal
                 % gives the number of expected spikes per behavioral event
                 % Multiplying by the response sampling rate in kHz gives the expected spike rate to one behavioral event in spike/ms
                 Sum_Psth_KDEfiltered_HearCall{uu,2} =  y * length(AllSpikes_local) ./(sum(~isnan(PSTH_local))) * Response_samprate/1000;
-                Sum_Psth_KDEfiltered_HearCall{uu,3} =  bconf95 .* length(AllSpikes_local) ./(sum(~isnan(PSTH_local))) .* Response_samprate ./1000;
+                Sum_Psth_KDEfiltered_HearCall{uu,3} =  abs(bconf95 .* length(AllSpikes_local) ./(sum(~isnan(PSTH_local))) .* Response_samprate ./1000 - repmat(Sum_Psth_KDEfiltered_HearCall{uu,2},2,1));
             end
         end
     else
@@ -675,7 +675,7 @@ if Flags(1) && (HearCall>1) && sum(HearOnly)
 %             hold on
 %             shadedErrorBar(Average_Psth_KDEfiltered_THearCall{uu}(1,:), Average_Psth_KDEfiltered_THearCall{uu}(2,:), Average_Psth_KDEfiltered_THearCall{uu}(3,:), {'b--', 'LineWidth',2})
 %             hold on
-            shadedErrorBar(Sum_Psth_KDEfiltered_THearCall{uu,1}, Sum_Psth_KDEfiltered_THearCall{uu,2}, flipud(Sum_Psth_KDEfiltered_THearCall{uu,3})-Sum_Psth_KDEfiltered_THearCall{uu,2}, {'b-', 'LineWidth',2})
+            shadedErrorBar(Sum_Psth_KDEfiltered_THearCall{uu,1}, Sum_Psth_KDEfiltered_THearCall{uu,2}, Sum_Psth_KDEfiltered_THearCall{uu,3}, {'b-', 'LineWidth',2})
             xlim(XLIM)
             ylim(YLIM_T)
             xlabel('Time centered at hearing onset (ms)')
@@ -742,7 +742,7 @@ if Flags(2) && (HearCall>1) && sum(HearOnly)
 %             hold on
 %             shadedErrorBar(Average_Psth_KDEfiltered_HearCall{uu}(1,:), Average_Psth_KDEfiltered_HearCall{uu}(2,:), Average_Psth_KDEfiltered_HearCall{uu}(3,:), {'b-', 'LineWidth',2})
 %             hold on
-            shadedErrorBar(Sum_Psth_KDEfiltered_HearCall{uu,1}, Sum_Psth_KDEfiltered_HearCall{uu,2}, flipud(Sum_Psth_KDEfiltered_HearCall{uu,3})-Sum_Psth_KDEfiltered_HearCall{uu,2}, {'b-', 'LineWidth',2})
+            shadedErrorBar(Sum_Psth_KDEfiltered_HearCall{uu,1}, Sum_Psth_KDEfiltered_HearCall{uu,2}, Sum_Psth_KDEfiltered_HearCall{uu,3}, {'b-', 'LineWidth',2})
             
             xlim(XLIM)
             ylim(YLIM_SU)
