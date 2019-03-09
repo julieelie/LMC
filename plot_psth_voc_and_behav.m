@@ -16,9 +16,9 @@ if Flags(1)
     SpikesTTimes_Behav = SpikeTrainsBehav.SpikesTTimes_Behav;
     NT = size(SpikesTTimes_Behav{1},2);
     if KDE_Cal
-        Average_Psth_KDEfiltered_TVocCall = SpikeTrainsVoc.Average_Psth_KDEfiltered_TVocCall;
-        Average_Psth_KDEfiltered_THearCall = SpikeTrainsVoc.Average_Psth_KDEfiltered_THearCall;
-        Average_Psth_KDEfiltered_TBehav = SpikeTrainsBehav.Average_Psth_KDEfiltered_TBehav;
+        Sum_Psth_KDEfiltered_TVocCall = SpikeTrainsVoc.Sum_Psth_KDEfiltered_TVocCall;
+        Sum_Psth_KDEfiltered_THearCall = SpikeTrainsVoc.Sum_Psth_KDEfiltered_THearCall;
+        Sum_Psth_KDEfiltered_TBehav = SpikeTrainsBehav.Sum_Psth_KDEfiltered_TBehav;
     end
 end
 if Flags(2)
@@ -27,9 +27,9 @@ if Flags(2)
     SpikesTimes_Behav = SpikeTrainsBehav.SpikesTimes_Behav;
     NU = size(SpikesTimes_Behav{1},2);
     if KDE_Cal
-        Average_Psth_KDEfiltered_VocCall = SpikeTrainsVoc.Average_Psth_KDEfiltered_VocCall;
-        Average_Psth_KDEfiltered_HearCall = SpikeTrainsVoc.Average_Psth_KDEfiltered_HearCall;
-        Average_Psth_KDEfiltered_Behav = SpikeTrainsBehav.Average_Psth_KDEfiltered_Behav;
+        Sum_Psth_KDEfiltered_VocCall = SpikeTrainsVoc.Sum_Psth_KDEfiltered_VocCall;
+        Sum_Psth_KDEfiltered_HearCall = SpikeTrainsVoc.Sum_Psth_KDEfiltered_HearCall;
+        Sum_Psth_KDEfiltered_Behav = SpikeTrainsBehav.Sum_Psth_KDEfiltered_Behav;
     end
 end
 VocDuration = SpikeTrainsVoc.VocDuration;
@@ -166,15 +166,15 @@ if Flags(1)
             % First plot lines to get the legend right
             for bb=1:length(UActionBehav)
                 hold on
-                plot(Average_Psth_KDEfiltered_TBehav{uu,bb}(1,:)-Delay, Average_Psth_KDEfiltered_TBehav{uu,bb}(2,:),'Color',ColorCode(2+bb,:), 'LineStyle','-', 'LineWidth',2)
+                plot(Sum_Psth_KDEfiltered_TBehav{uu,bb}{1}-Delay, Sum_Psth_KDEfiltered_TBehav{uu,bb}{2},'Color',ColorCode(2+bb,:), 'LineStyle','-', 'LineWidth',2)
             end
             
             if (length(HearOnlyInd)>1) && KDE_Cal
                 hold on
-                plot(Average_Psth_KDEfiltered_THearCall{uu}(1,:), Average_Psth_KDEfiltered_THearCall{uu}(2,:), 'b-', 'LineWidth',2)
+                plot(Sum_Psth_KDEfiltered_THearCall{uu,1}, Sum_Psth_KDEfiltered_THearCall{uu,2}, 'b-', 'LineWidth',2)
             end
             hold on
-            plot(Average_Psth_KDEfiltered_TVocCall{uu}(1,:), Average_Psth_KDEfiltered_TVocCall{uu}(2,:), 'r-', 'LineWidth',2)
+            plot(Sum_Psth_KDEfiltered_TVocCall{uu,1}, Sum_Psth_KDEfiltered_TVocCall{uu,2}, 'r-', 'LineWidth',2)
             xlabel('Time (ms)')
             ylabel('Spike rate (/ms)')
             % Then plots the lines with error bars
@@ -186,17 +186,17 @@ if Flags(1)
             for bb=1:length(UActionBehav)
                 fprintf(1,' -> KDE %s\n', UActionBehav{bb})
                 hold on
-                shadedErrorBar(Average_Psth_KDEfiltered_TBehav{uu,bb}(1,:)-Delay, Average_Psth_KDEfiltered_TBehav{uu,bb}(2,:), Average_Psth_KDEfiltered_TBehav{uu,bb}(3,:), {'Color',ColorCode(2+bb,:), 'LineStyle','-', 'LineWidth',2})
+                shadedErrorBar(Sum_Psth_KDEfiltered_TBehav{uu,bb}{1}-Delay, Sum_Psth_KDEfiltered_TBehav{uu,bb}{2}, Sum_Psth_KDEfiltered_TBehav{uu,bb}{3}, {'Color',ColorCode(2+bb,:), 'LineStyle','-', 'LineWidth',2})
             end
             
             if (length(HearOnlyInd)>1) && KDE_Cal
                 hold on
                 fprintf(1, ' -> KDE Hearing\n')
-                shadedErrorBar(Average_Psth_KDEfiltered_THearCall{uu}(1,:), Average_Psth_KDEfiltered_THearCall{uu}(2,:), Average_Psth_KDEfiltered_THearCall{uu}(3,:), {'b-', 'LineWidth',2})
+                shadedErrorBar(Sum_Psth_KDEfiltered_THearCall{uu,1}, Sum_Psth_KDEfiltered_THearCall{uu,2}, Sum_Psth_KDEfiltered_THearCall{uu,3}, {'b-', 'LineWidth',2})
             end
             hold on
             fprintf(1, ' -> KDE Vocalizing\n')
-            shadedErrorBar(Average_Psth_KDEfiltered_TVocCall{uu}(1,:), Average_Psth_KDEfiltered_TVocCall{uu}(2,:), Average_Psth_KDEfiltered_TVocCall{uu}(3,:), {'r-', 'LineWidth',2})
+            shadedErrorBar(Sum_Psth_KDEfiltered_TVocCall{uu,1}, Sum_Psth_KDEfiltered_TVocCall{uu,2}, Sum_Psth_KDEfiltered_TVocCall{uu,3}, {'r-', 'LineWidth',2})
             YLIM = get(gca,'YLim');
             YLIM(1) = 0;
             ylim(YLIM);
@@ -345,15 +345,15 @@ if Flags(2)
             % First plot the lines to get the legend right
             for bb=1:length(UActionBehav)
                 hold on
-                plot(Average_Psth_KDEfiltered_Behav{uu,bb}(1,:)-Delay, Average_Psth_KDEfiltered_Behav{uu,bb}(2,:), 'Color',ColorCode(2+bb,:), 'LineStyle','-', 'LineWidth',2)
+                plot(Sum_Psth_KDEfiltered_Behav{uu,bb}{1}-Delay, Sum_Psth_KDEfiltered_Behav{uu,bb}{2}, 'Color',ColorCode(2+bb,:), 'LineStyle','-', 'LineWidth',2)
             end
             
             if (length(HearOnlyInd)>1) && KDE_Cal
                 hold on
-                plot(Average_Psth_KDEfiltered_HearCall{uu}(1,:), Average_Psth_KDEfiltered_HearCall{uu}(2,:), 'b-', 'LineWidth',2)
+                plot(Sum_Psth_KDEfiltered_HearCall{uu,1}, Sum_Psth_KDEfiltered_HearCall{uu,2}, 'b-', 'LineWidth',2)
             end
             hold on
-            plot(Average_Psth_KDEfiltered_VocCall{uu}(1,:), Average_Psth_KDEfiltered_VocCall{uu}(2,:), 'r-', 'LineWidth',2)
+            plot(Sum_Psth_KDEfiltered_VocCall{uu,1}, Sum_Psth_KDEfiltered_VocCall{uu,2}, 'r-', 'LineWidth',2)
             xlabel('Time (ms)')
             ylabel('Spike rate (/ms)')
             if (length(HearOnlyInd)>1) && KDE_Cal
@@ -364,17 +364,17 @@ if Flags(2)
             for bb=1:length(UActionBehav)
                 fprintf(1,' -> KDE %s\n', UActionBehav{bb})
                 hold on
-                shadedErrorBar(Average_Psth_KDEfiltered_Behav{uu,bb}(1,:)-Delay, Average_Psth_KDEfiltered_Behav{uu,bb}(2,:), Average_Psth_KDEfiltered_Behav{uu,bb}(3,:), {'Color',ColorCode(2+bb,:), 'LineStyle','-', 'LineWidth',2})
+                shadedErrorBar(Sum_Psth_KDEfiltered_Behav{uu,bb}{1}-Delay, Sum_Psth_KDEfiltered_Behav{uu,bb}{2}, Sum_Psth_KDEfiltered_Behav{uu,bb}{3}, {'Color',ColorCode(2+bb,:), 'LineStyle','-', 'LineWidth',2})
             end
             
             if (length(HearOnlyInd)>1) && KDE_Cal
                 hold on
                 fprintf(1,' -> KDE Hearing\n')
-                shadedErrorBar(Average_Psth_KDEfiltered_HearCall{uu}(1,:), Average_Psth_KDEfiltered_HearCall{uu}(2,:), Average_Psth_KDEfiltered_HearCall{uu}(3,:), {'b-', 'LineWidth',2})
+                shadedErrorBar(Sum_Psth_KDEfiltered_HearCall{uu,1}, Sum_Psth_KDEfiltered_HearCall{uu,2}, Sum_Psth_KDEfiltered_HearCall{uu,3}, {'b-', 'LineWidth',2})
             end
             hold on
             fprintf(1,' -> KDE vocalizing\n')
-            shadedErrorBar(Average_Psth_KDEfiltered_VocCall{uu}(1,:), Average_Psth_KDEfiltered_VocCall{uu}(2,:), Average_Psth_KDEfiltered_VocCall{uu}(3,:), {'r-', 'LineWidth',2})
+            shadedErrorBar(Sum_Psth_KDEfiltered_VocCall{uu,1}, Sum_Psth_KDEfiltered_VocCall{uu,2}, Sum_Psth_KDEfiltered_VocCall{uu,3}, {'r-', 'LineWidth',2})
             YLIM = get(gca,'YLim');
             YLIM(1) = 0;
             ylim(YLIM);
