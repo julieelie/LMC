@@ -138,7 +138,7 @@ for bb=1:length(IndBehav)
             if Flags(2)
                 for uu=1:NSU
                     IndSU01 = logical((Neuro_spikes.(Fns_Neuro{FocIndNeuro}){IndBehav(bb)}{FocBatInd(ib),uu}>=CutLimits(cc)) .* (Neuro_spikes.(Fns_Neuro{FocIndNeuro}){IndBehav(bb)}{FocBatInd(ib),uu}<CutLimits(cc+1)));
-                    SpikesTimes_Behav{bb}{BehavCut,uu} = Neuro_spikes.(Fns_Neuro{FocIndNeuro}){IndBehav(bb)}{FocBatInd(ib),uu}(IndSU01) - CutLimits(cc);
+                    SpikesTimes_Behav{bb}{BehavCut,uu} = (Neuro_spikes.(Fns_Neuro{FocIndNeuro}){IndBehav(bb)}{FocBatInd(ib),uu}(IndSU01) - CutLimits(cc))';
                     if KDE_Cal
                         if isempty(SpikesTimes_Behav{bb}{BehavCut,uu})
                             y=ones(1, length(t))./(2*length(t));
@@ -252,7 +252,7 @@ if KDE_Cal
                     % gives the number of expected spikes per behavioral event
                     % Multiplying by the response sampling rate in kHz gives the expected spike rate to one behavioral event in spike/ms
                     Sum_Psth_KDEfiltered_Behav{uu,bb}{2} =  y * length(AllSpikes_local) ./(sum(~isnan(PSTH_local))) * Response_samprate/1000;
-                    Sum_Psth_KDEfiltered_Behav{uu,bb}{3} =  abs(fliup(bconf95) .* length(AllSpikes_local) ./(sum(~isnan(PSTH_local))) .* Response_samprate ./1000 - repmat(Sum_Psth_KDEfiltered_Behav{uu,bb}{2},2,1));
+                    Sum_Psth_KDEfiltered_Behav{uu,bb}{3} =  abs(flipud(bconf95) .* length(AllSpikes_local) ./(sum(~isnan(PSTH_local))) .* Response_samprate ./1000 - repmat(Sum_Psth_KDEfiltered_Behav{uu,bb}{2},2,1));
                 end
             end
         end
