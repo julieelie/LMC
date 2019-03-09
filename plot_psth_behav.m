@@ -54,7 +54,7 @@ if Flags(2)
     if KDE_Cal
         Psth_KDEfiltered_Behav = cell(length(IndBehav),1);
         Psth_KDEfiltered_Behav_t = cell(length(IndBehav),1);
-        Psth_KDEfiltered_Behav_scalef = nan(length(IndBehav),1);
+        Psth_KDEfiltered_Behav_scalef = cell(length(IndBehav),1);
     end
 end
 if Flags(1)
@@ -63,7 +63,7 @@ if Flags(1)
     if KDE_Cal
         Psth_KDEfiltered_TBehav = cell(length(IndBehav),1);
         Psth_KDEfiltered_TBehav_t = cell(length(IndBehav),1);
-        Psth_KDEfiltered_TBehav_scalef = nan(length(IndBehav),1);
+        Psth_KDEfiltered_TBehav_scalef = cell(length(IndBehav),1);
     end
 end
 

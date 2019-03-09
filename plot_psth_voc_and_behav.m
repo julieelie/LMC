@@ -9,19 +9,28 @@ if nargin<7
     KDE_Cal = 0;
 end
 
-
 % Reorganizing input Data
 if Flags(1)
     SpikesTTimes_VocCall = SpikeTrainsVoc.SpikesTTimes_VocCall;
     SpikesTTimes_HearCall = SpikeTrainsVoc.SpikesTTimes_HearCall;
     SpikesTTimes_Behav = SpikeTrainsBehav.SpikesTTimes_Behav;
     NT = size(SpikesTTimes_Behav{1},2);
+    if KDE_Cal
+        Average_Psth_KDEfiltered_TVocCall = SpikeTrainsVoc.Average_Psth_KDEfiltered_TVocCall;
+        Average_Psth_KDEfiltered_THearCall = SpikeTrainsVoc.Average_Psth_KDEfiltered_THearCall;
+        Average_Psth_KDEfiltered_TBehav = SpikeTrainsBehav.Average_Psth_KDEfiltered_TBehav;
+    end
 end
 if Flags(2)
     SpikesTimes_VocCall = SpikeTrainsVoc.SpikesTimes_VocCall;
     SpikesTimes_HearCall = SpikeTrainsVoc.SpikesTimes_HearCall;
     SpikesTimes_Behav = SpikeTrainsBehav.SpikesTimes_Behav;
     NU = size(SpikesTimes_Behav{1},2);
+    if KDE_Cal
+        Average_Psth_KDEfiltered_VocCall = SpikeTrainsVoc.Average_Psth_KDEfiltered_VocCall;
+        Average_Psth_KDEfiltered_HearCall = SpikeTrainsVoc.Average_Psth_KDEfiltered_HearCall;
+        Average_Psth_KDEfiltered_Behav = SpikeTrainsBehav.Average_Psth_KDEfiltered_Behav;
+    end
 end
 VocDuration = SpikeTrainsVoc.VocDuration;
 HearDuration = SpikeTrainsVoc.HearDuration;
@@ -34,23 +43,38 @@ BehaviorLegendX = -Delay - 50;
 %% Now plotting PSTH
 fprintf(1, 'Plotting PSTH\n')
 % Now plot Raster for tetrodes
+ColorCode = get(groot,'DefaultAxesColorOrder');
 if Flags(1)
     for uu=1:NT
         fprintf(1, 'Tetrode %d/%d...\n',uu,NT)
         Fig = figure();
         if KDE_Cal
-            subplot(2,1,1)
+            s2=subplot(3,1,2);
+            p2 = get(s2,'Position');
+            s2.XTick = [];
+            s2.XTickLabel = [];
+            s2.YTick = [];
+            s2.YTickLabel = [];
+            s1=subplot(3,1,1);
+            p1 = get(s1,'Position');
+            p1(1) = p2(1);
+            p1(2) = p2(2);
+            p1(4) = p1(4) + p2(4); 
+            set(s1,'pos',p1);
         end
         RowCount = 0;
         
         % plotting behavioral action in freely interacting bats
         for bb=1:length(UActionBehav)
-            fprintf(1,' -> %s\n', UActionBehav{bb})
+            fprintf(1,' -> Raster %s\n', UActionBehav{bb})
             NBehav = min(size(SpikesTTimes_Behav{bb},1), MaxInstances);
             
             % Plotting spikes
             for cc=1:NBehav
                 hold on
+                % first plot a colored line to code the behavior
+                plot([-Delay 3*Delay], RowCount+cc-[0.5 0.5], '-','LineWidth',250/(NBehav*length(UActionBehav)),'Color', [ColorCode(2+bb,:) 0.1])
+                % then the spikes
                 for spike=1:length(SpikesTTimes_Behav{bb}{cc,uu})
                     hold on
                     plot(SpikesTTimes_Behav{bb}{cc,uu}(spike)*ones(2,1)-Delay, RowCount+cc-[0.9 0.1], 'k-', 'LineWidth',1)
@@ -71,13 +95,13 @@ if Flags(1)
             HearOnlyDuration = Inf;
             fprintf(1,' ->No hearing data from the operant conditioning\n')
         else
-            fprintf(1,' -> hearing\n')
+            fprintf(1,' -> Raster hearing\n')
             HearOnlyDuration=HearDuration(HearOnlyInd); % Only taking heard vocalizations when the bat is not vocalizing itself.
             % We want to plot PSTH with increasing duration of vocalizations
             [~, IDurH] = sort(HearOnlyDuration, 'descend');
             for hh=1:length(HearOnlyInd)
                 cc = HearOnlyInd(IDurH(hh));
-                yyaxis left
+%                 yyaxis left
                 hold on
                 plot([0 HearDuration(cc)], RowCount+hh-[0.5 0.5], '-','LineWidth',250/(length(HearOnlyInd)+ RowCount),'Color', [0.8 0.8 1])
                 %         for dd=1:size(DataDeletion_HearCall{cc},1)
@@ -102,11 +126,11 @@ if Flags(1)
         
         % plotting vocalization production data during conditioning
         % We want to plot PSTH with increasing duration of vocalizations
-        fprintf(1,' -> vocalizing\n')
+        fprintf(1,' -> Raster vocalizing\n')
         [~, IDurV] = sort(VocDuration, 'descend');
         for hh=1:length(VocDuration)
             cc = IDurV(hh);
-            yyaxis left
+%             yyaxis left
             hold on
             plot([0 VocDuration(cc)], RowCount+hh-[0.5 0.5], '-','LineWidth',250/(length(VocDuration)+ RowCount),'Color', [1 0.8 0.8])
             %         for dd=1:size(DataDeletion_HearCall{cc},1)
@@ -136,28 +160,54 @@ if Flags(1)
         title(sprintf('Raster %s Tetrode %d on %s', NeuroLoggerID, uu, Date))
         hold off
         
-        % Plot KDE if requested %% THIS NEEDS REVISIONS!!%%
+        % Plot KDE if requested
         if KDE_Cal
-            subplot(2,1,2)
-            shadedErrorBar(Average_Psth_KDEfiltered_TBehav{uu,bb}(1,:), Average_Psth_KDEfiltered_TBehav{uu,bb}(2,:), Average_Psth_KDEfiltered_TBehav{uu,bb}(3,:), {'r-', 'LineWidth',2})
-            xlim(XLIM)
-            ylim(YLIM_T)
+            subplot(3,1,3)
+            % First plot lines to get the legend right
+            for bb=1:length(UActionBehav)
+                hold on
+                plot(Average_Psth_KDEfiltered_TBehav{uu,bb}(1,:)-Delay, Average_Psth_KDEfiltered_TBehav{uu,bb}(2,:),'Color',ColorCode(2+bb,:), 'LineStyle','-', 'LineWidth',2)
+            end
+            
+            if (length(HearOnlyInd)>1) && KDE_Cal
+                hold on
+                plot(Average_Psth_KDEfiltered_THearCall{uu}(1,:), Average_Psth_KDEfiltered_THearCall{uu}(2,:), 'b-', 'LineWidth',2)
+            end
+            hold on
+            plot(Average_Psth_KDEfiltered_TVocCall{uu}(1,:), Average_Psth_KDEfiltered_TVocCall{uu}(2,:), 'r-', 'LineWidth',2)
             xlabel('Time (ms)')
             ylabel('Spike rate (/ms)')
-        end
-        if (length(HearOnlyInd)>1) && KDE_Cal
-            subplot(2,1,2)
-            shadedErrorBar(Average_Psth_KDEfiltered_THearCall{uu}(1,:), Average_Psth_KDEfiltered_THearCall{uu}(2,:), Average_Psth_KDEfiltered_THearCall{uu}(3,:), {'b-', 'LineWidth',2})
+            % Then plots the lines with error bars
+            if (length(HearOnlyInd)>1) && KDE_Cal
+                legend([UActionBehav; 'Hearing'; 'Vocalizing'], 'AutoUpdate', 'off','location','southoutside','Orientation','horizontal')
+            else
+                legend([UActionBehav; 'Vocalizing'], 'AutoUpdate', 'off','location','southoutside','Orientation','horizontal')
+            end
+            for bb=1:length(UActionBehav)
+                fprintf(1,' -> KDE %s\n', UActionBehav{bb})
+                hold on
+                shadedErrorBar(Average_Psth_KDEfiltered_TBehav{uu,bb}(1,:)-Delay, Average_Psth_KDEfiltered_TBehav{uu,bb}(2,:), Average_Psth_KDEfiltered_TBehav{uu,bb}(3,:), {'Color',ColorCode(2+bb,:), 'LineStyle','-', 'LineWidth',2})
+            end
+            
+            if (length(HearOnlyInd)>1) && KDE_Cal
+                hold on
+                fprintf(1, ' -> KDE Hearing\n')
+                shadedErrorBar(Average_Psth_KDEfiltered_THearCall{uu}(1,:), Average_Psth_KDEfiltered_THearCall{uu}(2,:), Average_Psth_KDEfiltered_THearCall{uu}(3,:), {'b-', 'LineWidth',2})
+            end
+            hold on
+            fprintf(1, ' -> KDE Vocalizing\n')
+            shadedErrorBar(Average_Psth_KDEfiltered_TVocCall{uu}(1,:), Average_Psth_KDEfiltered_TVocCall{uu}(2,:), Average_Psth_KDEfiltered_TVocCall{uu}(3,:), {'r-', 'LineWidth',2})
+            YLIM = get(gca,'YLim');
+            YLIM(1) = 0;
+            ylim(YLIM);
             xlim(XLIM)
-            ylim(YLIM_T)
-            xlabel('Time centered at hearing onset (ms)')
-            ylabel('Spike rate (/ms)')
+            hold off
         end
         
         % Save figure
-        orient(Fig,'landscape')
+        orient(Fig,'portrait')
         Fig.PaperPositionMode = 'auto';
-        set(Fig,'PaperOrientation','landscape');
+        set(Fig,'PaperOrientation','portrait');
         %             set(Fig,'PaperUnits','normalized');
         %             set(Fig,'PaperPosition', [50 50 1200 800]);
         %             pause()
@@ -179,7 +229,18 @@ if Flags(2)
         fprintf(1, 'Single Unit %d/%d...\n',uu,NU)
         Fig = figure();
         if KDE_Cal
-            subplot(2,1,1)
+            s2=subplot(3,1,2);
+            p2 = get(s2,'Position');
+            s2.XTick = [];
+            s2.XTickLabel = [];
+            s2.YTick = [];
+            s2.YTickLabel = [];
+            s1=subplot(3,1,1);
+            p1 = get(s1,'Position');
+            p1(1) = p2(1);
+            p1(2) = p2(2);
+            p1(4) = p1(4) + p2(4); 
+            set(s1,'pos',p1);
         end
         RowCount = 0;
         
@@ -190,6 +251,10 @@ if Flags(2)
             % Plotting spikes
             for cc=1:NBehav
                 hold on
+                % First plot a colored line to indicate the behavior
+                plot([-Delay 3*Delay], RowCount+cc-[0.5 0.5], '-','LineWidth',250/(NBehav*length(UActionBehav)),'Color', [ColorCode(2+bb,:) 0.1])
+                hold on
+                % then the spikes
                 for spike=1:length(SpikesTimes_Behav{bb}{cc,uu})
                     hold on
                     plot(SpikesTimes_Behav{bb}{cc,uu}(spike)*ones(2,1)-Delay, RowCount+cc-[0.9 0.1], 'k-', 'LineWidth',1)
@@ -215,7 +280,7 @@ if Flags(2)
             [~, IDurH] = sort(HearOnlyDuration, 'descend');
             for hh=1:length(HearOnlyInd)
                 cc = HearOnlyInd(IDurH(hh));
-                yyaxis left
+%                 yyaxis left
                 hold on
                 plot([0 HearDuration(cc)], RowCount+hh-[0.5 0.5], '-','LineWidth',250/(length(HearOnlyInd)+ RowCount),'Color', [0.8 0.8 1])
                 %         for dd=1:size(DataDeletion_HearCall{cc},1)
@@ -244,7 +309,7 @@ if Flags(2)
         [~, IDurV] = sort(VocDuration, 'descend');
         for hh=1:length(VocDuration)
             cc = IDurV(hh);
-            yyaxis left
+%             yyaxis left
             hold on
             plot([0 VocDuration(cc)], RowCount+hh-[0.5 0.5], '-','LineWidth',250/(length(VocDuration)+ RowCount),'Color', [1 0.8 0.8])
             %         for dd=1:size(DataDeletion_HearCall{cc},1)
@@ -274,28 +339,53 @@ if Flags(2)
         title(sprintf('Raster %s Tetrode %d on %s', NeuroLoggerID, uu, Date))
         hold off
         
-        % Plot KDE if requested %% THIS NEEDS REVISIONS!!%%
+        % Plot KDE if requested 
         if KDE_Cal
-            subplot(2,1,2)
-            shadedErrorBar(Average_Psth_KDEfiltered_Behav{uu,bb}(1,:), Average_Psth_KDEfiltered_TBehav{uu,bb}(2,:), Average_Psth_KDEfiltered_TBehav{uu,bb}(3,:), {'r-', 'LineWidth',2})
-            xlim(XLIM)
-            ylim(YLIM_T)
+            subplot(3,1,3)
+            % First plot the lines to get the legend right
+            for bb=1:length(UActionBehav)
+                hold on
+                plot(Average_Psth_KDEfiltered_Behav{uu,bb}(1,:)-Delay, Average_Psth_KDEfiltered_Behav{uu,bb}(2,:), 'Color',ColorCode(2+bb,:), 'LineStyle','-', 'LineWidth',2)
+            end
+            
+            if (length(HearOnlyInd)>1) && KDE_Cal
+                hold on
+                plot(Average_Psth_KDEfiltered_HearCall{uu}(1,:), Average_Psth_KDEfiltered_HearCall{uu}(2,:), 'b-', 'LineWidth',2)
+            end
+            hold on
+            plot(Average_Psth_KDEfiltered_VocCall{uu}(1,:), Average_Psth_KDEfiltered_VocCall{uu}(2,:), 'r-', 'LineWidth',2)
             xlabel('Time (ms)')
             ylabel('Spike rate (/ms)')
-        end
-        if (length(HearOnlyInd)>1) && KDE_Cal
-            subplot(2,1,2)
-            shadedErrorBar(Average_Psth_KDEfiltered_HearCall{uu}(1,:), Average_Psth_KDEfiltered_THearCall{uu}(2,:), Average_Psth_KDEfiltered_THearCall{uu}(3,:), {'b-', 'LineWidth',2})
+            if (length(HearOnlyInd)>1) && KDE_Cal
+                legend([UActionBehav; 'Hearing'; 'Vocalizing'], 'AutoUpdate','off','location','southoutside','Orientation','horizontal')
+            else
+                legend([UActionBehav; 'Vocalizing'], 'AutoUpdate','off','location','southoutside','Orientation','horizontal')
+            end
+            for bb=1:length(UActionBehav)
+                fprintf(1,' -> KDE %s\n', UActionBehav{bb})
+                hold on
+                shadedErrorBar(Average_Psth_KDEfiltered_Behav{uu,bb}(1,:)-Delay, Average_Psth_KDEfiltered_Behav{uu,bb}(2,:), Average_Psth_KDEfiltered_Behav{uu,bb}(3,:), {'Color',ColorCode(2+bb,:), 'LineStyle','-', 'LineWidth',2})
+            end
+            
+            if (length(HearOnlyInd)>1) && KDE_Cal
+                hold on
+                fprintf(1,' -> KDE Hearing\n')
+                shadedErrorBar(Average_Psth_KDEfiltered_HearCall{uu}(1,:), Average_Psth_KDEfiltered_HearCall{uu}(2,:), Average_Psth_KDEfiltered_HearCall{uu}(3,:), {'b-', 'LineWidth',2})
+            end
+            hold on
+            fprintf(1,' -> KDE vocalizing\n')
+            shadedErrorBar(Average_Psth_KDEfiltered_VocCall{uu}(1,:), Average_Psth_KDEfiltered_VocCall{uu}(2,:), Average_Psth_KDEfiltered_VocCall{uu}(3,:), {'r-', 'LineWidth',2})
+            YLIM = get(gca,'YLim');
+            YLIM(1) = 0;
+            ylim(YLIM);
             xlim(XLIM)
-            ylim(YLIM_T)
-            xlabel('Time centered at hearing onset (ms)')
-            ylabel('Spike rate (/ms)')
+            hold off
         end
         
         % Save figure
-        orient(Fig,'landscape')
+        orient(Fig,'portrait')
         Fig.PaperPositionMode = 'auto';
-        set(Fig,'PaperOrientation','landscape');
+        set(Fig,'PaperOrientation','portrait');
         %             set(Fig,'PaperUnits','normalized');
         %             set(Fig,'PaperPosition', [50 50 1200 800]);
         %             pause()
