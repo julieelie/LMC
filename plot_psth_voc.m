@@ -570,7 +570,7 @@ if KDE_Cal
                 % gives the number of expected spikes per behavioral event
                 % Multiplying by the response sampling rate in kHz gives the expected spike rate to one behavioral event in spike/ms
                 Sum_Psth_KDEfiltered_THearCall{uu,2} =  y * length(AllSpikes_local) ./(sum(~isnan(PSTH_local))) * Response_samprate/1000;
-                Sum_Psth_KDEfiltered_THearCall{uu,3} =  abs(bconf95 .* length(AllSpikes_local) ./(sum(~isnan(PSTH_local))) .* Response_samprate ./1000 - repmat(Sum_Psth_KDEfiltered_THearCall{uu,2},2,1));
+                Sum_Psth_KDEfiltered_THearCall{uu,3} =  abs(flipud(bconf95) .* length(AllSpikes_local) ./(sum(~isnan(PSTH_local))) .* Response_samprate ./1000 - repmat(Sum_Psth_KDEfiltered_THearCall{uu,2},2,1));
             end
             
         end
@@ -620,7 +620,7 @@ if KDE_Cal
                 % gives the number of expected spikes per behavioral event
                 % Multiplying by the response sampling rate in kHz gives the expected spike rate to one behavioral event in spike/ms
                 Sum_Psth_KDEfiltered_HearCall{uu,2} =  y * length(AllSpikes_local) ./(sum(~isnan(PSTH_local))) * Response_samprate/1000;
-                Sum_Psth_KDEfiltered_HearCall{uu,3} =  abs(bconf95 .* length(AllSpikes_local) ./(sum(~isnan(PSTH_local))) .* Response_samprate ./1000 - repmat(Sum_Psth_KDEfiltered_HearCall{uu,2},2,1));
+                Sum_Psth_KDEfiltered_HearCall{uu,3} =  abs(flipud(bconf95) .* length(AllSpikes_local) ./(sum(~isnan(PSTH_local))) .* Response_samprate ./1000 - repmat(Sum_Psth_KDEfiltered_HearCall{uu,2},2,1));
             end
         end
     else
