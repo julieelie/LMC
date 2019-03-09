@@ -245,7 +245,7 @@ if KDE_Cal
                         % calculate the density estimate
                         [y,Sum_Psth_KDEfiltered_Behav{uu,bb}{1},OptW,~,~,bconf95]=sskernel(AllSpikes_local,t);
                     end
-                    fprintf(1, 'Done calculating kernel density estimate for %s events tetrode %d/%d, using kernel bandwidth= %f\n', UActionText{IndBehav(bb)}, uu, NT, OptW);
+                    fprintf(1, 'Done calculating kernel density estimate for %s events single unit %d/%d, using kernel bandwidth= %f\n', UActionText{IndBehav(bb)}, uu, NSU, OptW);
                     % y is a density function that sums to 1
                     % Multiplying by the total number of spikes gives the number of expecting spike per time bin for all behavioral events (here 10 ms)
                     % Dividing by the number of behavioral events per time bin
