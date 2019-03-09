@@ -173,11 +173,11 @@ if KDE_Cal
     % bin and each row a vocalization for each tetrode/unit then calculate the
     % nanmean and nanste over rows.
     if Flags(1)
-        Average_Psth_KDEfiltered_TBehav=cell(NT,length(IndBehav));
+        Sum_Psth_KDEfiltered_TBehav=cell(NT,length(IndBehav));
         for bb=1:length(IndBehav)
             for uu=1:NT
                 t=0: Bin_ms : round(MaxDur/Bin_ms)*Bin_ms;
-                Average_Psth_KDEfiltered_TBehav{uu,bb} = nan(3,length(t));
+                Sum_Psth_KDEfiltered_TBehav{uu,bb} = cell(3,1);
                 NBehav = size(Psth_KDEfiltered_TBehav_t{bb},1);
                 PSTH_local = nan(NBehav,length(t));
                 for vv=1:NBehav
@@ -186,19 +186,41 @@ if KDE_Cal
                         PSTH_local(vv,Ind) = Psth_KDEfiltered_TBehav{bb}{vv,uu}(tt); %#ok<FNDSB>
                     end
                 end
-                Average_Psth_KDEfiltered_TBehav{uu,bb}(1,:) = t;
-                Average_Psth_KDEfiltered_TBehav{uu,bb}(2,:) = nanmean(PSTH_local);
-                Average_Psth_KDEfiltered_TBehav{uu,bb}(3,:) = nanstd(PSTH_local)./(sum(~isnan(PSTH_local))).^0.5;
-            end
+                
+                AllSpikes_local = cell2mat(SpikesTTimes_Behav{bb}(:,uu));
+                % calculate the density estimate
+                if isempty(AllSpikes_local)
+                    y=ones(1,length(t))./(2*length(t));
+                    Sum_Psth_KDEfiltered_TBehav{uu,bb}{1} = t;
+                    Sum_Psth_KDEfiltered_TBehav{uu,bb}{2} =  y ./(sum(~isnan(PSTH_local)))* Response_samprate/1000;
+                    Sum_Psth_KDEfiltered_TBehav{uu,bb}{3} = nan(2, length(t));
+                else
+                    if length(AllSpikes_local)==1
+                        y=ones(1,length(t))./length(t);
+                        Sum_Psth_KDEfiltered_TBehav{uu,bb}{1} = t;
+                    else
+                        % calculate the density estimate
+                        [y,Sum_Psth_KDEfiltered_TBehav{uu,bb}{1},OptW,~,~,bconf95]=sskernel(AllSpikes_local,t);
+                    end
+                    fprintf(1, 'Done calculating kernel density estimate for %s events tetrode %d/%d, using kernel bandwidth= %f\n', UActionText{IndBehav(bb)}, uu, NT, OptW);
+                    % y is a density function that sums to 1
+                    % Multiplying by the total number of spikes gives the number of expecting spike per time bin for all behavioral events (here 10 ms)
+                    % Dividing by the number of behavioral events per time bin
+                    % gives the number of expected spikes per behavioral event
+                    % Multiplying by the response sampling rate in kHz gives the expected spike rate to one behavioral event in spike/ms
+                    Sum_Psth_KDEfiltered_TBehav{uu,bb}{2} =  y * length(AllSpikes_local) ./(sum(~isnan(PSTH_local))) * Response_samprate/1000;
+                    Sum_Psth_KDEfiltered_TBehav{uu,bb}{3} =  abs(flipud(bconf95) .* length(AllSpikes_local) ./(sum(~isnan(PSTH_local))) .* Response_samprate ./1000 - repmat(Sum_Psth_KDEfiltered_TBehav{uu,bb}{2},2,1));
+                end
+           end
         end
     end
     
     if Flags(2)
-        Average_Psth_KDEfiltered_Behav=cell(NSU,length(IndBehav));
+        Sum_Psth_KDEfiltered_Behav=cell(NSU,length(IndBehav));
         for bb=1:length(IndBehav)
             for uu=1:NSU
                 t=0: Bin_ms : round(MaxDur/Bin_ms)*Bin_ms;
-                Average_Psth_KDEfiltered_Behav{uu,bb} = nan(3,length(t));
+                Sum_Psth_KDEfiltered_Behav{uu,bb} = cell(3,1);
                 NBehav = size(Psth_KDEfiltered_Behav_t{bb},1);
                 PSTH_local = nan(NBehav,length(t));
                 for vv=1:NBehav
@@ -207,9 +229,31 @@ if KDE_Cal
                         PSTH_local(vv,Ind) = Psth_KDEfiltered_Behav{bb}{vv,uu}(tt); %#ok<FNDSB>
                     end
                 end
-                Average_Psth_KDEfiltered_Behav{uu,bb}(1,:) = t;
-                Average_Psth_KDEfiltered_Behav{uu,bb}(2,:) = nanmean(PSTH_local);
-                Average_Psth_KDEfiltered_Behav{uu,bb}(3,:) = nanstd(PSTH_local)./(sum(~isnan(PSTH_local))).^0.5;
+                
+                AllSpikes_local = cell2mat(SpikesTimes_Behav{bb}(:,uu));
+                % calculate the density estimate
+                if isempty(AllSpikes_local)
+                    y=ones(1,length(t))./(2*length(t));
+                    Sum_Psth_KDEfiltered_Behav{uu,bb}{1} = t;
+                    Sum_Psth_KDEfiltered_Behav{uu,bb}{2} =  y ./(sum(~isnan(PSTH_local)))* Response_samprate/1000;
+                    Sum_Psth_KDEfiltered_Behav{uu,bb}{3} = nan(2, length(t));
+                else
+                    if length(AllSpikes_local)==1
+                        y=ones(1,length(t))./length(t);
+                        Sum_Psth_KDEfiltered_Behav{uu,bb}{1} = t;
+                    else
+                        % calculate the density estimate
+                        [y,Sum_Psth_KDEfiltered_Behav{uu,bb}{1},OptW,~,~,bconf95]=sskernel(AllSpikes_local,t);
+                    end
+                    fprintf(1, 'Done calculating kernel density estimate for %s events tetrode %d/%d, using kernel bandwidth= %f\n', UActionText{IndBehav(bb)}, uu, NT, OptW);
+                    % y is a density function that sums to 1
+                    % Multiplying by the total number of spikes gives the number of expecting spike per time bin for all behavioral events (here 10 ms)
+                    % Dividing by the number of behavioral events per time bin
+                    % gives the number of expected spikes per behavioral event
+                    % Multiplying by the response sampling rate in kHz gives the expected spike rate to one behavioral event in spike/ms
+                    Sum_Psth_KDEfiltered_Behav{uu,bb}{2} =  y * length(AllSpikes_local) ./(sum(~isnan(PSTH_local))) * Response_samprate/1000;
+                    Sum_Psth_KDEfiltered_Behav{uu,bb}{3} =  abs(fliup(bconf95) .* length(AllSpikes_local) ./(sum(~isnan(PSTH_local))) .* Response_samprate ./1000 - repmat(Sum_Psth_KDEfiltered_Behav{uu,bb}{2},2,1));
+                end
             end
         end
     end
@@ -249,7 +293,7 @@ if Flags(1)
             
             if KDE_Cal
                 subplot(2,1,2)
-                shadedErrorBar(Average_Psth_KDEfiltered_TBehav{uu,bb}(1,:), Average_Psth_KDEfiltered_TBehav{uu,bb}(2,:), Average_Psth_KDEfiltered_TBehav{uu,bb}(3,:), {'r-', 'LineWidth',2})
+                shadedErrorBar(Sum_Psth_KDEfiltered_TBehav{uu,bb}{1}, Sum_Psth_KDEfiltered_TBehav{uu,bb}{2}, flipud(Sum_Psth_KDEfiltered_TBehav{uu,bb}{3})-Sum_Psth_KDEfiltered_TBehav{uu,bb}{2}, {'r-', 'LineWidth',2})
                 xlim(XLIM)
                 ylim(YLIM_T)
                 xlabel('Time (ms)')
@@ -300,7 +344,7 @@ if Flags(2)
             
             if KDE_Cal
                 subplot(2,1,2)
-                shadedErrorBar(Average_Psth_KDEfiltered_Behav{uu,bb}(1,:), Average_Psth_KDEfiltered_Behav{uu,bb}(2,:), Average_Psth_KDEfiltered_Behav{uu,bb}(3,:), {'r-', 'LineWidth',2})
+                shadedErrorBar(Sum_Psth_KDEfiltered_Behav{uu,bb}{1}, Sum_Psth_KDEfiltered_Behav{uu,bb}{2}, flipud(Sum_Psth_KDEfiltered_Behav{uu,bb}{3})-Sum_Psth_KDEfiltered_Behav{uu,bb}{2}, {'r-', 'LineWidth',2})
                 xlim(XLIM)
                 ylim(YLIM_SU)
                 xlabel('Time (ms)')
@@ -326,13 +370,13 @@ fprintf(1, 'DONE\n')
 if Flags(2)
     SpikeTrains.SpikesTimes_Behav = SpikesTimes_Behav;
     if KDE_Cal
-        SpikeTrains.Average_Psth_KDEfiltered_TBehav = Average_Psth_KDEfiltered_TBehav;
+        SpikeTrains.Sum_Psth_KDEfiltered_TBehav = Sum_Psth_KDEfiltered_TBehav;
     end
 end
 if Flags(1)
     SpikeTrains.SpikesTTimes_Behav = SpikesTTimes_Behav;
     if KDE_Cal
-        SpikeTrains.Average_Psth_KDEfiltered_Behav = Average_Psth_KDEfiltered_Behav;
+        SpikeTrains.Sum_Psth_KDEfiltered_Behav = Sum_Psth_KDEfiltered_Behav;
     end
 end
 SpikeTrains.UActionBehav = UActionText(IndBehav);
