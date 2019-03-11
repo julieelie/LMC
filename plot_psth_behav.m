@@ -45,7 +45,9 @@ for bb=1:length(IndBehav)
     Dur_local = Dur_local(logical(AllActions_ID{IndBehav(bb)} == BatID));
     Num_Slots(bb) = sum(floor(Dur_local/MaxDur)) + sum(mod(Dur_local, MaxDur)>0);
 end
-
+% Identify if there is one missing behavior type for this particular logger
+% and eliminate it from the PSTH calculations
+IndBehav(Num_Slots == 0) = [];
 
 % Now loop through behaviors and gather data
 if Flags(2)
@@ -211,7 +213,8 @@ if KDE_Cal
                     Sum_Psth_KDEfiltered_TBehav{uu,bb}{2} =  y * length(AllSpikes_local) ./(sum(~isnan(PSTH_local))) * Response_samprate/1000;
                     Sum_Psth_KDEfiltered_TBehav{uu,bb}{3} =  abs(flipud(bconf95) .* length(AllSpikes_local) ./(sum(~isnan(PSTH_local))) .* Response_samprate ./1000 - repmat(Sum_Psth_KDEfiltered_TBehav{uu,bb}{2},2,1));
                 end
-           end
+            end
+            
         end
     end
     
@@ -255,6 +258,7 @@ if KDE_Cal
                     Sum_Psth_KDEfiltered_Behav{uu,bb}{3} =  abs(flipud(bconf95) .* length(AllSpikes_local) ./(sum(~isnan(PSTH_local))) .* Response_samprate ./1000 - repmat(Sum_Psth_KDEfiltered_Behav{uu,bb}{2},2,1));
                 end
             end
+            
         end
     end
     fprintf(1,'DONE\n')
@@ -274,7 +278,7 @@ if Flags(1)
             
             for cc=1:NBehav
                 hold on
-%                 yyaxis left
+                %                 yyaxis left
                 for spike=1:length(SpikesTTimes_Behav{bb}{cc,uu})
                     hold on
                     plot(SpikesTTimes_Behav{bb}{cc,uu}(spike)*ones(2,1), cc-[0.9 0.1], 'k-', 'LineWidth',1)
@@ -284,7 +288,7 @@ if Flags(1)
                 %                 plot(Psth_KDEfiltered_TVocCall_t{cc,uu}, Psth_KDEfiltered_TVocCall{cc,uu}/max(Psth_KDEfiltered_TVocCall_scalef(:,uu))+cc-1, 'r-', 'LineWidth',2)
             end
             xlabel('Time (continuous during behavior, in ms)')
-%             yyaxis left
+            %             yyaxis left
             ylim([0 NBehav+1])
             xlim(XLIM)
             ylabel('Renditions')
@@ -312,6 +316,7 @@ if Flags(1)
                 print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_%sPSTH_Tetrode%d.pdf', Date, NeuroLoggerID,UActionText{IndBehav(bb)},uu)),'-dpdf','-fillpage')
             end
             close all
+            
         end
     end
 end
@@ -364,6 +369,7 @@ if Flags(2)
             end
             close all
         end
+        
     end
 end
 fprintf(1, 'DONE\n')

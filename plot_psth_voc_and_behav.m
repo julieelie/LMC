@@ -153,7 +153,7 @@ if Flags(1)
         RowCount = RowCount + length(VocDuration)+1;
         
         % Set the parameters of the figure
-        XLIM = [-Delay min(min(HearOnlyDuration), min(VocDuration))+Delay];
+        XLIM = [-Delay+10 min(min(HearOnlyDuration), min(VocDuration))+Delay-10];
         xlabel('Time (ms)')
         ylim([0 RowCount])
         xlim(XLIM)
@@ -162,19 +162,28 @@ if Flags(1)
         
         % Plot KDE if requested
         if KDE_Cal
+            MaxSR = nan(length(UActionBehav)+2,1);
             subplot(3,1,3)
             % First plot lines to get the legend right
             for bb=1:length(UActionBehav)
                 hold on
                 plot(Sum_Psth_KDEfiltered_TBehav{uu,bb}{1}-Delay, Sum_Psth_KDEfiltered_TBehav{uu,bb}{2},'Color',ColorCode(2+bb,:), 'LineStyle','-', 'LineWidth',2)
+                Ind = ((Sum_Psth_KDEfiltered_TBehav{uu,bb}{1}-Delay)>XLIM(1)) .* ((Sum_Psth_KDEfiltered_TBehav{uu,bb}{1}-Delay) < XLIM(2));
+                if ~isempty(Ind)
+                    MaxSR(bb) = max(Sum_Psth_KDEfiltered_TBehav{uu,bb}{2}(logical(Ind)));
+                end
             end
             
             if (length(HearOnlyInd)>1) && KDE_Cal
                 hold on
                 plot(Sum_Psth_KDEfiltered_THearCall{uu,1}, Sum_Psth_KDEfiltered_THearCall{uu,2}, 'b-', 'LineWidth',2)
+                Ind = ((Sum_Psth_KDEfiltered_THearCall{uu,1}-Delay)>XLIM(1)) .* ((Sum_Psth_KDEfiltered_THearCall{uu,1}-Delay) < XLIM(2));
+                MaxSR(bb+1) = max(Sum_Psth_KDEfiltered_THearCall{uu,2}(logical(Ind)));
             end
             hold on
             plot(Sum_Psth_KDEfiltered_TVocCall{uu,1}, Sum_Psth_KDEfiltered_TVocCall{uu,2}, 'r-', 'LineWidth',2)
+            Ind = ((Sum_Psth_KDEfiltered_TVocCall{uu,1}-Delay)>XLIM(1)) .* ((Sum_Psth_KDEfiltered_TVocCall{uu,1}-Delay) < XLIM(2));
+            MaxSR(bb+2) = max(Sum_Psth_KDEfiltered_TVocCall{uu,2}(logical(Ind)));
             xlabel('Time (ms)')
             ylabel('Spike rate (/ms)')
             % Then plots the lines with error bars
@@ -199,6 +208,7 @@ if Flags(1)
             shadedErrorBar(Sum_Psth_KDEfiltered_TVocCall{uu,1}, Sum_Psth_KDEfiltered_TVocCall{uu,2}, Sum_Psth_KDEfiltered_TVocCall{uu,3}, {'r-', 'LineWidth',2})
             YLIM = get(gca,'YLim');
             YLIM(1) = 0;
+            YLIM(2) = max(MaxSR)*1.1;
             ylim(YLIM);
             xlim(XLIM)
             hold off
@@ -332,28 +342,37 @@ if Flags(2)
         RowCount = RowCount + length(VocDuration) + 1;
         
         % Set the parameters of the figure
-        XLIM = [-Delay min(min(HearOnlyDuration), min(VocDuration))+Delay];
+        XLIM = [-Delay+10 min(min(HearOnlyDuration), min(VocDuration))+Delay-10];
         xlabel('Time (ms)')
         ylim([0 RowCount])
         xlim(XLIM)
-        title(sprintf('Raster %s Tetrode %d on %s', NeuroLoggerID, uu, Date))
+        title(sprintf('Raster %s Single Unit %d on %s', NeuroLoggerID, uu, Date))
         hold off
         
         % Plot KDE if requested 
         if KDE_Cal
+            MaxSR = nan(length(UActionBehav)+2,1);
             subplot(3,1,3)
             % First plot the lines to get the legend right
             for bb=1:length(UActionBehav)
                 hold on
                 plot(Sum_Psth_KDEfiltered_Behav{uu,bb}{1}-Delay, Sum_Psth_KDEfiltered_Behav{uu,bb}{2}, 'Color',ColorCode(2+bb,:), 'LineStyle','-', 'LineWidth',2)
+                Ind = ((Sum_Psth_KDEfiltered_Behav{uu,bb}{1}-Delay)>XLIM(1)) .* ((Sum_Psth_KDEfiltered_Behav{uu,bb}{1}-Delay) < XLIM(2));
+                if ~isempty(Ind)
+                    MaxSR(bb) = max(Sum_Psth_KDEfiltered_Behav{uu,bb}{2}(logical(Ind)));
+                end
             end
             
             if (length(HearOnlyInd)>1) && KDE_Cal
                 hold on
                 plot(Sum_Psth_KDEfiltered_HearCall{uu,1}, Sum_Psth_KDEfiltered_HearCall{uu,2}, 'b-', 'LineWidth',2)
+                Ind = ((Sum_Psth_KDEfiltered_HearCall{uu,1}-Delay)>XLIM(1)) .* ((Sum_Psth_KDEfiltered_HearCall{uu,1}-Delay) < XLIM(2));
+                MaxSR(bb+1) = max(Sum_Psth_KDEfiltered_HearCall{uu,2}(logical(Ind)));
             end
             hold on
             plot(Sum_Psth_KDEfiltered_VocCall{uu,1}, Sum_Psth_KDEfiltered_VocCall{uu,2}, 'r-', 'LineWidth',2)
+            Ind = ((Sum_Psth_KDEfiltered_VocCall{uu,1}-Delay)>XLIM(1)) .* ((Sum_Psth_KDEfiltered_VocCall{uu,1}-Delay) < XLIM(2));
+            MaxSR(bb+2) = max(Sum_Psth_KDEfiltered_VocCall{uu,2}(logical(Ind)));
             xlabel('Time (ms)')
             ylabel('Spike rate (/ms)')
             if (length(HearOnlyInd)>1) && KDE_Cal
@@ -377,6 +396,7 @@ if Flags(2)
             shadedErrorBar(Sum_Psth_KDEfiltered_VocCall{uu,1}, Sum_Psth_KDEfiltered_VocCall{uu,2}, Sum_Psth_KDEfiltered_VocCall{uu,3}, {'r-', 'LineWidth',2})
             YLIM = get(gca,'YLim');
             YLIM(1) = 0;
+            YLIM(2) = max(MaxSR)*1.1;
             ylim(YLIM);
             xlim(XLIM)
             hold off

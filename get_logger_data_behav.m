@@ -229,7 +229,7 @@ for aa=1:NAction
                 if sum(strcmp(IndivActions, UActionText{aa}))
                     AllActions_ID{aa}(e_count) = BatID_local;
                 end
-                if ii<length(IndActionStart)
+                if ii<length(IndActionStart) && length(IndActionStop)>1
                     % Find the next start
                     nn = find(min(IndActionStart(ii+1:end) - IndActionStopBat(mm)));
                     kk = find(IndActionStop == IndActionStopBat(mm)); %Position of that particular stop in the list of potential stops from all bats
@@ -241,6 +241,8 @@ for aa=1:NAction
                         SupInd = find(diff(IndActionStop(kk:end))<(IndActionStart(ii+nn) - IndActionStop(kk)));
                         IndActionStop(kk : (kk+ SupInd)) = [];
                     end
+                else %no more stops available stop here
+                    break
                 end
             end
 %           % plot the action
