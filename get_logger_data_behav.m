@@ -20,7 +20,7 @@ function get_logger_data_behav(Audio_dir, Loggers_dir, Date, ExpStartTime)
 
 
 %% Load the manual coding of behavior
-InputFiles = dir(fullfile(Audio_dir,'*behav.txt'));
+InputFiles = dir(fullfile(Audio_dir,'*RecOnly_behav.txt'));
 NF = length(InputFiles);
 Type = cell(NF,1); % Type of annotation (vocalization, licking_start, chewing....)
 Stamp = cell(NF,1); % Time stamp in computer time of the form yyyymmddThhmmssmmm

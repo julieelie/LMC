@@ -46,13 +46,14 @@ if Flags(4)
     save(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, NeuroBuffer)),'Neuro_spikes', '-append');
 end
 
-% Plot PSTH for each vocalization for each neural logger 16
-for ll=1:NLogger
-    LData_folder = fullfile(Logger_dirs(ll).folder, Logger_dirs(ll).name,'extracted_data');
-    LDir = dir(fullfile(LData_folder, '*CSC*.mat'));
-    LData = load(fullfile(LDir(1).folder, LDir(1).name), 'logger_type', 'logger_serial_number');
-    LoggerType{ll}  = LData.logger_type;
-    if strcmp(LoggerType{ll}, 'Mous') || strcmp(LoggerType{ll}, 'Rat')
-        plot_psth_one_voc(Neuro_spikesT.(sprintf('Logger%s', LData.logger_serial_number)), Raw_wave, Piezo_wave.Logger6, Piezo_FS.Logger6, FS)
-    end
+% % Plot PSTH for each vocalization for each neural logger 16
+% for ll=1:NLogger
+%     LData_folder = fullfile(Logger_dirs(ll).folder, Logger_dirs(ll).name,'extracted_data');
+%     LDir = dir(fullfile(LData_folder, '*CSC*.mat'));
+%     LData = load(fullfile(LDir(1).folder, LDir(1).name), 'logger_type', 'logger_serial_number');
+%     LoggerType{ll}  = LData.logger_type;
+%     if strcmp(LoggerType{ll}, 'Mous') || strcmp(LoggerType{ll}, 'Rat')
+%         plot_psth_one_voc(Neuro_spikesT.(sprintf('Logger%s', LData.logger_serial_number)), Raw_wave, Piezo_wave.Logger6, Piezo_FS.Logger6, FS)
+%     end
+% end
 end

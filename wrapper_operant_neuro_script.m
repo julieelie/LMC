@@ -1,8 +1,13 @@
 %Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190202/HoHa_190202_1046_VocTrigger_param.txt';
 % Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190131/HoHa_190131_1108_VocTrigger_param.txt';
 % Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190130/HoHa_190130_1007_VocTrigger_param.txt';
-Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190129/HoHa_190129_1023_VocTrigger_param.txt';
-% Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190201/HoHa_190201_1023_VocTrigger_param.txt';
+% Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190129/HoHa_190129_1023_VocTrigger_param.txt';
+% Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190120/HoHa_190120_1208_VocTrigger_param.txt';
+% Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190119/HoHa_190119_1158_VocTrigger_param.txt';
+% Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190118/HoHa_190118_1027_VocTrigger_param.txt';
+Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190117/HoHa_190117_1008_VocTrigger_param.txt';
+% Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190116/HoHa_190116_1126_VocTrigger_param.txt';
+
 
 addpath(genpath('/Users/elie/Documents/CODE/operant_bats'))
 addpath(genpath('/Users/elie/Documents/CODE/GeneralCode'))
@@ -58,6 +63,9 @@ close all
 %% Extract data of the bats doing other actions during the free behavior session (RecOnly)
 fprintf(' EXTRACTING ONSET/OFFSET TIMES OF OTHER BEHAVIORS DURING FREE SESSION \n')
 RecOnlySession = dir(fullfile(AudioDataPath, '*RecOnly_events.txt'));
+if isempty(RecOnlySession)
+    fprintf(1,'No free interaction session on that day!\n')
+end
 if length(RecOnlySession)>1
     fprintf(1, 'Several RecOnly session were done on that day:\n')
     for ss=1:length(RecOnlySession)
@@ -101,7 +109,7 @@ end
 Date = RecOnlySession.name(6:11);
 ExpStartTime = RecOnlySession.name(13:16);
  % Find the ID of the Neural loggers and corresponding ID tag of each implanted bat
-MaxDur = 600; % duration by which each long behavioral sequence should be cut
+MaxDur = 700; % duration by which each long behavioral sequence should be cut often set at 600 but for 190118, 700 is better
 [~,~,RecTableData]=xlsread(Path2RecordingTable,1,'A1:P200','basic');
 RowData = find((cell2mat(RecTableData(2:end,1))== str2double(Date))) +1;
 DataInfo = RecTableData(RowData,:);
@@ -127,6 +135,10 @@ for nl=1:length(NL_ID)
     Flags=[1 1];% Flags = whether to print PSTH of Tetrode (Flags(1)=1) and/or Single units
 % (Flags(2)=1))
     KDE_Cal = 1;
+    if isempty(RecOnlySession)
+        fprintf(1,'No free interaction session on that day!\n')
+        SpikeTimesBehav.(NeuroLoggerID) = [];
+    end
     fprintf(' PSTH of NEURAL DATA CORRESPONDING TO BEHAVIORS DURING FREE SOCIALIZATION AND VOCAL ACTIVITY DURING OPERANT CONDITIONING \n')
-    plot_psth_voc_and_behav(SpikeTimesBehav.(NeuroLoggerID),SpikeTimesVoc.(NeuroLoggerID),Logger_dir,Date, NeuroLoggerID,Flags, BufferBeforeOnset, KDE_Cal);
+    plot_psth_voc_and_behav(SpikeTimesBehav.(NeuroLoggerID),SpikeTimesVoc.(NeuroLoggerID),Logger_dir,Date, NeuroLoggerID,Flags, BufferBeforeOnset,MaxDur, KDE_Cal);
 end

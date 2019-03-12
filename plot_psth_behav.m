@@ -20,12 +20,19 @@ fprintf(1,'DONE\n')
 if nargin<7
     MaxDur = 600;% time in ms to cut behavioral actions into schrunk to constitute a PSTH
 end
-Response_samprate = 100;% Sampling rate of the KDE in Hz
 Bin_ms = 1; % size of the KDE binning
+Response_samprate = 1/(Bin_ms*10^-3);% Sampling rate of the KDE in Hz
+
+% Assumptions for the KDE:
+% when there is no spike for all behavioral events, our best estimate of the
+% spike rate per behavioral event is 1/2 spike for the whole
+% behavioral event
+% When there is one spike, our best estimate of the spike rate per
+% behavioral event is 1 spike.
 
 XLIM = [0 MaxDur];
-YLIM_SU = [0 0.004];
-YLIM_T = [0 0.1];
+YLIM_SU = [0 0.045];
+YLIM_T = [0 1.5];
 
 %% extract the spike arrival times from NeuroLoggerID for each behavioral event and calculate a KDE at each cut if requested
 if Flags(1)
@@ -50,6 +57,11 @@ end
 IndBehav(Num_Slots == 0) = [];
 
 % Now loop through behaviors and gather data
+if isempty(IndBehav) % No data for that logger
+    fprintf(1,'No behavioral data for that logger\n');
+    SpikeTrains=[];
+    return
+end
 if Flags(2)
     NSU = size(Neuro_spikes.(Fns_Neuro{FocIndNeuro}){IndBehav(1)},2);
     SpikesTimes_Behav = cell(length(IndBehav),1);
@@ -121,15 +133,17 @@ for bb=1:length(IndBehav)
                             y = ones(1, length(t))./(2*length(t));
                             Psth_KDEfiltered_TBehav{bb}{BehavCut,uu} =  y  * Response_samprate/1000;
                             Psth_KDEfiltered_TBehav_scalef{bb}(BehavCut,uu) = max(Psth_KDEfiltered_TBehav{bb}{BehavCut,uu});
+                            Psth_KDEfiltered_TBehav_t{bb}{BehavCut,uu} = t;
                         else
                             if length(SpikesTTimes_Behav{bb}{BehavCut,uu})==1
                                 y = ones(1, length(t))./(length(t));
+                                Psth_KDEfiltered_TBehav_t{bb}{BehavCut,uu} = t;
                             else
                                 % calculate the density estimate
                                 [y,Psth_KDEfiltered_TBehav_t{bb}{BehavCut,uu},~]=sskernel(SpikesTTimes_Behav{bb}{BehavCut,uu},t);
                             end
                             % y is a density function that sums to 1
-                            % multiplying by the total number of spikes gives the number of expecting spike per time bin (here 10 ms)
+                            % multiplying by the total number of spikes gives the number of expecting spike per time bin (here Bin_ms=1 ms)
                             % multiplying by the response sampling rate in kHz gives the expected spike rate to one stimulus presentation in spike/ms
                             Psth_KDEfiltered_TBehav{bb}{BehavCut,uu} =  y * length(SpikesTTimes_Behav{bb}{BehavCut,uu}) * Response_samprate/1000;
                             Psth_KDEfiltered_TBehav_scalef{bb}(BehavCut,uu) = max(Psth_KDEfiltered_TBehav{bb}{BehavCut,uu});
@@ -142,19 +156,21 @@ for bb=1:length(IndBehav)
                     IndSU01 = logical((Neuro_spikes.(Fns_Neuro{FocIndNeuro}){IndBehav(bb)}{FocBatInd(ib),uu}>=CutLimits(cc)) .* (Neuro_spikes.(Fns_Neuro{FocIndNeuro}){IndBehav(bb)}{FocBatInd(ib),uu}<CutLimits(cc+1)));
                     SpikesTimes_Behav{bb}{BehavCut,uu} = (Neuro_spikes.(Fns_Neuro{FocIndNeuro}){IndBehav(bb)}{FocBatInd(ib),uu}(IndSU01) - CutLimits(cc))';
                     if KDE_Cal
-                        if isempty(SpikesTimes_Behav{bb}{BehavCut,uu})
+                        if isempty(SpikesTimes_Behav{bb}{BehavCut,uu}) % Our best estimate of the spike rate density within the boudary of the behavior is 1/2 spike so within a bin, it is 1/2*number of time bins
                             y=ones(1, length(t))./(2*length(t));
                             Psth_KDEfiltered_Behav{bb}{BehavCut,uu} =  y * Response_samprate/1000;
                             Psth_KDEfiltered_Behav_scalef{bb}(BehavCut,uu) = max(Psth_KDEfiltered_Behav{bb}{BehavCut,uu});
+                            Psth_KDEfiltered_Behav_t{bb}{BehavCut,uu} = t;
                         else
                             if length(SpikesTimes_Behav{bb}{BehavCut,uu})==1
                                 y=ones(1,length(t))./(length(t));
+                                Psth_KDEfiltered_Behav_t{bb}{BehavCut,uu} = t;
                             else
                                 % calculate the density estimate
                                 [y,Psth_KDEfiltered_Behav_t{bb}{BehavCut,uu},~]=sskernel(SpikesTimes_Behav{bb}{BehavCut,uu},t);
                             end
                             % y is a density function that sums to 1
-                            % multiplying by the total number of spikes gives the number of expecting spike per time bin (here 10 ms)
+                            % multiplying by the total number of spikes gives the number of expecting spike per time bin (here 1 ms)
                             % multiplying by the response sampling rate in kHz gives the expected spike rate to one stimulus presentation in spike/ms
                             Psth_KDEfiltered_Behav{bb}{BehavCut,uu} =  y * length(SpikesTimes_Behav{bb}{BehavCut,uu}) * Response_samprate/1000;
                             Psth_KDEfiltered_Behav_scalef{bb}(BehavCut,uu) = max(Psth_KDEfiltered_Behav{bb}{BehavCut,uu});

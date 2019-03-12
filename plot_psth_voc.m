@@ -21,11 +21,12 @@ fprintf(1,'DONE\n')
 if nargin<7
     Delay = 500;% time in ms to extract data before and after vocalization onset/offset
 end
-Response_samprate = 100;% Sampling rate of the KDE in Hz
-Bin_ms = 1; % size of the KDE binning
 
-YLIM_SU = [0 0.004];
-YLIM_T = [0 0.1];
+Bin_ms = 1; % size of the KDE binning
+Response_samprate = 1/(Bin_ms*10^-3);% Sampling rate of the KDE in Hz
+
+YLIM_SU = [0 0.045];
+YLIM_T = [0 1.5];
 
 %% extract the spike arrival times from NeuroLoggerID for each vocalization cut of AudioLoggerID
 fprintf(1, 'Gathering vocalization data...')
@@ -237,7 +238,7 @@ if sum(Ncall)
                         % calculate the density estimate
                         [y,Sum_Psth_KDEfiltered_VocCall{uu,1},OptW,~,~,bconf95]=sskernel(AllSpikes_local,t);
                     end
-                    fprintf(1, 'Done calculating kernel density estimate of vocalization production single Unit %d/%d, using kernel bandwidth= %f\n', uu, NT, OptW);
+                    fprintf(1, 'Done calculating kernel density estimate of vocalization production single Unit %d/%d, using kernel bandwidth= %f\n', uu, NSU, OptW);
                     % y is a density function that sums to 1
                     % Multiplying by the total number of spikes gives the number of expecting spike per time bin for all behavioral events (here 10 ms)
                     % Dividing by the number of behavioral events per time bin
@@ -281,7 +282,7 @@ if sum(Ncall)
                 %                 yyaxis right
                 %                 plot(Psth_KDEfiltered_TVocCall_t{cc,uu}, Psth_KDEfiltered_TVocCall{cc,uu}/max(Psth_KDEfiltered_TVocCall_scalef(:,uu))+cc-1, 'r-', 'LineWidth',2)
             end
-            XLIM = [-Delay min(VocDuration)+Delay];
+            XLIM = [-Delay mean(VocDuration)+Delay];
             xlabel('Time centered at production onset (ms)')
             yyaxis left
             ylim([0 VocCall+1])
@@ -301,7 +302,7 @@ if sum(Ncall)
 %                 hold on
                 shadedErrorBar(Sum_Psth_KDEfiltered_TVocCall{uu,1}, Sum_Psth_KDEfiltered_TVocCall{uu,2}, Sum_Psth_KDEfiltered_TVocCall{uu,3}, {'r-', 'LineWidth',2})
                 xlim(XLIM)
-                ylim(YLIM_T)
+                ylim([0 max(Sum_Psth_KDEfiltered_TVocCall{uu,2})*1.3])
                 xlabel('Time centered at production onset (ms)')
                 ylabel('Spike rate (/ms)')
                 hold off
@@ -348,7 +349,7 @@ if sum(Ncall)
                 %                 yyaxis right
                 %                 plot(Psth_KDEfiltered_VocCall_t{cc,uu}, Psth_KDEfiltered_VocCall{cc,uu}/max(Psth_KDEfiltered_VocCall_scalef(:,uu))+cc-1, 'r-', 'LineWidth',2)
             end
-            XLIM = [-Delay min(VocDuration)+Delay];
+            XLIM = [-Delay mean(VocDuration)+Delay];
             yyaxis left
             xlabel('Time centered at production onset (ms)')
             ylim([0 VocCall+1])
@@ -368,7 +369,7 @@ if sum(Ncall)
 %                 hold on
                 shadedErrorBar(Sum_Psth_KDEfiltered_VocCall{uu,1}, Sum_Psth_KDEfiltered_VocCall{uu,2}, Sum_Psth_KDEfiltered_VocCall{uu,3}, {'r-', 'LineWidth',2})
                 xlim(XLIM)
-                ylim(YLIM_SU)
+                ylim([0 max(Sum_Psth_KDEfiltered_VocCall{uu,2})*1.3])
                 xlabel('Time centered at production onset (ms)')
                 ylabel('Spike rate (/ms)')
                 hold off
@@ -391,6 +392,8 @@ if sum(Ncall)
     fprintf(1, 'DONE\n')
 else
     fprintf('No vocalization production of the target bat on that day\n')
+    Sum_Psth_KDEfiltered_TVocCall=[];
+    Sum_Psth_KDEfiltered_VocCall=[];
 end
 
 
@@ -613,7 +616,7 @@ if KDE_Cal
                     % calculate the density estimate
                     [y,Sum_Psth_KDEfiltered_HearCall{uu,1},OptW,~,~,bconf95]=sskernel(AllSpikes_local,t);
                 end
-                fprintf(1, 'Done calculating kernel density estimate of vocalization perception single unit %d/%d, using kernel bandwidth= %f\n', uu, NT, OptW);
+                fprintf(1, 'Done calculating kernel density estimate of vocalization perception single unit %d/%d, using kernel bandwidth= %f\n', uu, NSU, OptW);
                 % y is a density function that sums to 1
                 % Multiplying by the total number of spikes gives the number of expecting spike per time bin for all behavioral events (here 10 ms)
                 % Dividing by the number of behavioral events per time bin
@@ -658,7 +661,7 @@ if Flags(1) && (HearCall>1) && sum(HearOnly)
 %             yyaxis right
 %             plot(Psth_KDEfiltered_THearCall_t{cc,uu}, Psth_KDEfiltered_THearCall{cc,uu}/max(Psth_KDEfiltered_THearCall_scalef(HearOnlyInd,uu))+hh-1, 'r-', 'LineWidth',2)
         end
-        XLIM = [-Delay min(HearDuration)+Delay];
+        XLIM = [-Delay mean(HearDuration)+Delay];
         yyaxis left
         xlabel('Time centered at hearing onset (ms)')
         ylim([0 length(HearOnlyInd)+1])
@@ -677,7 +680,7 @@ if Flags(1) && (HearCall>1) && sum(HearOnly)
 %             hold on
             shadedErrorBar(Sum_Psth_KDEfiltered_THearCall{uu,1}, Sum_Psth_KDEfiltered_THearCall{uu,2}, Sum_Psth_KDEfiltered_THearCall{uu,3}, {'b-', 'LineWidth',2})
             xlim(XLIM)
-            ylim(YLIM_T)
+            ylim([0 max(Sum_Psth_KDEfiltered_THearCall{uu,2})*1.3])
             xlabel('Time centered at hearing onset (ms)')
             ylabel('Spike rate (/ms)')
         end
@@ -724,7 +727,7 @@ if Flags(2) && (HearCall>1) && sum(HearOnly)
 %             yyaxis right
 %             plot(Psth_KDEfiltered_HearCall_t{cc,uu}, Psth_KDEfiltered_HearCall{cc,uu}/max(Psth_KDEfiltered_HearCall_scalef(HearOnlyInd,uu))+hh-1, 'r-', 'LineWidth',2)
         end
-        XLIM = [-Delay min(HearDuration)+Delay];
+        XLIM = [-Delay mean(HearDuration)+Delay];
         yyaxis left
         xlabel('Time centered at hearing onset (ms)')
         ylim([0 length(HearOnlyInd)+1])
@@ -745,7 +748,7 @@ if Flags(2) && (HearCall>1) && sum(HearOnly)
             shadedErrorBar(Sum_Psth_KDEfiltered_HearCall{uu,1}, Sum_Psth_KDEfiltered_HearCall{uu,2}, Sum_Psth_KDEfiltered_HearCall{uu,3}, {'b-', 'LineWidth',2})
             
             xlim(XLIM)
-            ylim(YLIM_SU)
+            ylim([0 max(Sum_Psth_KDEfiltered_HearCall{uu,2})*1.3])
             xlabel('Time centered at hearing onset (ms)')
             ylabel('Spike rate (/ms)')
             hold off
@@ -786,6 +789,8 @@ if Flags(2)
     end
 end
 SpikeTrains.VocDuration = VocDuration;
+SpikeTrains.NSU = NSU;
+SpikeTrains.NT = NT;
 if (HearCall>1) && sum(HearOnly)
     SpikeTrains.HearDuration = HearDuration;
     SpikeTrains.HearOnlyInd = HearOnlyInd;
