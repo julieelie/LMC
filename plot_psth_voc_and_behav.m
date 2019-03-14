@@ -59,11 +59,14 @@ end
 
 MaxInstances = 150; % Max number of instances to plot for behavioral events other than hearing and vocalizing
 PSTH_spacer=10;
-BehaviorLegendX = -Delay - 50;
+
 %% Now plotting PSTH
 fprintf(1, 'Plotting PSTH\n')
 % Now plot Raster for tetrodes
 ColorCode = get(groot,'DefaultAxesColorOrder');
+BehavXLim = [-Delay 3*Delay];
+BehaviorLegendX = BehavXLim(1) - 50;
+fprintf(1, 'First alligned to vocalization onset\n')
 if Flags(1)
     for uu=1:NT
         fprintf(1, 'Tetrode %d/%d...\n',uu,NT)
@@ -93,11 +96,11 @@ if Flags(1)
             for cc=1:NBehav
                 hold on
                 % first plot a colored line to code the behavior
-                plot([-Delay 3*Delay], RowCount+cc-[0.5 0.5], '-','LineWidth',250/(NBehav*length(UActionBehav)),'Color', [ColorCode(2+bb,:) 0.1])
+                plot(BehavXLim, RowCount+cc-[0.5 0.5], '-','LineWidth',250/(NBehav*length(UActionBehav)),'Color', [ColorCode(2+bb,:) 0.1])
                 % then the spikes
                 for spike=1:length(SpikesTTimes_Behav{bb}{cc,uu})
                     hold on
-                    plot(SpikesTTimes_Behav{bb}{cc,uu}(spike)*ones(2,1)-Delay, RowCount+cc-[0.9 0.1], 'k-', 'LineWidth',1)
+                    plot(SpikesTTimes_Behav{bb}{cc,uu}(spike)*ones(2,1)+BehavXLim(1), RowCount+cc-[0.9 0.1], 'k-', 'LineWidth',1)
                 end
                 hold on
                 %                 yyaxis right
@@ -124,19 +127,20 @@ if Flags(1)
 %                 yyaxis left
                 hold on
                 plot([0 HearDuration(cc)], RowCount+hh-[0.5 0.5], '-','LineWidth',250/(length(HearOnlyInd)+ RowCount),'Color', [0.8 0.8 1])
+                
                 %         for dd=1:size(DataDeletion_HearCall{cc},1)
                 %             hold on
                 %             plot(DataDeletion_HearCall{cc}(dd,:), hh-[0.5 0.5], '-','LineWidth',250/length(HearOnlyInd),'Color', [0.8 0.8 0.8]) % RF artefact period
                 %         end
                 for spike=1:length(SpikesTTimes_HearCall{cc,uu})
                     hold on
-                    plot(SpikesTTimes_HearCall{cc,uu}(spike)*ones(2,1), RowCount+hh-[0.9 0.1], 'k-', 'LineWidth',1)
+                    plot((SpikesTTimes_HearCall{cc,uu}(spike))*ones(2,1), RowCount+hh-[0.9 0.1], 'k-', 'LineWidth',1)
                 end
                 hold on
                 %             yyaxis right
                 %             plot(Psth_KDEfiltered_THearCall_t{cc,uu}, Psth_KDEfiltered_THearCall{cc,uu}/max(Psth_KDEfiltered_THearCall_scalef(HearOnlyInd,uu))+hh-1, 'r-', 'LineWidth',2)
             end
-            % plotting a line at onset
+            % plotting a line at onset/offset
             line([0 0], [RowCount-0.5 RowCount+length(HearOnlyInd)+0.5], 'color','b','LineStyle','-', 'LineWidth',1)
             % plotting the legend for that particular behavior
             h=text(BehaviorLegendX, RowCount + length(HearOnlyInd)/3 ,'Hearing');
@@ -156,19 +160,20 @@ if Flags(1)
     %             yyaxis left
                 hold on
                 plot([0 VocDuration(cc)], RowCount+hh-[0.5 0.5], '-','LineWidth',250/(length(VocDuration)+ RowCount),'Color', [1 0.8 0.8])
+                    
                 %         for dd=1:size(DataDeletion_HearCall{cc},1)
                 %             hold on
                 %             plot(DataDeletion_HearCall{cc}(dd,:), hh-[0.5 0.5], '-','LineWidth',250/length(HearOnlyInd),'Color', [0.8 0.8 0.8]) % RF artefact period
                 %         end
                 for spike=1:length(SpikesTTimes_VocCall{cc,uu})
                     hold on
-                    plot(SpikesTTimes_VocCall{cc,uu}(spike)*ones(2,1), RowCount+hh-[0.9 0.1], 'k-', 'LineWidth',1)
+                    plot((SpikesTTimes_VocCall{cc,uu}(spike))*ones(2,1), RowCount+hh-[0.9 0.1], 'k-', 'LineWidth',1)
                 end
                 hold on
                 %             yyaxis right
                 %             plot(Psth_KDEfiltered_THearCall_t{cc,uu}, Psth_KDEfiltered_THearCall{cc,uu}/max(Psth_KDEfiltered_THearCall_scalef(HearOnlyInd,uu))+hh-1, 'r-', 'LineWidth',2)
             end
-            % plotting a line at onset
+            % plotting a line at onset/offset
             line([0 0], [RowCount-0.5 RowCount+length(VocDuration)+0.5], 'Color','r','LineStyle','-', 'LineWidth',1.5)
             % plotting the legend for that particular behavior
             h=text(BehaviorLegendX, RowCount + length(VocDuration)/3 ,'Vocalizing');
@@ -178,6 +183,7 @@ if Flags(1)
         
         % Set the parameters of the figure
         XLIM = [-Delay+10 min(max(mean(HearOnlyDuration), mean(VocDuration))+Delay, MaxDur-Delay)-10];
+        
         xlabel('Time (ms)')
         ylim([0 RowCount])
         xlim(XLIM)
@@ -273,7 +279,6 @@ if Flags(1)
     
 end
 
-        
  %% Now plot Raster for single units
 if Flags(2)
     for uu=1:NSU
