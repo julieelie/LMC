@@ -31,6 +31,7 @@ for pp=1:length(ListOfPaths)
     % Get the path to audio data for operant conditioning experiment
     [AudioDataPath, DataFile ,~]=fileparts(Path2ParamFile);
     Date = DataFile(6:11);
+    fprintf(1,'Working on %s\n', Date)
     ExpStartTime = DataFile(13:16);
     
     Path2RecordingTable = '/Users/elie/Google Drive/BatmanData/RecordingLogs/recording_logs.xlsx';
@@ -51,6 +52,7 @@ for pp=1:length(ListOfPaths)
     
     %% Plot PSTH of the bats hearing or producing a vocalization during the operant conditioning
     % Find the ID of the Neural loggers and corresponding audiologger for each implanted bat
+    if ~strcmp(Date, '190130') 
     [~,~,RecTableData]=xlsread(Path2RecordingTable,1,'A1:P200','basic');
     RowData = find((cell2mat(RecTableData(2:end,1))== str2double(Date))) +1;
     DataInfo = RecTableData(RowData,:);
@@ -67,13 +69,13 @@ for pp=1:length(ListOfPaths)
         % (Flags(2)=1))
         KDE_Cal = 1;
         PLOT=1; % set to 1 to plot the results, 0 to just save data
-        fprintf(' PSTH of NEURAL DATA CORRESPONDING TO VOCALIZATIONS DURING OPERANT \n')
+        fprintf(1,' PSTH of NEURAL DATA CORRESPONDING TO VOCALIZATIONS DURING OPERANT %s\n', NeuroLoggerID)
         [SpikeTimesVoc.(NeuroLoggerID)]=plot_psth_voc(Logger_dir, Date, ExpStartTime, AudioLoggerID, NeuroLoggerID, Flags, BufferBeforeOnset, KDE_Cal,PLOT);
     end
     save(fullfile(Logger_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, BufferBeforeOnset)), 'SpikeTimesVoc','-append')
     close all
     %     pause()
-    
+    end
      %% Extract data of the bats doing other actions during the free behavior session (RecOnly)
     % fprintf(' EXTRACTING ONSET/OFFSET TIMES OF OTHER BEHAVIORS DURING FREE SESSION \n')
     % RecOnlySession = dir(fullfile(AudioDataPath, '*RecOnly_events.txt'));
@@ -137,7 +139,7 @@ for pp=1:length(ListOfPaths)
         Flags=[1 1];% Flags = whether to print PSTH of Tetrode (Flags(1)=1) and/or Single units
         % (Flags(2)=1))
         KDE_Cal = 1;
-        fprintf(' PSTH of NEURAL DATA CORRESPONDING TO OTHER BEHAVIORS DURING FREE SOCIALIZATION \n')
+        fprintf(1,' PSTH of NEURAL DATA CORRESPONDING TO OTHER BEHAVIORS DURING FREE SOCIALIZATION %s \n', NeuroLoggerID)
         [SpikeTimesBehav.(NeuroLoggerID)]= plot_psth_behav(Logger_dir, Date, ExpStartTime, NeuroLoggerID,Bat_ID, Flags, MaxDur, KDE_Cal);
     end
     save(fullfile(Logger_dir, sprintf('%s_%s_BehavExtractData_%d.mat', Date, ExpStartTime,BufferBeforeBehavOnset)),'SpikeTimesBehav','-append');
@@ -154,7 +156,7 @@ for pp=1:length(ListOfPaths)
             fprintf(1,'No free interaction session on that day!\n')
             SpikeTimesBehav.(NeuroLoggerID) = [];
         end
-        fprintf(' PSTH of NEURAL DATA CORRESPONDING TO BEHAVIORS DURING FREE SOCIALIZATION AND VOCAL ACTIVITY DURING OPERANT CONDITIONING \n')
+        fprintf(1,' PSTH of NEURAL DATA CORRESPONDING TO BEHAVIORS DURING FREE SOCIALIZATION AND VOCAL ACTIVITY DURING OPERANT CONDITIONING %s\n', NeuroLoggerID)
         plot_psth_voc_and_behav(SpikeTimesBehav.(NeuroLoggerID),SpikeTimesVoc.(NeuroLoggerID),Logger_dir,Date, NeuroLoggerID,Flags, BufferBeforeOnset,MaxDur, KDE_Cal);
     end
 end

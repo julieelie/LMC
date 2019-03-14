@@ -198,7 +198,7 @@ if KDE_Cal
                 AllSpikes_local = cell2mat(SpikesTimes_Behav{bb}(:,uu));
                 % calculate the density estimate
                 [Sum_Psth_KDEfiltered_Behav{uu,bb}{2}, Sum_Psth_KDEfiltered_Behav{uu,bb}{1}, Sum_Psth_KDEfiltered_Behav{uu,bb}{3}] = kde_wrapper(AllSpikes_local,t,Response_samprate,sum(~isnan(PSTH_local)));
-                fprintf(1, 'Done calculating kernel density estimate for %s events single unit %d/%d, using kernel bandwidth= %f\n', UActionText{IndBehav(bb)}, uu, NSU, OptW);
+                fprintf(1, 'Done calculating kernel density estimate for %s events single unit %d/%d\n', UActionText{IndBehav(bb)}, uu, NSU);
             end
             
         end
