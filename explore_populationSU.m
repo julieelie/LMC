@@ -110,11 +110,11 @@ for dd=1:NDays
                 % averaged before vocalizations (one time window with KDE
                 % away from the mean by twice SD). Rate is in spike per ms
                 % here. Test only if the average spike rate is  above 0.1Hz (1 spike every 10 seconds);
-                if Mean_SR(CellCount)>0.1
+                if Mean_SR(CellCount)>MeanSR4Calulations
                     ST = SpikeTimesVoc.(sprintf('Logger%s',LData.logger_serial_number));
                     if ~isempty(ST.Sum_Psth_KDEfiltered_VocBaseline) && iscell(ST.Sum_Psth_KDEfiltered_VocBaseline)
                         MeanBaselineVoc = mean(ST.Sum_Psth_KDEfiltered_VocBaseline{uu,2})*1000;% Average baseline rate in Hz
-                        if MeanBaselineVoc>0.1
+                        if MeanBaselineVoc>MeanSR4Calulations
                             LogicalInd=logical((ST.Sum_Psth_KDEfiltered_VocCall{uu,1}>-Delay) .* (ST.Sum_Psth_KDEfiltered_VocCall{uu,1}<mean(ST.VocDuration+Delay)));
                             Zscore = abs(ST.Sum_Psth_KDEfiltered_VocCall{uu,2}(LogicalInd) - MeanBaselineVoc/1000)/std(ST.Sum_Psth_KDEfiltered_VocBaseline{uu,2});
                             P_value = normcdf(Zscore, 'upper');
@@ -126,7 +126,7 @@ for dd=1:NDays
                     end
                     if ~isempty(ST.Sum_Psth_KDEfiltered_HearBaseline) && iscell(ST.Sum_Psth_KDEfiltered_HearBaseline)
                         MeanBaselineHear = mean(ST.Sum_Psth_KDEfiltered_HearBaseline{uu,2})*1000;% Average baseline rate in Hz
-                        if MeanBaselineHear>0.1
+                        if MeanBaselineHear>MeanSR4Calulations
                             LogicalInd=logical((ST.Sum_Psth_KDEfiltered_HearCall{uu,1}>-Delay) .* (ST.Sum_Psth_KDEfiltered_HearCall{uu,1}<mean(ST.HearDuration(ST.HearOnlyInd)+Delay)));
                             Zscore = abs(ST.Sum_Psth_KDEfiltered_HearCall{uu,2}(LogicalInd) - MeanBaselineHear/1000)/std(ST.Sum_Psth_KDEfiltered_HearBaseline{uu,2});
                             P_value = normcdf(Zscore, 'upper');
