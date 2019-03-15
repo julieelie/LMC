@@ -14,8 +14,10 @@ Dates = cell2mat(RecTableData(Dates_Ind,1));
 
 %% Loop through dates and gather data
 % For each day, each logger, each unit find the average spike rate
+PLOT=0;
+MeanSR4Calulations = 1; % Values in Hz of the mean SR for doing calculations
 NDays = length(Dates);
-HypNSU = 100;
+HypNSU = 200;
 TimeStep = 10*60; % Time resolution in seconds at which the spike rate shoule be calculated
 MaxRecTime = 60*60*6;
 TimePoints = 0:TimeStep:MaxRecTime;
@@ -32,13 +34,14 @@ Tetrode_ID = nan(HypNSU,1);
 SS_ID = cell(HypNSU,1);
 Mean_Peak2Peak = nan(HypNSU,1);
 SpikeShape = cell(HypNSU,4);
-Alpha = 0.05; % Detection thershold for significant spike rate modulation before correction for false positive
+Alpha = 0.01; % Detection thershold for significant spike rate modulation before correction for false positive
 SignWinVoc = nan(HypNSU,1); % number of time bin in the KDE when producing the vocalizations above the mean baseline firing rate by twice the SD of the baseline firing rate
 SignWinHear = nan(HypNSU,1);% number of time bin in the KDE when hearing the vocalizations above the mean baseline firing rate by twice the SD of the baseline firing rate
 
 CellCount=0;
 for dd=1:NDays
     Date = Dates(dd);
+    fprintf(1,'%d\n',Date)
     Path2Data = fullfile(Path2AllData, ['20' num2str(Date)]);
     % Get the number of loggers
     Logger_dirs = dir(fullfile(Path2Data, '*ogger*'));
@@ -52,6 +55,7 @@ for dd=1:NDays
     Ind_ = strfind(FileData(1).name, '_');
     Delay = str2double(FileData(1).name(Ind_(end) + (1:3)));
     for ll=1:NLogger
+        fprintf(1,'%s\n',Logger_dirs(ll).name)
         LData_folder = fullfile(Logger_dirs(ll).folder, Logger_dirs(ll).name,'extracted_data');
         LDir = dir(fullfile(LData_folder, '*CSC*.mat'));
         LData = load(fullfile(LDir(1).folder, LDir(1).name), 'logger_type', 'logger_serial_number');
@@ -69,6 +73,7 @@ for dd=1:NDays
             
             for uu=1:NSU
                 CellCount = CellCount+1;
+                fprintf(1,'Cell %d\n',CellCount)
                 Cell = load(fullfile(SU_files(uu).folder, SU_files(uu).name)); % This load the Spike_arrival_times in micro seconds and the Spike_snippets in microVolts, ceiled at 500uV for spike sorting projection
                 SpikeTimes = (Cell.Spike_arrival_times-Cell.Spike_arrival_times(1))*10^-6; % Spike arrival times centered to the first spike, in seconds
                 for tt=1:(length(TimePoints)-1)
@@ -84,7 +89,7 @@ for dd=1:NDays
                 
                 % calculate average statistics for that cell
                 SpikeLife(CellCount) = (TimePoints(find(~isnan(Peak2Peak(CellCount,:)),1,'Last'))- TimePoints(find(~isnan(Peak2Peak(CellCount,:)),1,'First')))/60;
-                [KDE(CellCount,:),~,KDE_error{CellCount}] = kde_wrapper(SpikeTimes,TimePoints(2:end)-TimeStep/2,1000/TimeStep);
+                [KDE(CellCount,:),~,KDE_error{CellCount}] = kde_wrapper(SpikeTimes,TimePoints(2:end)-TimeStep/2,1/TimeStep);
                 Mean_Peak2Peak(CellCount) = nanmean(Peak2Peak(CellCount,:));
                 Mean_SR(CellCount) = mean(SpikeRate(CellCount,find(~isnan(Peak2Peak(CellCount,:)))));
                 SD_SR(CellCount) = std(SpikeRate(CellCount,find(~isnan(Peak2Peak(CellCount,:)))));
@@ -134,35 +139,37 @@ for dd=1:NDays
                     
                 end
                 
-                % Plot the average spike rate over time, the average spike
-                % amplitude over time and the mean snippets
-                Fig1=figure();
-                yyaxis left
-                plot((TimePoints(2:end)-TimeStep/2)/60,SpikeRate(CellCount,:),'b-', 'LineWidth',2)
-                hold on
-                shadedErrorBar((TimePoints(2:end)-TimeStep/2)/60,KDE(CellCount,:),KDE_error{CellCount},{'b--', 'LineWidth',2})
-                ylabel('Spike rate (Hz)')
-                xlabel('Time (min)')
-                ylim([0 max(0.1,Fig1.Children.YLim(2))])
-                hold on
-                yyaxis right
-                plot((TimePoints(2:end)-TimeStep/2)/60,Peak2Peak(CellCount,:),'r-', 'LineWidth',2)
-                ylabel('Spike Amplitude (uV)')
-                title(sprintf('M%d %d TT%d SS%s SU%d SignifVoc=%d SignifHear=%d', Bat_ID(CellCount),Date_ID(CellCount), Tetrode_ID(CellCount), SS_ID{CellCount},uu,SignWinVoc(CellCount),SignWinHear(CellCount)))
-                hold off
-                Fig2=figure();
-                for cc=1:4
-                    subplot(2,2,cc)
-                    shadedErrorBar([],SpikeShape{CellCount,cc}(1,:), SpikeShape{CellCount,cc}(2,:), {'Color','k','LineWidth',2})
-                    ylabel('Voltage (uVolt)')
+                if PLOT
+                    % Plot the average spike rate over time, the average spike
+                    % amplitude over time and the mean snippets
+                    Fig1=figure();
+                    yyaxis left
+                    plot((TimePoints(2:end)-TimeStep/2)/60,SpikeRate(CellCount,:),'b-', 'LineWidth',2)
+                    hold on
+                    shadedErrorBar((TimePoints(2:end)-TimeStep/2)/60,KDE(CellCount,:),KDE_error{CellCount},{'b--', 'LineWidth',2})
+                    ylabel('Spike rate (Hz)')
+                    xlabel('Time (min)')
+                    ylim([0 max(0.1,Fig1.Children.YLim(2))])
+                    hold on
+                    yyaxis right
+                    plot((TimePoints(2:end)-TimeStep/2)/60,Peak2Peak(CellCount,:),'r-', 'LineWidth',2)
+                    ylabel('Spike Amplitude (uV)')
+                    title(sprintf('M%d %d TT%d SS%s SU%d SignifVoc=%d SignifHear=%d', Bat_ID(CellCount),Date_ID(CellCount), Tetrode_ID(CellCount), SS_ID{CellCount},uu,SignWinVoc(CellCount),SignWinHear(CellCount)))
+                    hold off
+                    Fig2=figure();
+                    for cc=1:4
+                        subplot(2,2,cc)
+                        shadedErrorBar([],SpikeShape{CellCount,cc}(1,:), SpikeShape{CellCount,cc}(2,:), {'Color','k','LineWidth',2})
+                        ylabel('Voltage (uVolt)')
+                    end
+                    sgtitle(sprintf('Spike shape M%d %d TT%d SS%s SU%d', Bat_ID(CellCount),Date_ID(CellCount), Tetrode_ID(CellCount), SS_ID{CellCount},uu))
+                    print(Fig1,fullfile(Path2Data,sprintf('%d_Logger%s_TT%d_SS%s_SU%d_Rate.pdf', Date, LData.logger_serial_number,Tetrode_ID(CellCount),SS_ID{CellCount},uu)),'-dpdf')
+                    print(Fig2,fullfile(Path2Data,sprintf('%d_Logger%s_TT%d_SS%s_SU%d_Snippets.pdf', Date, LData.logger_serial_number,Tetrode_ID(CellCount),SS_ID{CellCount},uu)),'-dpdf')
+%                     if SignWinVoc(CellCount)>0 || SignWinHear(CellCount)>0
+    %                     pause()
+    %                 end
+                    close all
                 end
-                sgtitle(sprintf('Spike shape M%d %d TT%d SS%s SU%d', Bat_ID(CellCount),Date_ID(CellCount), Tetrode_ID(CellCount), SS_ID{CellCount},uu))
-%                 print(Fig1,fullfile(Path2Data,sprintf('%d_Logger%s_TT%d_SS%s_SU%d_Rate.pdf', Date, LData.logger_serial_number,Tetrode_ID(CellCount),SS_ID{CellCount},uu)),'-dpdf')
-%                 print(Fig2,fullfile(Path2Data,sprintf('%d_Logger%s_TT%d_SS%s_SU%d_Snippets.pdf', Date, LData.logger_serial_number,Tetrode_ID(CellCount),SS_ID{CellCount},uu)),'-dpdf')
-                if SignWinVoc(CellCount)>0 || SignWinHear(CellCount)>0
-                    pause()
-                end
-                close all
             end
             
         end
@@ -220,3 +227,71 @@ ylabel('Recording duration (min)')
 xlabel('Average rate (Hz)')
 hold off
 
+%% Look at cell one by one
+% First voc prod modulated
+ProdCell = find(SignWinVoc>ThreshSig);
+for cc=1:length(ProdCell)
+    fprintf(1,'Date: %d\n',Date_ID(ProdCell(cc)))
+    fprintf(1,'Bat: %d\n',Bat_ID(ProdCell(cc)))
+    fprintf(1,'T%d\n',Tetrode_ID(ProdCell(cc)));
+    fprintf(1,'SS%s\n',SS_ID{ProdCell(cc)});
+    pause()
+    
+end
+% Then Hear only modulated cell
+HearCell = find((SignWinHear>ThreshSig).*~(SignWinVoc>ThreshSig));
+HearCellGood = nan(length(HearCell),1);
+for cc=1:length(HearCell)
+    fprintf(1,'\n\n')
+    fprintf(1,'Date: %d\n',Date_ID(HearCell(cc)))
+    fprintf(1,'Bat: %d\n',Bat_ID(HearCell(cc)))
+    fprintf(1,'T%d\n',Tetrode_ID(HearCell(cc)));
+    fprintf(1,'SS%s\n',SS_ID{HearCell(cc)});
+    HearCellGood=input('GoodCell?');
+end
+
+HearCellGood = find(HearCellGood);
+% Only 68 is clearly modulated by vocalization hearing
+% Good Prod Cell: 121,122,123, 103,102,99,58
+
+% Scatter plot of mean_SR and Mean amplitude of the spikes
+ThreshSig=100;
+figure()
+subplot(2,2,1)
+plot(Mean_SR, Mean_Peak2Peak, 'k.','MarkerSize',10)
+hold on
+plot(Mean_SR(ProdCellGood), Mean_Peak2Peak(ProdCellGood), 'r.','MarkerSize',10)
+set(gca, 'XScale','log')
+ylabel('Spike Amplitude uV')
+xlabel('Average rate (Hz)')
+hold off
+
+subplot(2,2,2)
+plot(Mean_SR, Mean_Peak2Peak, 'k.','MarkerSize',10)
+hold on
+plot(Mean_SR(HearCellGood), Mean_Peak2Peak(HearCellGood), 'c.','MarkerSize',10)
+set(gca, 'XScale','log')
+ylabel('Spike Amplitude uV')
+xlabel('Average rate (Hz)')
+hold off
+
+% Scatter plot of mean_SR and Mean amplitude of the spikes
+subplot(2,2,3)
+plot(Mean_SR, SpikeLife, 'k.','MarkerSize',10)
+hold on
+plot(Mean_SR(ProdCellGood), SpikeLife(ProdCellGood), 'r.','MarkerSize',10)
+set(gca, 'XScale','log')
+ylabel('Recording duration (min)')
+ylim([0 400])
+xlabel('Average rate (Hz)')
+hold off
+
+subplot(2,2,4)
+plot(Mean_SR, SpikeLife, 'k.','MarkerSize',10)
+hold on
+plot(Mean_SR(HearCellGood), SpikeLife(HearCellGood), 'c.','MarkerSize',10)
+set(gca, 'XScale','log')
+ylim([0 400])
+ylabel('Recording duration (min)')
+xlabel('Average rate (Hz)')
+hold off
