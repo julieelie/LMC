@@ -1,4 +1,4 @@
-function cut_neuralData_voc(Loggers_dir, Date, ExpStartTime, Flags, NeuroBuffer)
+function cut_neuralData_voc(Loggers_dir, Date, ExpStartTime, Flags, NeuroBuffer, DenoiseT, Rthreshold)
 %% This function uses the better estimation of vocalization onset/offset in transceiver time (ms) calculated by get_logger_data_voc
 % (Voc_transc_time_refined) And extract the corresponding neural data in
 % the neural loggers as long as neural data of baseline activity in the
@@ -6,6 +6,12 @@ function cut_neuralData_voc(Loggers_dir, Date, ExpStartTime, Flags, NeuroBuffer)
 load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date, ExpStartTime)), 'Voc_transc_time_refined', 'Raw_wave','Piezo_wave', 'FS', 'Piezo_FS');
 if nargin<5
     NeuroBuffer = 100; % NeuroBuffer ms will be added before the onset and after the offset of the behavioral event when extracting neural data and spikes times will be alligned to behavioral event onset
+end
+if nargin<6
+    DenoiseT = 0; % No sort of the tetrode spike from noise
+end
+if nargin<7
+    Rthreshold = [0.92 0.94 0.96 0.98];
 end
 MaxEventDur = NaN; % Set to NaN: The neural data is extracted for the whole duration of each event
 BaselineDur = 1000; % Duration of the baseline section that is seeked at least 1 second before sound onset
@@ -33,7 +39,7 @@ for ll=1:NLogger
                end
             end
         end
-        [Neuro_Raw.(sprintf('Logger%s', LData.logger_serial_number)), Neuro_LFP.(sprintf('Logger%s', LData.logger_serial_number)), Neuro_spikesT.(sprintf('Logger%s', LData.logger_serial_number)),Neuro_spikes.(sprintf('Logger%s', LData.logger_serial_number))] = extract_timeslot_LFP_spikes(LData_folder, Voc_transc_time_refined, NeuroBuffer,MaxEventDur, Flags);       
+        [Neuro_Raw.(sprintf('Logger%s', LData.logger_serial_number)), Neuro_LFP.(sprintf('Logger%s', LData.logger_serial_number)), Neuro_spikesT.(sprintf('Logger%s', LData.logger_serial_number)),Neuro_spikes.(sprintf('Logger%s', LData.logger_serial_number)),Neuro_spikesTDeNoiseInd.(sprintf('Logger%s', LData.logger_serial_number))] = extract_timeslot_LFP_spikes(LData_folder, Voc_transc_time_refined, NeuroBuffer,MaxEventDur, Flags, DenoiseT,Rthreshold);       
     end
 end
 if Flags(1)
@@ -43,7 +49,7 @@ if Flags(2)
     save(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, NeuroBuffer)), 'Neuro_LFP', '-append');
 end
 if Flags(3)
-    save(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, NeuroBuffer)),'Neuro_spikesT', '-append');
+    save(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, NeuroBuffer)),'Neuro_spikesT','Neuro_spikesTDeNoiseInd', '-append');
 end
 if Flags(4)
     save(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, NeuroBuffer)),'Neuro_spikes', '-append');

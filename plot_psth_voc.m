@@ -1,4 +1,4 @@
-function [SpikeTrains] = plot_psth_voc(Loggers_dir, Date, ExpStartTime, AudioLoggerID, NeuroLoggerID, Flags, Delay, KDE_Cal,PLOT)
+function [SpikeTrains] = plot_psth_voc(Loggers_dir, Date, ExpStartTime, AudioLoggerID, NeuroLoggerID, Flags, Delay, KDE_Cal,PLOT,RthreshInd)
 % AudioLoggerID = ID of the audio logger that the targeting animal is
 % wearing
 % NeuroLoggerID = ID of the neural logger that the targeting animal is
@@ -12,10 +12,24 @@ end
 if nargin<9
     PLOT = 0;
 end
+if nargin<10
+    RthreshInd = [];
+end
 
 % load the data
 fprintf(1,'Loading data....')
-load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, Delay)), 'IndVocStartRaw_merged', 'IndVocStopRaw_merged', 'Neuro_spikes','Neuro_spikesT','Neuro_spikes_Baseline','BSL_transc_time_refined');
+DataFile = fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, Delay));
+load(DataFile, 'IndVocStartRaw_merged', 'IndVocStopRaw_merged','Neuro_spikes_Baseline','BSL_transc_time_refined');
+if Flags(1)
+    load(DataFile, 'Neuro_spikesT');
+    if ~isempty(RthreshInd)
+        load(DataFile,'Neuro_spikesTDeNoiseInd')
+    end
+end
+if Flags(2)
+    load(DataFile, 'Neuro_spikes');
+end
+
 load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date, ExpStartTime)), 'FS','Piezo_wave');
 % EventDir = dir(fullfile(Loggers_dir,sprintf('*%s', NeuroLoggerID(2:end)), 'extracted_data',sprintf('*%s*EVENTS.mat', Date)));
 % load(fullfile(EventDir.folder, EventDir.name), 'DataDeletionOnsetOffset_usec_sync')
@@ -103,6 +117,9 @@ for vv=1:NV
             if Flags(1)
                 for uu=1:NT
                     IndT01 = logical((Neuro_spikesT.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}>(IndVocStartRaw_merged{VocInd(vv)}{FocIndAudio}(nn)/FS*1000 - Delay)) .* (Neuro_spikesT.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}<(IndVocStopRaw_merged{VocInd(vv)}{FocIndAudio}(nn)/FS*1000 + Delay)));
+                    if ~isempty(RthreshInd)
+                        IndT01 = logical(IndT01 .* Neuro_spikesTDeNoiseInd.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}{RthreshInd});
+                    end
                     SpikesTTimes_VocCall{VocCall,uu} = Neuro_spikesT.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}(IndT01)- IndVocStartRaw_merged{VocInd(vv)}{FocIndAudio}(nn)/FS*1000;
                     if KDE_Cal
                         [Psth_KDEfiltered_TVocCall{VocCall,uu}, Psth_KDEfiltered_TVocCall_t{VocCall,uu}] = kde_wrapper(SpikesTTimes_VocCall{VocCall,uu},t,Response_samprate);
@@ -274,11 +291,14 @@ if sum(Ncall)
                 %             set(Fig,'PaperUnits','normalized');
                 %             set(Fig,'PaperPosition', [50 50 1200 800]);
                 %             pause()
-                if KDE_Cal
-                    print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocProdPSTH_KDE_Tetrode%d_%d.pdf', Date, NeuroLoggerID,uu,Delay)),'-dpdf','-fillpage')
+                if KDE_Cal && ~isempty(RthreshInd)
+                    Filename_local = sprintf('%s_%s_VocProdPSTH_KDE_Tetrode%d_%d_DeNoise%d.pdf', Date, NeuroLoggerID,uu, Delay,RthreshInd);
+                elseif KDE_Cal && isempty(RthreshInd)
+                    Filename_local = sprintf('%s_%s_VocProdPSTH_KDE_Tetrode%d_%d.pdf', Date, NeuroLoggerID,uu, Delay);
                 else
-                    print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocProdPSTH_Tetrode%d_%d.pdf', Date, NeuroLoggerID,uu,Delay)),'-dpdf','-fillpage')
+                    Filename_local = sprintf('%s_%s_VocProdPSTH_Tetrode%d_%d.pdf', Date, NeuroLoggerID,uu, Delay);
                 end
+                print(Fig,fullfile(Loggers_dir,Filename_local),'-dpdf','-fillpage')
                 close all
             end
         end
@@ -342,10 +362,11 @@ if sum(Ncall)
                 %             set(Fig,'PaperPosition', [0 0 1 1]);
                 %             pause()
                 if KDE_Cal
-                    print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocProdPSTH_KDE_SU%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf', '-fillpage')
+                    Filename_local = sprintf('%s_%s_VocProdPSTH_KDE_SU%d_%d.pdf', Date, NeuroLoggerID,uu, Delay);
                 else
-                    print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocProdPSTH_SU%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf', '-fillpage')
+                    Filename_local = sprintf('%s_%s_VocProdPSTH_SU%d_%d.pdf', Date, NeuroLoggerID,uu, Delay);
                 end
+                print(Fig,fullfile(Loggers_dir,Filename_local),'-dpdf', '-fillpage')
                 close all
             end
         end
@@ -437,6 +458,9 @@ for vv=1:NV
                 if Flags(1)
                     for uu=1:NT
                         IndT01 = logical((Neuro_spikesT.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}>(IndVocStartRaw_merged{VocInd(vv)}{OthInd(ll)}(nn)/FS*1000 - Delay)) .* (Neuro_spikesT.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}<(IndVocStopRaw_merged{VocInd(vv)}{OthInd(ll)}(nn)/FS*1000 + Delay)));
+                        if ~isempty(RthreshInd)
+                            IndT01 = logical(IndT01 .* Neuro_spikesTDeNoiseInd.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}{RthreshInd});
+                        end
                         SpikesTTimes_HearCall{HearCall,uu} = Neuro_spikesT.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}(IndT01)- IndVocStartRaw_merged{VocInd(vv)}{OthInd(ll)}(nn)/FS*1000;
                         if KDE_Cal
                             [Psth_KDEfiltered_THearCall{HearCall,uu},Psth_KDEfiltered_THearCall_t{HearCall,uu}] = kde_wrapper(SpikesTTimes_HearCall{HearCall,uu},t,Response_samprate);
@@ -610,11 +634,14 @@ if PLOT
     %         set(Fig,'PaperUnits','normalized');
     %         set(Fig,'PaperPosition', [0 0 1 1]);
     %         pause()
-            if KDE_Cal
-                print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocHearPSTH_KDE_Tetrode%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf','-fillpage')
+            if KDE_Cal && ~isempty(RthreshInd)
+                Filename_local = sprintf('%s_%s_VocHearPSTH_KDE_Tetrode%d_%d_Denoise%d.pdf', Date, NeuroLoggerID,uu, Delay,RthreshInd);
+            elseif KDE_Cal && isempty(RthreshInd)
+                Filename_local = sprintf('%s_%s_VocHearPSTH_KDE_Tetrode%d_%d.pdf', Date, NeuroLoggerID,uu, Delay);
             else
-                print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocHearPSTH_Tetrode%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf','-fillpage')
+                Filename_local = sprintf('%s_%s_VocHearPSTH_Tetrode%d_%d.pdf', Date, NeuroLoggerID,uu, Delay);
             end
+            print(Fig,fullfile(Loggers_dir,Filename_local),'-dpdf','-fillpage')
             close all
         end
     end
@@ -699,6 +726,7 @@ if Flags(1)
 %         SpikeTrains.Average_Psth_KDEfiltered_TVocCall = Average_Psth_KDEfiltered_TVocCall;
         SpikeTrains.Sum_Psth_KDEfiltered_TVocCall = Sum_Psth_KDEfiltered_TVocCall;
     end
+    SpikeTrains.NT = NT;
 end
 if Flags(2)
     SpikeTrains.SpikesTimes_VocCall = SpikesTimes_VocCall;
@@ -710,10 +738,11 @@ if Flags(2)
         SpikeTrains.Sum_Psth_KDEfiltered_VocCall = Sum_Psth_KDEfiltered_VocCall;
         SpikeTrains.Sum_Psth_KDEfiltered_VocBaseline = Sum_Psth_KDEfiltered_VocBaseline;
     end
+    SpikeTrains.NSU = NSU;
 end
 SpikeTrains.VocDuration = VocDuration;
-SpikeTrains.NSU = NSU;
-SpikeTrains.NT = NT;
+
+
 if (HearCall>1) && sum(HearOnly)
     SpikeTrains.HearDuration = HearDuration;
     SpikeTrains.HearOnlyInd = HearOnlyInd;
