@@ -82,8 +82,9 @@ for pp=1:length(ListOfPaths)
         for rr=1:length(Rthreshold)
             [SpikeTimesVoc.(NeuroLoggerID)]=plot_psth_voc(Logger_dir, Date, ExpStartTime, AudioLoggerID, NeuroLoggerID, Flags, BufferBeforeOnset, KDE_Cal,PLOT,rr);
         end
+        [SpikeTimesVocOff.(NeuroLoggerID)]=plot_psth_voc_off(Logger_dir, Date, ExpStartTime, AudioLoggerID, NeuroLoggerID, Flags, BufferBeforeOnset, KDE_Cal,PLOT);
     end
-%     save(fullfile(Logger_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, BufferBeforeOnset)), 'SpikeTimesVoc','-append')
+    save(fullfile(Logger_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, BufferBeforeOnset)), 'SpikeTimesVoc','SpikeTimesVocOff','-append')
     close all
     %     pause()
     

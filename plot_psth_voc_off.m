@@ -56,15 +56,11 @@ VocDuration = nan(1,VocCall);
 Voc_BSLDuration = nan(1,VocCall);
 if Flags(2)
     NSU = size(Neuro_spikes.(Fns_Neuro{FocIndNeuro}),2);
-    SpikesTimes_VocBaseline = cell(VocCall,NSU);
     SpikesTimes_VocCall = cell(VocCall,NSU);
     if KDE_Cal
         Psth_KDEfiltered_VocCall = cell(VocCall,NSU);
         Psth_KDEfiltered_VocCall_t = cell(VocCall,NSU);
         Psth_KDEfiltered_VocCall_scalef = nan(VocCall,NSU);
-        Psth_KDEfiltered_VocBaseline = cell(VocCall,NSU);
-        Psth_KDEfiltered_VocBaseline_t = cell(VocCall,NSU);
-        Psth_KDEfiltered_VocBaseline_scalef = nan(VocCall,NSU);
     end
 end
 if Flags(1)
@@ -97,12 +93,13 @@ for vv=1:NV
             %             DataDeletion_VocCall{VocCall} = [DataDeletionOnsetOffset_usec_sync(DelOnOffsetInd,:)/1000; DataDeletionOnsetOffset_usec_sync(DelOnsetInd,1)/1000 VocStopTransc.*ones(length(DelOnsetInd),1) ; VocStartTransc.*ones(length(DelOffsetInd),1) DataDeletionOnsetOffset_usec_sync(DelOffsetInd,1)/1000] - VocStartTransc - Delay; % The deletion periods are time centered at vocalization onset
             %
             % Calculate the t for KDE
-            t=-Delay: Bin_ms : round((VocDuration(VocCall) + Delay)/Bin_ms)*Bin_ms;
-            t_baseline=0: Bin_ms : Voc_BSLDuration(VocCall);
+            t= -round((VocDuration(VocCall) + Delay)/Bin_ms)*Bin_ms : Bin_ms : Delay;
+            % Extract spikes, calculate KDE and allign everything to
+            % vocalization offset
             if Flags(1)
                 for uu=1:NT
                     IndT01 = logical((Neuro_spikesT.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}>(IndVocStartRaw_merged{VocInd(vv)}{FocIndAudio}(nn)/FS*1000 - Delay)) .* (Neuro_spikesT.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}<(IndVocStopRaw_merged{VocInd(vv)}{FocIndAudio}(nn)/FS*1000 + Delay)));
-                    SpikesTTimes_VocCall{VocCall,uu} = Neuro_spikesT.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}(IndT01)- IndVocStartRaw_merged{VocInd(vv)}{FocIndAudio}(nn)/FS*1000;
+                    SpikesTTimes_VocCall{VocCall,uu} = Neuro_spikesT.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}(IndT01)- IndVocStopRaw_merged{VocInd(vv)}{FocIndAudio}(nn)/FS*1000;
                     if KDE_Cal
                         [Psth_KDEfiltered_TVocCall{VocCall,uu}, Psth_KDEfiltered_TVocCall_t{VocCall,uu}] = kde_wrapper(SpikesTTimes_VocCall{VocCall,uu},t,Response_samprate);
                         Psth_KDEfiltered_TVocCall_scalef(VocCall,uu) = max(Psth_KDEfiltered_TVocCall{VocCall,uu});
@@ -112,17 +109,10 @@ for vv=1:NV
             if Flags(2)
                 for uu=1:NSU
                     IndSU01 = logical((Neuro_spikes.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}>(IndVocStartRaw_merged{VocInd(vv)}{FocIndAudio}(nn)/FS*1000 - Delay)) .* (Neuro_spikes.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}<(IndVocStopRaw_merged{VocInd(vv)}{FocIndAudio}(nn)/FS*1000 + Delay)));
-                    SpikesTimes_VocCall{VocCall,uu} = (Neuro_spikes.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}(IndSU01) - IndVocStartRaw_merged{VocInd(vv)}{FocIndAudio}(nn)/FS*1000)';
+                    SpikesTimes_VocCall{VocCall,uu} = (Neuro_spikes.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}(IndSU01) - IndVocStopRaw_merged{VocInd(vv)}{FocIndAudio}(nn)/FS*1000)';
                     if KDE_Cal
                         [Psth_KDEfiltered_VocCall{VocCall,uu}, Psth_KDEfiltered_VocCall_t{VocCall,uu}] = kde_wrapper(SpikesTimes_VocCall{VocCall,uu},t,Response_samprate);
                         Psth_KDEfiltered_VocCall_scalef(VocCall,uu) = max(Psth_KDEfiltered_VocCall{VocCall,uu});
-                        
-                        % calculate a KDE for the baseline period
-                        if ~isnan(Voc_BSLDuration(VocCall)) % if isnan: No baseline period could be taken before the onset of the vocalization
-                            SpikesTimes_VocBaseline{VocCall,uu} = Neuro_spikes_Baseline.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu};
-                            [Psth_KDEfiltered_VocBaseline{VocCall,uu}, Psth_KDEfiltered_VocBaseline_t{VocCall,uu}] = kde_wrapper(SpikesTimes_VocBaseline{VocCall,uu},t_baseline,Response_samprate);
-                            Psth_KDEfiltered_VocBaseline_scalef(VocCall,uu) = max(Psth_KDEfiltered_VocBaseline{VocCall,uu});
-                        end
                     end
                 end
             end
@@ -145,7 +135,7 @@ if sum(Ncall)
 %             Average_Psth_KDEfiltered_TVocCall=cell(NT,1);
             Sum_Psth_KDEfiltered_TVocCall=cell(NT,3); % This will contain the spike rate calculated from all renditions (loosing the variability between renditions) with an error estimated from the confidence interval of the spike density function
             for uu=1:NT
-                t=-Delay: Bin_ms : round((max(VocDuration) + Delay)/Bin_ms)*Bin_ms;
+                t=round((max(VocDuration) + Delay)/Bin_ms)*Bin_ms : Bin_ms : Delay;
 %                 Average_Psth_KDEfiltered_TVocCall{uu} = nan(3,length(t)); % This will conain the average spike rate over renditions, it's std and the time points at which it was calculated
                 PSTH_local = nan(length(VocDuration),length(t));
                 for vv=1:length(VocDuration)
@@ -190,11 +180,9 @@ if sum(Ncall)
         
         if Flags(2)
 %             Average_Psth_KDEfiltered_VocCall=cell(NSU,1);
-            Sum_Psth_KDEfiltered_VocCall=cell(NT,3); % This will contain the spike rate calculated from all renditions (loosing the variability between renditions) with an error estimated from the confidence interval of the spike density function
-            Sum_Psth_KDEfiltered_VocBaseline=cell(NT,3); % This will contain the spike rate calculated from all baseline (loosing the variability between renditions) with an error estimated from the confidence interval of the spike density function
+            Sum_Psth_KDEfiltered_VocCall=cell(NSU,3); % This will contain the spike rate calculated from all renditions (loosing the variability between renditions) with an error estimated from the confidence interval of the spike density function
             for uu=1:NSU
-                t=-Delay: Bin_ms : round((max(VocDuration) + Delay)/Bin_ms)*Bin_ms;
-                t_baseline = 0:Bin_ms:max(Voc_BSLDuration);
+                t=-round((max(VocDuration) + Delay)/Bin_ms)*Bin_ms : Bin_ms : Delay; 
 %                 Average_Psth_KDEfiltered_VocCall{uu} = nan(3,length(t));
                 PSTH_local = nan(length(VocDuration),length(t));
                 for vv=1:length(VocDuration)
@@ -203,13 +191,7 @@ if sum(Ncall)
                         PSTH_local(vv,Ind) = Psth_KDEfiltered_VocCall{vv,uu}(tt); %#ok<FNDSB>
                     end
                 end
-                Baseline_data = nan(length(Voc_BSLDuration),length(t_baseline));
-                for vv=1:length(Voc_BSLDuration)
-                    for tt=1:length(Psth_KDEfiltered_VocBaseline_t{vv,uu})
-                        Ind = find(t_baseline==Psth_KDEfiltered_VocBaseline_t{vv,uu}(tt));
-                        Baseline_data(vv,Ind) = Psth_KDEfiltered_VocBaseline{vv,uu}(tt); %#ok<FNDSB>
-                    end
-                end
+                
 %                 Average_Psth_KDEfiltered_VocCall{uu}(1,:) = t;
 %                 Average_Psth_KDEfiltered_VocCall{uu}(2,:) = nanmean(PSTH_local);
 %                 Average_Psth_KDEfiltered_VocCall{uu}(3,:) = nanstd(PSTH_local)./(sum(~isnan(PSTH_local))).^0.5;
@@ -218,18 +200,6 @@ if sum(Ncall)
                 [KDE_local,Sum_Psth_KDEfiltered_VocCall{uu,1},KDE_Error_local] = kde_wrapper(AllSpikes_local,t,Response_samprate);
                 Sum_Psth_KDEfiltered_VocCall{uu,2} =  KDE_local ./(sum(~isnan(PSTH_local)));
                 Sum_Psth_KDEfiltered_VocCall{uu,3} = KDE_Error_local./(sum(~isnan(PSTH_local)));
-
-                AllSpikesBaseline_local = cell2mat(SpikesTimes_VocBaseline(:,uu)');
-                USpikeT = unique(AllSpikesBaseline_local);
-                CountSpikeT = histc(AllSpikesBaseline_local,USpikeT);
-                RepSpike = USpikeT(CountSpikeT>1);
-                for rs=1:length(RepSpike)
-                    Ind_sr = find(AllSpikesBaseline_local == RepSpike(rs));
-                    AllSpikesBaseline_local(Ind_sr) = AllSpikesBaseline_local(Ind_sr) + [0 ones(1,length(Ind_sr)-1)]; % add 1ms to the spike that are duplicated so the calculation of the PSTH can go through and is still balanced compared to the PSTh during vocalizations
-                end
-                [KDE_local,Sum_Psth_KDEfiltered_VocBaseline{uu,1},KDE_Error_local] = kde_wrapper(AllSpikesBaseline_local,t_baseline,Response_samprate);
-                Sum_Psth_KDEfiltered_VocBaseline{uu,2} =  KDE_local ./(sum(~isnan(Baseline_data)));
-                Sum_Psth_KDEfiltered_VocBaseline{uu,3} = KDE_Error_local./(sum(~isnan(Baseline_data)));
                 fprintf(1, 'Done calculating kernel density estimate of vocalization production SU %d/%d\n', uu, NSU);
             end
         end
@@ -254,7 +224,7 @@ if sum(Ncall)
                     cc=IDur(oo);
                     hold on
                     yyaxis left
-                    plot([0 VocDuration(cc)], oo-[0.5 0.5], '-','LineWidth',250/VocCall,'Color', [1 0.8 0.8]) % vocalization
+                    plot([-VocDuration(cc) 0], oo-[0.5 0.5], '-','LineWidth',250/VocCall,'Color', [1 0.8 0.8]) % vocalization
                     %         for dd=1:size(DataDeletion_VocCall{VocCall},1)
                     %             hold on
                     %             plot(DataDeletion_VocCall{VocCall}(dd,:), cc-[0.5 0.5], '-','LineWidth',250/VocCall,'Color', [0.8 0.8 0.8]) % RF artefact period
@@ -267,8 +237,8 @@ if sum(Ncall)
                     %                 yyaxis right
                     %                 plot(Psth_KDEfiltered_TVocCall_t{cc,uu}, Psth_KDEfiltered_TVocCall{cc,uu}/max(Psth_KDEfiltered_TVocCall_scalef(:,uu))+cc-1, 'r-', 'LineWidth',2)
                 end
-                XLIM = [-Delay mean(VocDuration)+Delay];
-                xlabel('Time centered at production onset (ms)')
+                XLIM = [-Delay-mean(VocDuration) Delay];
+                xlabel('Time centered at production offset (ms)')
                 yyaxis left
                 ylim([0 VocCall+1])
                 xlim(XLIM)
@@ -288,7 +258,7 @@ if sum(Ncall)
                     shadedErrorBar(Sum_Psth_KDEfiltered_TVocCall{uu,1}, Sum_Psth_KDEfiltered_TVocCall{uu,2}, Sum_Psth_KDEfiltered_TVocCall{uu,3}, {'r-', 'LineWidth',2})
                     xlim(XLIM)
                     ylim([0 max(Sum_Psth_KDEfiltered_TVocCall{uu,2})*1.3])
-                    xlabel('Time centered at production onset (ms)')
+                    xlabel('Time centered at production offset (ms)')
                     ylabel('Spike rate (/ms)')
                     hold off
                 end
@@ -300,9 +270,9 @@ if sum(Ncall)
                 %             set(Fig,'PaperPosition', [50 50 1200 800]);
                 %             pause()
                 if KDE_Cal
-                    print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocProdPSTH_KDE_Tetrode%d_%d.pdf', Date, NeuroLoggerID,uu,Delay)),'-dpdf','-fillpage')
+                    print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocProdPSTH_KDE_Tetrode%d_%d_off.pdf', Date, NeuroLoggerID,uu,Delay)),'-dpdf','-fillpage')
                 else
-                    print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocProdPSTH_Tetrode%d_%d.pdf', Date, NeuroLoggerID,uu,Delay)),'-dpdf','-fillpage')
+                    print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocProdPSTH_Tetrode%d_%d_off.pdf', Date, NeuroLoggerID,uu,Delay)),'-dpdf','-fillpage')
                 end
                 close all
             end
@@ -321,7 +291,7 @@ if sum(Ncall)
                     cc=IDur(oo);
                     hold on
                     yyaxis left
-                    plot([0 VocDuration(cc)], oo-[0.5 0.5], '-','LineWidth',250/VocCall,'Color', [1 0.8 0.8]) % vocalizations
+                    plot([-VocDuration(cc) 0], oo-[0.5 0.5], '-','LineWidth',250/VocCall,'Color', [1 0.8 0.8]) % vocalizations
                     %         for dd=1:size(DataDeletion_VocCall{cc},1)
                     %             hold on
                     %             plot(DataDeletion_VocCall{cc}(dd,:), cc-[0.5 0.5], '-','LineWidth',250/VocCall,'Color', [0.8 0.8 0.8]) % RF artefact period
@@ -334,9 +304,9 @@ if sum(Ncall)
                     %                 yyaxis right
                     %                 plot(Psth_KDEfiltered_VocCall_t{cc,uu}, Psth_KDEfiltered_VocCall{cc,uu}/max(Psth_KDEfiltered_VocCall_scalef(:,uu))+cc-1, 'r-', 'LineWidth',2)
                 end
-                XLIM = [-Delay mean(VocDuration)+Delay];
+                XLIM = [-Delay-mean(VocDuration) Delay];
                 yyaxis left
-                xlabel('Time centered at production onset (ms)')
+                xlabel('Time centered at production offset (ms)')
                 ylim([0 VocCall+1])
                 xlim(XLIM)
                 ylabel('Vocalization production renditions')
@@ -355,7 +325,7 @@ if sum(Ncall)
                     shadedErrorBar(Sum_Psth_KDEfiltered_VocCall{uu,1}, Sum_Psth_KDEfiltered_VocCall{uu,2}, Sum_Psth_KDEfiltered_VocCall{uu,3}, {'r-', 'LineWidth',2})
                     xlim(XLIM)
                     ylim([0 max(Sum_Psth_KDEfiltered_VocCall{uu,2})*1.3])
-                    xlabel('Time centered at production onset (ms)')
+                    xlabel('Time centered at production offset (ms)')
                     ylabel('Spike rate (/ms)')
                     hold off
                 end
@@ -367,9 +337,9 @@ if sum(Ncall)
                 %             set(Fig,'PaperPosition', [0 0 1 1]);
                 %             pause()
                 if KDE_Cal
-                    print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocProdPSTH_KDE_SU%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf', '-fillpage')
+                    print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocProdPSTH_KDE_SU%d_%d_off.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf', '-fillpage')
                 else
-                    print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocProdPSTH_SU%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf', '-fillpage')
+                    print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocProdPSTH_SU%d_%d_off.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf', '-fillpage')
                 end
                 close all
             end
@@ -380,7 +350,6 @@ else
     fprintf('No vocalization production of the target bat on that day\n')
     Sum_Psth_KDEfiltered_TVocCall=[];
     Sum_Psth_KDEfiltered_VocCall=[];
-    Sum_Psth_KDEfiltered_VocBaseline=[];
 end
 
 
@@ -406,14 +375,10 @@ end
 if Flags(2)
     NSU = size(Neuro_spikes.(Fns_Neuro{FocIndNeuro}),2);
     SpikesTimes_HearCall = cell(HearCall,NSU);
-    SpikesTimes_HearBaseline = cell(HearCall,NSU);
     if KDE_Cal
         Psth_KDEfiltered_HearCall = cell(HearCall,NSU);
         Psth_KDEfiltered_HearCall_t = cell(HearCall,NSU);
         Psth_KDEfiltered_HearCall_scalef = nan(HearCall,NSU);
-        Psth_KDEfiltered_HearBaseline = cell(HearCall,NSU);
-        Psth_KDEfiltered_HearBaseline_t = cell(HearCall,NSU);
-        Psth_KDEfiltered_HearBaseline_scalef = nan(HearCall,NSU);
     end
 end
 if Flags(1)
@@ -426,7 +391,6 @@ if Flags(1)
     end
 end
 HearDuration = nan(1,HearCall);
-Hear_BSLDuration = nan(1,HearCall);
 % DataDeletion_HearCall = cell(VocCall,1); % This cell array contains the onset offset times (1st and 2nd column) of data deletion periods (RF Artefact) that happens during each vocalization
 HearOnly = nan(1,HearCall);
 HearCall = 0;
@@ -437,7 +401,6 @@ for vv=1:NV
             for nn=1:NcallHear
                 HearCall = HearCall+1;
                 HearDuration(HearCall) = (IndVocStopRaw_merged{VocInd(vv)}{OthInd(ll)}(nn) -IndVocStartRaw_merged{VocInd(vv)}{OthInd(ll)}(nn))/FS*1000;
-                Hear_BSLDuration(HearCall) = BSL_transc_time_refined(VocInd(vv),2)-BSL_transc_time_refined(VocInd(vv),1);
                 % Identify if any deletion period fall within the spike sequence for the call
 %                 VocStartTransc = Voc_transc_time_refined(vv,1) + IndVocStartRaw_merged{vv}{OthInd(ll)}(nn)/FS*1000 - Delay;
 %                 VocStopTransc = Voc_transc_time_refined(vv,1) + IndVocStopRaw_merged{vv}{OthInd(ll)}(nn)/FS*1000 + Delay;
@@ -448,8 +411,7 @@ for vv=1:NV
 %                 DelOffsetInd = setdiff(DelOffsetInd, DelOnOffsetInd);  % deletion periods stoping within the time of the vocalization spike sequence
 %                 DataDeletion_HearCall{HearCall} = [DataDeletionOnsetOffset_usec_sync(DelOnOffsetInd,:)/1000; DataDeletionOnsetOffset_usec_sync(DelOnsetInd,1)/1000 VocStopTransc.*ones(length(DelOnsetInd),1) ; VocStartTransc.*ones(length(DelOffsetInd),1) DataDeletionOnsetOffset_usec_sync(DelOffsetInd,1)/1000] - VocStartTransc - Delay; % The deletion periods are time centered at vocalization onset
 %                 
-                t=-Delay: Bin_ms : round((HearDuration(HearCall) + Delay)/Bin_ms)*Bin_ms;
-                t_baseline=0: Bin_ms : round((Hear_BSLDuration(HearCall))/Bin_ms)*Bin_ms;
+                t=-round((HearDuration(HearCall) + Delay)/Bin_ms)*Bin_ms : Bin_ms : Delay;
                 % Is this call heard at the same time the focal bat is
                 % producing a call  within the window 100ms before 100ms after a vocalization?
                 OnsetSync = sum(((IndVocStartRaw_merged{VocInd(vv)}{FocIndAudio} - Delay*FS/1000) < IndVocStartRaw_merged{VocInd(vv)}{OthInd(ll)}(nn)) .* ((IndVocStopRaw_merged{VocInd(vv)}{FocIndAudio} + Delay*FS/1000) > IndVocStartRaw_merged{VocInd(vv)}{OthInd(ll)}(nn)));
@@ -462,7 +424,7 @@ for vv=1:NV
                 if Flags(1)
                     for uu=1:NT
                         IndT01 = logical((Neuro_spikesT.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}>(IndVocStartRaw_merged{VocInd(vv)}{OthInd(ll)}(nn)/FS*1000 - Delay)) .* (Neuro_spikesT.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}<(IndVocStopRaw_merged{VocInd(vv)}{OthInd(ll)}(nn)/FS*1000 + Delay)));
-                        SpikesTTimes_HearCall{HearCall,uu} = Neuro_spikesT.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}(IndT01)- IndVocStartRaw_merged{VocInd(vv)}{OthInd(ll)}(nn)/FS*1000;
+                        SpikesTTimes_HearCall{HearCall,uu} = Neuro_spikesT.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}(IndT01)- IndVocStopRaw_merged{VocInd(vv)}{OthInd(ll)}(nn)/FS*1000;
                         if KDE_Cal
                             [Psth_KDEfiltered_THearCall{HearCall,uu},Psth_KDEfiltered_THearCall_t{HearCall,uu}] = kde_wrapper(SpikesTTimes_HearCall{HearCall,uu},t,Response_samprate);
                             Psth_KDEfiltered_THearCall_scalef(HearCall,uu) = max(Psth_KDEfiltered_THearCall{HearCall,uu});
@@ -472,14 +434,10 @@ for vv=1:NV
                 if Flags(2)
                     for uu=1:NSU
                         IndSU01 = logical((Neuro_spikes.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}>(IndVocStartRaw_merged{VocInd(vv)}{OthInd(ll)}(nn)/FS*1000 - Delay)) .* (Neuro_spikes.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}<(IndVocStopRaw_merged{VocInd(vv)}{OthInd(ll)}(nn)/FS*1000 + Delay)));
-                        SpikesTimes_HearCall{HearCall,uu} = (Neuro_spikes.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}(IndSU01) - IndVocStartRaw_merged{VocInd(vv)}{OthInd(ll)}(nn)/FS*1000)';
+                        SpikesTimes_HearCall{HearCall,uu} = (Neuro_spikes.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu}(IndSU01) - IndVocStopRaw_merged{VocInd(vv)}{OthInd(ll)}(nn)/FS*1000)';
                         if KDE_Cal
                             [Psth_KDEfiltered_HearCall{HearCall,uu},Psth_KDEfiltered_HearCall_t{HearCall,uu}] = kde_wrapper(SpikesTimes_HearCall{HearCall,uu},t,Response_samprate);
                             Psth_KDEfiltered_HearCall_scalef(HearCall,uu) = max(Psth_KDEfiltered_HearCall{HearCall,uu});
-                                
-                            SpikesTimes_HearBaseline{HearCall,uu} = Neuro_spikes_Baseline.(Fns_Neuro{FocIndNeuro}){VocInd(vv),uu};
-                            [Psth_KDEfiltered_HearBaseline{HearCall,uu},Psth_KDEfiltered_HearBaseline_t{HearCall,uu}] = kde_wrapper(SpikesTimes_HearBaseline{HearCall,uu},t_baseline,Response_samprate);
-                            Psth_KDEfiltered_HearBaseline_scalef(HearCall,uu) = max(Psth_KDEfiltered_HearBaseline{HearCall,uu});
                         end
                     end
                 end
@@ -501,7 +459,7 @@ if KDE_Cal
         Sum_Psth_KDEfiltered_THearCall=cell(NT,3);
         HearOnlyInd = find(HearOnly);
         for uu=1:NT
-            t=-Delay: Bin_ms : round((max(HearDuration(HearOnlyInd)) + Delay)/Bin_ms)*Bin_ms;
+            t=-round((max(HearDuration(HearOnlyInd)) + Delay)/Bin_ms)*Bin_ms: Bin_ms : Delay;
 %             Average_Psth_KDEfiltered_THearCall{uu} = nan(3,length(t));
             PSTH_local = nan(length(HearOnlyInd),length(t));
             for jj=1:length(HearOnlyInd)
@@ -553,11 +511,9 @@ if KDE_Cal
     if Flags(2) && (HearCall>1) && sum(HearOnly)
 %         Average_Psth_KDEfiltered_HearCall=cell(NSU,1);
         Sum_Psth_KDEfiltered_HearCall=cell(NSU,3);
-        Sum_Psth_KDEfiltered_HearBaseline = cell(NSU,3);
         HearOnlyInd = find(HearOnly);
         for uu=1:NSU
-            t=-Delay: Bin_ms : round((max(HearDuration(HearOnlyInd)) + Delay)/Bin_ms)*Bin_ms;
-            t_baseline=0: Bin_ms : round((max(Hear_BSLDuration(HearOnlyInd)))/Bin_ms)*Bin_ms;
+            t=-round((max(HearDuration(HearOnlyInd)) + Delay)/Bin_ms)*Bin_ms:Bin_ms :Delay ;
 %             Average_Psth_KDEfiltered_HearCall{uu} = nan(3,length(t));
             PSTH_local = nan(length(HearOnlyInd),length(t));
             for jj=1:length(HearOnlyInd)
@@ -565,14 +521,6 @@ if KDE_Cal
                 for tt=1:length(Psth_KDEfiltered_HearCall_t{vv,uu})
                     Ind = find(t==Psth_KDEfiltered_HearCall_t{vv,uu}(tt));
                     PSTH_local(vv,Ind) = Psth_KDEfiltered_HearCall{vv,uu}(tt); %#ok<FNDSB>
-                end
-            end
-            Baseline_data = nan(length(HearOnlyInd),length(t_baseline));
-            for jj=1:length(HearOnlyInd)
-                vv=HearOnlyInd(jj);
-                for tt=1:length(Psth_KDEfiltered_HearBaseline_t{vv,uu})
-                    Ind = find(t_baseline==Psth_KDEfiltered_HearBaseline_t{vv,uu}(tt));
-                    Baseline_data(vv,Ind) = Psth_KDEfiltered_HearBaseline{vv,uu}(tt); %#ok<FNDSB>
                 end
             end
 %             Average_Psth_KDEfiltered_HearCall{uu}(1,:) = t;
@@ -584,20 +532,6 @@ if KDE_Cal
             [KDE_local, Sum_Psth_KDEfiltered_HearCall{uu,1}, Error_local] = kde_wrapper(AllSpikes_local,t,Response_samprate);
             Sum_Psth_KDEfiltered_HearCall{uu,2} =  KDE_local ./(sum(~isnan(PSTH_local)));
             Sum_Psth_KDEfiltered_HearCall{uu,3} = Error_local ./(sum(~isnan(PSTH_local)));
-            
-            AllSpikesBaseline_local = cell2mat(SpikesTimes_HearBaseline(:,uu)');
-            USpikeT = unique(AllSpikesBaseline_local);
-            CountSpikeT = histc(AllSpikesBaseline_local,USpikeT);
-            RepSpike = USpikeT(CountSpikeT>1);
-            for rs=1:length(RepSpike)
-                Ind_sr = find(AllSpikesBaseline_local == RepSpike(rs));
-                AllSpikesBaseline_local(Ind_sr) = AllSpikesBaseline_local(Ind_sr) + [0 ones(1,length(Ind_sr)-1)]; % add 1ms to the spike that are duplicated so the calculation of the PSTH can go through and is still balanced compared to the PSTh during vocalizations
-            end
-            [KDE_local, Sum_Psth_KDEfiltered_HearBaseline{uu,1}, Error_local] = kde_wrapper(AllSpikesBaseline_local,t_baseline,Response_samprate);
-            Sum_Psth_KDEfiltered_HearBaseline{uu,2} =  KDE_local ./(sum(~isnan(Baseline_data)));
-            Sum_Psth_KDEfiltered_HearBaseline{uu,3} = Error_local ./(sum(~isnan(Baseline_data)));
-            
-            
         end
     else
         fprintf('No vocalization heard\n')
@@ -622,7 +556,7 @@ if PLOT
                 cc = HearOnlyInd(IDurH(hh));
                 yyaxis left
                 hold on
-                plot([0 HearDuration(cc)], hh-[0.5 0.5], '-','LineWidth',250/length(HearOnlyInd),'Color', [0.8 0.8 1])
+                plot([-HearDuration(cc) 0], hh-[0.5 0.5], '-','LineWidth',250/length(HearOnlyInd),'Color', [0.8 0.8 1])
                 %         for dd=1:size(DataDeletion_HearCall{cc},1)
                 %             hold on
                 %             plot(DataDeletion_HearCall{cc}(dd,:), hh-[0.5 0.5], '-','LineWidth',250/length(HearOnlyInd),'Color', [0.8 0.8 0.8]) % RF artefact period
@@ -635,9 +569,9 @@ if PLOT
     %             yyaxis right
     %             plot(Psth_KDEfiltered_THearCall_t{cc,uu}, Psth_KDEfiltered_THearCall{cc,uu}/max(Psth_KDEfiltered_THearCall_scalef(HearOnlyInd,uu))+hh-1, 'r-', 'LineWidth',2)
             end
-            XLIM = [-Delay mean(HearDuration)+Delay];
+            XLIM = [-Delay-mean(HearDuration) Delay];
             yyaxis left
-            xlabel('Time centered at hearing onset (ms)')
+            xlabel('Time centered at hearing offset (ms)')
             ylim([0 length(HearOnlyInd)+1])
             xlim(XLIM)
             ylabel('Vocalization hearing renditions')
@@ -655,7 +589,7 @@ if PLOT
                 shadedErrorBar(Sum_Psth_KDEfiltered_THearCall{uu,1}, Sum_Psth_KDEfiltered_THearCall{uu,2}, Sum_Psth_KDEfiltered_THearCall{uu,3}, {'b-', 'LineWidth',2})
                 xlim(XLIM)
                 ylim([0 max(Sum_Psth_KDEfiltered_THearCall{uu,2})*1.3])
-                xlabel('Time centered at hearing onset (ms)')
+                xlabel('Time centered at hearing offset (ms)')
                 ylabel('Spike rate (/ms)')
             end
             orient(Fig,'landscape')
@@ -666,9 +600,9 @@ if PLOT
     %         set(Fig,'PaperPosition', [0 0 1 1]);
     %         pause()
             if KDE_Cal
-                print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocHearPSTH_KDE_Tetrode%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf','-fillpage')
+                print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocHearPSTH_KDE_Tetrode%d_%d_off.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf','-fillpage')
             else
-                print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocHearPSTH_Tetrode%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf','-fillpage')
+                print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocHearPSTH_Tetrode%d_%d_off.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf','-fillpage')
             end
             close all
         end
@@ -688,7 +622,7 @@ if PLOT
                 cc = HearOnlyInd(IDurH(hh));
                 yyaxis left
                 hold on
-                plot([0 HearDuration(cc)], hh-[0.5 0.5], '-','LineWidth',250/length(HearOnlyInd),'Color', [0.8 0.8 1])
+                plot([-HearDuration(cc) 0], hh-[0.5 0.5], '-','LineWidth',250/length(HearOnlyInd),'Color', [0.8 0.8 1])
                 %         for dd=1:size(DataDeletion_HearCall{cc},1)
                 %             hold on
                 %             plot(DataDeletion_HearCall{cc}(dd,:), hh-[0.5 0.5], '-','LineWidth',250/length(HearOnlyInd),'Color', [0.8 0.8 0.8]) % RF artefact period
@@ -701,9 +635,9 @@ if PLOT
     %             yyaxis right
     %             plot(Psth_KDEfiltered_HearCall_t{cc,uu}, Psth_KDEfiltered_HearCall{cc,uu}/max(Psth_KDEfiltered_HearCall_scalef(HearOnlyInd,uu))+hh-1, 'r-', 'LineWidth',2)
             end
-            XLIM = [-Delay mean(HearDuration)+Delay];
+            XLIM = [-Delay-mean(HearDuration) Delay];
             yyaxis left
-            xlabel('Time centered at hearing onset (ms)')
+            xlabel('Time centered at hearing offset (ms)')
             ylim([0 length(HearOnlyInd)+1])
             xlim(XLIM)
             ylabel('Vocalization hearing renditions')
@@ -723,7 +657,7 @@ if PLOT
 
                 xlim(XLIM)
                 ylim([0 max(Sum_Psth_KDEfiltered_HearCall{uu,2})*1.3])
-                xlabel('Time centered at hearing onset (ms)')
+                xlabel('Time centered at hearing offset (ms)')
                 ylabel('Spike rate (/ms)')
                 hold off
             end
@@ -736,9 +670,9 @@ if PLOT
     %         set(Fig,'PaperPosition', [0 0 1 1]);
     %         pause()
             if KDE_Cal
-                print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocHearPSTH_KDE_SU%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf','-fillpage')
+                print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocHearPSTH_KDE_SU%d_%d_off.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf','-fillpage')
             else
-                print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocHearPSTH_SU%d_%d.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf','-fillpage')
+                print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_VocHearPSTH_SU%d_%d_off.pdf', Date, NeuroLoggerID,uu, Delay)),'-dpdf','-fillpage')
             end
             close all
         end
@@ -758,12 +692,9 @@ end
 if Flags(2)
     SpikeTrains.SpikesTimes_VocCall = SpikesTimes_VocCall;
     SpikeTrains.SpikesTimes_HearCall = SpikesTimes_HearCall;
-    SpikeTrains.SpikesTimes_HearBaseline = SpikesTimes_HearBaseline;
-    SpikeTrains.SpikesTimes_VocBaseline = SpikesTimes_VocBaseline;
     if KDE_Cal
 %         SpikeTrains.Average_Psth_KDEfiltered_VocCall = Average_Psth_KDEfiltered_VocCall;
         SpikeTrains.Sum_Psth_KDEfiltered_VocCall = Sum_Psth_KDEfiltered_VocCall;
-        SpikeTrains.Sum_Psth_KDEfiltered_VocBaseline = Sum_Psth_KDEfiltered_VocBaseline;
     end
 end
 SpikeTrains.VocDuration = VocDuration;
@@ -779,7 +710,6 @@ if (HearCall>1) && sum(HearOnly)
     if Flags(2) && KDE_Cal
 %         SpikeTrains.Average_Psth_KDEfiltered_HearCall = Average_Psth_KDEfiltered_HearCall;
         SpikeTrains.Sum_Psth_KDEfiltered_HearCall = Sum_Psth_KDEfiltered_HearCall;
-        SpikeTrains.Sum_Psth_KDEfiltered_HearBaseline = Sum_Psth_KDEfiltered_HearBaseline;
     end
 else
     SpikeTrains.HearDuration = NaN;
@@ -791,7 +721,6 @@ else
     if Flags(2) && KDE_Cal
 %         SpikeTrains.Average_Psth_KDEfiltered_HearCall = NaN;
         SpikeTrains.Sum_Psth_KDEfiltered_HearCall = NaN;
-        SpikeTrains.Sum_Psth_KDEfiltered_HearBaseline = NaN;
     end
 end
 

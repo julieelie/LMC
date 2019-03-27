@@ -185,8 +185,8 @@ if sum(Ncall)
         
         if Flags(2)
 %             Average_Psth_KDEfiltered_VocCall=cell(NSU,1);
-            Sum_Psth_KDEfiltered_VocCall=cell(NT,3); % This will contain the spike rate calculated from all renditions (loosing the variability between renditions) with an error estimated from the confidence interval of the spike density function
-            Sum_Psth_KDEfiltered_VocBaseline=cell(NT,3); % This will contain the spike rate calculated from all baseline (loosing the variability between renditions) with an error estimated from the confidence interval of the spike density function
+            Sum_Psth_KDEfiltered_VocCall=cell(NSU,3); % This will contain the spike rate calculated from all renditions (loosing the variability between renditions) with an error estimated from the confidence interval of the spike density function
+            Sum_Psth_KDEfiltered_VocBaseline=cell(NSU,3); % This will contain the spike rate calculated from all baseline (loosing the variability between renditions) with an error estimated from the confidence interval of the spike density function
             for uu=1:NSU
                 t=-Delay: Bin_ms : round((max(VocDuration) + Delay)/Bin_ms)*Bin_ms;
                 t_baseline = 0:Bin_ms:max(Voc_BSLDuration);

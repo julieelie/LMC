@@ -64,14 +64,9 @@ PSTH_spacer=10;
 fprintf(1, 'Plotting PSTH\n')
 % Now plot Raster for tetrodes
 ColorCode = get(groot,'DefaultAxesColorOrder');
-for Allign=1:2
-if Allign==1
-    BehavXLim = [-Delay 3*Delay];
-elseif Allign==2
-    BehavXLim = [-3*Delay Delay];
-end
+BehavXLim = [-3*Delay Delay];
 BehaviorLegendX = BehavXLim(1) - 50;
-fprintf(1, 'First alligned to vocalization onset\n')
+fprintf(1, 'Alligned to vocalization offset\n')
 if Flags(1)
     for uu=1:NT
         fprintf(1, 'Tetrode %d/%d...\n',uu,NT)
@@ -131,26 +126,20 @@ if Flags(1)
                 cc = HearOnlyInd(IDurH(hh));
 %                 yyaxis left
                 hold on
-                if Allign==1
-                    plot([0 HearDuration(cc)], RowCount+hh-[0.5 0.5], '-','LineWidth',250/(length(HearOnlyInd)+ RowCount),'Color', [0.8 0.8 1])
-                    Shift = 0;
-                elseif Allign==2
-                    plot([-HearDuration(cc) 0], RowCount+hh-[0.5 0.5], '-','LineWidth',250/(length(HearOnlyInd)+ RowCount),'Color', [0.8 0.8 1])
-                    Shift = -HearDuration(cc);
-                end
+                plot([-HearDuration(cc) 0], RowCount+hh-[0.5 0.5], '-','LineWidth',250/(length(HearOnlyInd)+ RowCount),'Color', [0.8 0.8 1])
                 %         for dd=1:size(DataDeletion_HearCall{cc},1)
                 %             hold on
                 %             plot(DataDeletion_HearCall{cc}(dd,:), hh-[0.5 0.5], '-','LineWidth',250/length(HearOnlyInd),'Color', [0.8 0.8 0.8]) % RF artefact period
                 %         end
                 for spike=1:length(SpikesTTimes_HearCall{cc,uu})
                     hold on
-                    plot((SpikesTTimes_HearCall{cc,uu}(spike)+Shift)*ones(2,1), RowCount+hh-[0.9 0.1], 'k-', 'LineWidth',1)
+                    plot((SpikesTTimes_HearCall{cc,uu}(spike))*ones(2,1), RowCount+hh-[0.9 0.1], 'k-', 'LineWidth',1)
                 end
                 hold on
                 %             yyaxis right
                 %             plot(Psth_KDEfiltered_THearCall_t{cc,uu}, Psth_KDEfiltered_THearCall{cc,uu}/max(Psth_KDEfiltered_THearCall_scalef(HearOnlyInd,uu))+hh-1, 'r-', 'LineWidth',2)
             end
-            % plotting a line at onset/offset
+            % plotting a line at offset
             line([0 0], [RowCount-0.5 RowCount+length(HearOnlyInd)+0.5], 'color','b','LineStyle','-', 'LineWidth',1)
             % plotting the legend for that particular behavior
             h=text(BehaviorLegendX, RowCount + length(HearOnlyInd)/3 ,'Hearing');
@@ -164,31 +153,26 @@ if Flags(1)
             fprintf(1,' ->No vocalizing data from the operant conditioning\n')
         else
             fprintf(1,' -> Raster vocalizing\n')
-                [~, IDurV] = sort(VocDuration, 'descend');
+            [~, IDurV] = sort(VocDuration, 'descend');
             for hh=1:length(VocDuration)
                 cc = IDurV(hh);
     %             yyaxis left
                 hold on
-                if Allign==1
-                    plot([0 VocDuration(cc)], RowCount+hh-[0.5 0.5], '-','LineWidth',250/(length(VocDuration)+ RowCount),'Color', [1 0.8 0.8])
-                    Shift=0;
-                elseif Allign==2
-                    plot([-VocDuration(cc) 0], RowCount+hh-[0.5 0.5], '-','LineWidth',250/(length(VocDuration)+ RowCount),'Color', [1 0.8 0.8])
-                    Shift = -VocDuration(cc);
-                end
+                plot([-VocDuration(cc) 0], RowCount+hh-[0.5 0.5], '-','LineWidth',250/(length(VocDuration)+ RowCount),'Color', [1 0.8 0.8])
+                
                 %         for dd=1:size(DataDeletion_HearCall{cc},1)
                 %             hold on
                 %             plot(DataDeletion_HearCall{cc}(dd,:), hh-[0.5 0.5], '-','LineWidth',250/length(HearOnlyInd),'Color', [0.8 0.8 0.8]) % RF artefact period
                 %         end
                 for spike=1:length(SpikesTTimes_VocCall{cc,uu})
                     hold on
-                    plot((SpikesTTimes_VocCall{cc,uu}(spike)+Shift)*ones(2,1), RowCount+hh-[0.9 0.1], 'k-', 'LineWidth',1)
+                    plot((SpikesTTimes_VocCall{cc,uu}(spike))*ones(2,1), RowCount+hh-[0.9 0.1], 'k-', 'LineWidth',1)
                 end
                 hold on
                 %             yyaxis right
                 %             plot(Psth_KDEfiltered_THearCall_t{cc,uu}, Psth_KDEfiltered_THearCall{cc,uu}/max(Psth_KDEfiltered_THearCall_scalef(HearOnlyInd,uu))+hh-1, 'r-', 'LineWidth',2)
             end
-            % plotting a line at onset/offset
+            % plotting a line at offset
             line([0 0], [RowCount-0.5 RowCount+length(VocDuration)+0.5], 'Color','r','LineStyle','-', 'LineWidth',1.5)
             % plotting the legend for that particular behavior
             h=text(BehaviorLegendX, RowCount + length(VocDuration)/3 ,'Vocalizing');
@@ -197,11 +181,7 @@ if Flags(1)
         end
         
         % Set the parameters of the figure
-        if Allign(1)
-            XLIM = [-Delay+10 min(max(mean(HearOnlyDuration), mean(VocDuration))+Delay, MaxDur-Delay)-10];
-        elseif Allign(2)
-            XLIM = [min(max(mean(HearOnlyDuration), mean(VocDuration))+Delay, MaxDur-Delay)+10 Delay-10];
-        end
+        XLIM = [-min(max(mean(HearOnlyDuration), mean(VocDuration))+Delay, MaxDur-Delay)+10 Delay-10];
         xlabel('Time (ms)')
         ylim([0 RowCount])
         xlim(XLIM)
@@ -215,8 +195,8 @@ if Flags(1)
             % First plot lines to get the legend right
             for bb=1:length(UActionBehav)
                 hold on
-                plot(Sum_Psth_KDEfiltered_TBehav{uu,bb}{1}-Delay, mean(Sum_Psth_KDEfiltered_TBehav{uu,bb}{2})*ones(size(Sum_Psth_KDEfiltered_TBehav{uu,bb}{1})),'Color',ColorCode(2+bb,:), 'LineStyle','-', 'LineWidth',2)
-                Ind = ((Sum_Psth_KDEfiltered_TBehav{uu,bb}{1}-Delay)>XLIM(1)) .* ((Sum_Psth_KDEfiltered_TBehav{uu,bb}{1}-Delay) < XLIM(2));
+                plot(Sum_Psth_KDEfiltered_TBehav{uu,bb}{1}+BehavXLim(1), mean(Sum_Psth_KDEfiltered_TBehav{uu,bb}{2})*ones(size(Sum_Psth_KDEfiltered_TBehav{uu,bb}{1})),'Color',ColorCode(2+bb,:), 'LineStyle','-', 'LineWidth',2)
+                Ind = ((Sum_Psth_KDEfiltered_TBehav{uu,bb}{1}+BehavXLim(1))>XLIM(1)) .* ((Sum_Psth_KDEfiltered_TBehav{uu,bb}{1}+BehavXLim(1)) < XLIM(2));
                 if ~isempty(Ind)
                     MaxSR(bb) = max(Sum_Psth_KDEfiltered_TBehav{uu,bb}{2}(logical(Ind)));
                 end
@@ -256,7 +236,7 @@ if Flags(1)
                 fprintf(1,' -> KDE %s\n', UActionBehav{bb})
                 hold on
                 SizeD = size(Sum_Psth_KDEfiltered_TBehav{uu,bb}{1});
-                shadedErrorBar(Sum_Psth_KDEfiltered_TBehav{uu,bb}{1}-Delay, mean(Sum_Psth_KDEfiltered_TBehav{uu,bb}{2})*ones(SizeD), repmat(mean(Sum_Psth_KDEfiltered_TBehav{uu,bb}{3},2),SizeD), {'Color',ColorCode(2+bb,:), 'LineStyle','-', 'LineWidth',2})
+                shadedErrorBar(Sum_Psth_KDEfiltered_TBehav{uu,bb}{1}+BehavXLim(1), mean(Sum_Psth_KDEfiltered_TBehav{uu,bb}{2})*ones(SizeD), repmat(mean(Sum_Psth_KDEfiltered_TBehav{uu,bb}{3},2),SizeD), {'Color',ColorCode(2+bb,:), 'LineStyle','-', 'LineWidth',2})
             end
             
             
@@ -287,9 +267,9 @@ if Flags(1)
         %             set(Fig,'PaperPosition', [50 50 1200 800]);
         %             pause()
         if KDE_Cal
-            print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_ALL_PSTH_KDE_Tetrode%d.pdf', Date, NeuroLoggerID,uu)),'-dpdf','-fillpage')
+            print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_ALL_PSTH_KDE_Tetrode%d_off.pdf', Date, NeuroLoggerID,uu)),'-dpdf','-fillpage')
         else
-            print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_ALL_PSTH_Tetrode%d.pdf', Date, NeuroLoggerID,uu)),'-dpdf','-fillpage')
+            print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_ALL_PSTH_Tetrode%d_off.pdf', Date, NeuroLoggerID,uu)),'-dpdf','-fillpage')
         end
         close all
         
@@ -297,7 +277,7 @@ if Flags(1)
     
 end
 
-end        
+       
  %% Now plot Raster for single units
 if Flags(2)
     for uu=1:NSU
@@ -327,12 +307,12 @@ if Flags(2)
             for cc=1:NBehav
                 hold on
                 % First plot a colored line to indicate the behavior
-                plot([-Delay 3*Delay], RowCount+cc-[0.5 0.5], '-','LineWidth',250/(NBehav*length(UActionBehav)),'Color', [ColorCode(2+bb,:) 0.1])
+                plot(BehavXLim, RowCount+cc-[0.5 0.5], '-','LineWidth',250/(NBehav*length(UActionBehav)),'Color', [ColorCode(2+bb,:) 0.1])
                 hold on
                 % then the spikes
                 for spike=1:length(SpikesTimes_Behav{bb}{cc,uu})
                     hold on
-                    plot(SpikesTimes_Behav{bb}{cc,uu}(spike)*ones(2,1)-Delay, RowCount+cc-[0.9 0.1], 'k-', 'LineWidth',1)
+                    plot(SpikesTimes_Behav{bb}{cc,uu}(spike)*ones(2,1)+BehavXLim(1), RowCount+cc-[0.9 0.1], 'k-', 'LineWidth',1)
                 end
                 hold on
                 %                 yyaxis right
@@ -358,7 +338,7 @@ if Flags(2)
                 cc = HearOnlyInd(IDurH(hh));
 %                 yyaxis left
                 hold on
-                plot([0 HearDuration(cc)], RowCount+hh-[0.5 0.5], '-','LineWidth',250/(length(HearOnlyInd)+ RowCount),'Color', [0.8 0.8 1])
+                plot([-HearDuration(cc) 0], RowCount+hh-[0.5 0.5], '-','LineWidth',250/(length(HearOnlyInd)+ RowCount),'Color', [0.8 0.8 1])
                 %         for dd=1:size(DataDeletion_HearCall{cc},1)
                 %             hold on
                 %             plot(DataDeletion_HearCall{cc}(dd,:), hh-[0.5 0.5], '-','LineWidth',250/length(HearOnlyInd),'Color', [0.8 0.8 0.8]) % RF artefact period
@@ -390,7 +370,7 @@ if Flags(2)
                 cc = IDurV(hh);
                 %             yyaxis left
                 hold on
-                plot([0 VocDuration(cc)], RowCount+hh-[0.5 0.5], '-','LineWidth',250/(length(VocDuration)+ RowCount),'Color', [1 0.8 0.8])
+                plot([-VocDuration(cc) 0], RowCount+hh-[0.5 0.5], '-','LineWidth',250/(length(VocDuration)+ RowCount),'Color', [1 0.8 0.8])
                 %         for dd=1:size(DataDeletion_HearCall{cc},1)
                 %             hold on
                 %             plot(DataDeletion_HearCall{cc}(dd,:), hh-[0.5 0.5], '-','LineWidth',250/length(HearOnlyInd),'Color', [0.8 0.8 0.8]) % RF artefact period
@@ -412,7 +392,7 @@ if Flags(2)
         end
         
         % Set the parameters of the figure
-        XLIM = [-Delay+10 min(max(mean(HearOnlyDuration), mean(VocDuration))+Delay, MaxDur-Delay)-10];
+        XLIM = [-min(max(mean(HearOnlyDuration), mean(VocDuration))+Delay, MaxDur-Delay)+10 Delay-10 ];
         xlabel('Time (ms)')
         ylim([0 RowCount])
         xlim(XLIM)
@@ -426,8 +406,8 @@ if Flags(2)
             % First plot the lines to get the legend right
             for bb=1:length(UActionBehav)
                 hold on
-                plot(Sum_Psth_KDEfiltered_Behav{uu,bb}{1}-Delay, mean(Sum_Psth_KDEfiltered_Behav{uu,bb}{2}) * ones(size(Sum_Psth_KDEfiltered_Behav{uu,bb}{2})), 'Color',ColorCode(2+bb,:), 'LineStyle','-', 'LineWidth',2)
-                Ind = ((Sum_Psth_KDEfiltered_Behav{uu,bb}{1}-Delay)>XLIM(1)) .* ((Sum_Psth_KDEfiltered_Behav{uu,bb}{1}-Delay) < XLIM(2));
+                plot(Sum_Psth_KDEfiltered_Behav{uu,bb}{1}+BehavXLim(1), mean(Sum_Psth_KDEfiltered_Behav{uu,bb}{2}) * ones(size(Sum_Psth_KDEfiltered_Behav{uu,bb}{2})), 'Color',ColorCode(2+bb,:), 'LineStyle','-', 'LineWidth',2)
+                Ind = ((Sum_Psth_KDEfiltered_Behav{uu,bb}{1}+BehavXLim(1))>XLIM(1)) .* ((Sum_Psth_KDEfiltered_Behav{uu,bb}{1}+BehavXLim(1)) < XLIM(2));
                 if ~isempty(Ind)
                     MaxSR(bb) = max(Sum_Psth_KDEfiltered_Behav{uu,bb}{2}(logical(Ind)));
                 end
@@ -465,7 +445,7 @@ if Flags(2)
                 fprintf(1,' -> KDE %s\n', UActionBehav{bb})
                 hold on
                 SizeD = size(Sum_Psth_KDEfiltered_Behav{uu,bb}{2});
-                shadedErrorBar(Sum_Psth_KDEfiltered_Behav{uu,bb}{1}-Delay, mean(Sum_Psth_KDEfiltered_Behav{uu,bb}{2})* ones(SizeD), repmat(mean(Sum_Psth_KDEfiltered_Behav{uu,bb}{3},2),SizeD), {'Color',ColorCode(2+bb,:), 'LineStyle','-', 'LineWidth',2})
+                shadedErrorBar(Sum_Psth_KDEfiltered_Behav{uu,bb}{1}+BehavXLim(1), mean(Sum_Psth_KDEfiltered_Behav{uu,bb}{2})* ones(SizeD), repmat(mean(Sum_Psth_KDEfiltered_Behav{uu,bb}{3},2),SizeD), {'Color',ColorCode(2+bb,:), 'LineStyle','-', 'LineWidth',2})
             end
             
             if (length(HearOnlyInd)>1) && KDE_Cal
@@ -495,9 +475,9 @@ if Flags(2)
         %             set(Fig,'PaperPosition', [50 50 1200 800]);
         %             pause()
         if KDE_Cal
-            print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_ALL_PSTH_KDE_SU%d.pdf', Date, NeuroLoggerID,uu)),'-dpdf','-fillpage')
+            print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_ALL_PSTH_KDE_SU%d_off.pdf', Date, NeuroLoggerID,uu)),'-dpdf','-fillpage')
         else
-            print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_ALL_PSTH_SU%d.pdf', Date, NeuroLoggerID,uu)),'-dpdf','-fillpage')
+            print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_ALL_PSTH_SU%d_off.pdf', Date, NeuroLoggerID,uu)),'-dpdf','-fillpage')
         end
         close all
         

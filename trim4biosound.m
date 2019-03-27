@@ -1,13 +1,17 @@
 function []=trim4biosound(Loggers_dir, Date, ExpStartTime, MergeThresh, Manual)
-Loggers_dir = '/Users/elie/Documents/ManipBats/LMC/190110_59882_11689_HoHa/20190130_TestCalls';
-Date = num2str(190130);
-ExpStartTime = num2str(1007);
-MergeThresh=200; %ms
+% Loggers_dir = '/Users/elie/Documents/ManipBats/LMC/190110_59882_11689_HoHa/20190130_TestCalls';
+Loggers_dir = '/Users/elie/Documents/ManipBats/JulieBatsDrive/180711/loggers';
+%Date = num2str(190130);
+Date = num2str(180711);
+%ExpStartTime = num2str(1007);
+ExpStartTime = num2str(1059);
+%MergeThresh=200; %ms
 BandPassFiltPiezo = [100 10000]; % bandpass filter of the piezo
 
 %% Load the data
-load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date, ExpStartTime)), 'Piezo_wave', 'Piezo_FS',  'Raw_wave','FS','BandPassFilter', 'AudioLogs','VocFilename');
-load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, MergeThresh)), 'IndVocStartRaw_merged', 'IndVocStopRaw_merged', 'IndVocStartPiezo_merged', 'IndVocStopPiezo_merged');
+load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date, ExpStartTime)))
+% load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date, ExpStartTime)), 'Piezo_wave', 'Piezo_FS',  'Raw_wave','FS','BandPassFilter', 'AudioLogs','VocFilename');
+% load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, MergeThresh)), 'IndVocStartRaw_merged', 'IndVocStopRaw_merged', 'IndVocStartPiezo_merged', 'IndVocStopPiezo_merged');
 
 %% Creating the output directories that will contain the wavfiles
 OutputDir = fullfile(Loggers_dir, '4Biosound');
