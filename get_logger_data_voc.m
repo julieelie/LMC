@@ -169,6 +169,7 @@ Fns_AL = fieldnames(Piezo_wave);
 
 for vv=1:Nvoc
     F1=figure(1);
+    sgtitle(sprintf('Voc %d/%d',vv,Nvoc))
     % filter the original wavfile
     [Raw_wave{vv}, FS] = audioread(VocExt.Voc_filename{vv});
     [z,p,k] = butter(6,BandPassFilter(1:2)/(FS/2),'bandpass');% a 12th order Butterworth band-pass filter; the second input argument is normalized cut-off frequency (ie. normalized to the Nyquist frequency, which is half the sampling frequency, as required by MATLAB)
@@ -227,8 +228,8 @@ for vv=1:Nvoc
             hold on
             plot(Filt_Logger_wav{ll}, 'r-')
             set(gca, 'XLim', [0 length(Piezo_wave.(Fns_AL{ll}){vv})]);
+            title(sprintf('%s signal filtering and resampling',Fns_AL{ll}))
             if ll==1
-                title('Loggers signal filtering and resampling')
                 legend('centered voltage trace', sprintf('BandPass %d %d Hz', BandPassFilter(1:2)))
             end
             hold off
@@ -240,7 +241,7 @@ for vv=1:Nvoc
         fprintf('NO DATA FROM ANY AudioLogger\n')
     else
            HRMS_Ind = find(RMS_audioLog == max(RMS_audioLog));
-        fprintf('The %dth logger is chosen as the loudest vocalizer\n',HRMS_Ind);
+        fprintf('The %dth logger, %s, is chosen as the loudest vocalizer\n',HRMS_Ind, Fns_AL{HRMS_Ind});
         Agree = input('Do you agree? yes (leave empty), No (any input)\n');
         if ~isempty(Agree)
             HRMS_Ind = input('Indicate your choice:\n');
@@ -318,6 +319,7 @@ for vv=1:Nvoc
         LagDiff = nan(length(HRMS_Ind),1);
         TimeDiff_audio_temp = nan(length(HRMS_Ind),1);
         F2 = figure(2);
+        sgtitle(sprintf('Voc %d/%d',vv,Nvoc))
         for ll=1:length(HRMS_Ind)
             [Xcor{ll},Lag{ll}] = xcorr(Resamp_Filt_Raw_wav,Clean_Resamp_Filt_Logger_wav{ll}, (Buffer*2)*4*BandPassFilter(2)); % Running a cross correlation between the raw signal and each audio logger signal with a maximum lag equal to twice the Buffer size
             [~,I] = max(abs(Xcor{ll}));
@@ -331,15 +333,27 @@ for vv=1:Nvoc
             hold off
         end
         if (mean(LagDiff)<-1.5*Buffer*4*BandPassFilter(2)/1000) || mean(LagDiff)>-0.5*Buffer*4*BandPassFilter(2)/1000
-            fprintf('The result of the cross-correlation is most likely abherrent: LagDiff=%d\n', LagDiff);
-            LagDiff = input('You want to input another value (suggested -1970):\n');
-        end
-        if strcmp(Date, '180712') &&(vv==2 || vv==4) %Allignment not working for that vocalization taking best default guess
-            LagDiff = -1971;
+            fprintf(1,'The result of the cross-correlation is most likely abherrent: LagDiff=%d\n', LagDiff);
+            User_in = input('Do you want to input another value (suggested -1970; leave empty to not change the value; return .1 to return keyboard):\n');
+            PauseTime = 2;
+            if isempty(User_in)
+                % not changing LagDiff
+            elseif User_in == 0.1
+                keyboard
+            else
+                LagDiff = User_in;
+            end
+            if LagDiff>0
+                fprintf(1,'The result of the cross-correlation requests that the sound should be alligned taking %.1fms before the sound extract.\nThis data is not available given the buffer size used here Buffer = %d ms\nIncrease the value line23 of get_logger_data_voc.m if you want to do a better allignment job\nFor now the lag will be set to the maximum value:0\n',LagDiff(ll)/(4*BandPassFilter(2)), Buffer);
+                LagDiff = 0;
+            end
+        else
+            PauseTime=1;
         end
 
         % check the allignment
         F3=figure(3);
+        sgtitle(sprintf('Voc %d/%d',vv,Nvoc))
         subplot(length(HRMS_Ind)+1,1,1)
         plot(Resamp_Filt_Raw_wav, 'k-')
         title(sprintf('Mic filtered resampled data Voc %d/%d',vv,Nvoc))
@@ -350,7 +364,7 @@ for vv=1:Nvoc
             plot(Clean_Resamp_Filt_Logger_wav{ll}(-LagDiff(ll) + (0:(length(Clean_Resamp_Filt_Logger_wav{ll}) - (Buffer*2*10^-3)*4*BandPassFilter(2)))), 'c')
             title(sprintf('Logger filtered resampled data Voc %d/%d',vv,Nvoc))
         end
-        pause(1)
+        pause(PauseTime)
 %         Player= audioplayer((Resamp_Filt_Raw_wav -mean(Resamp_Filt_Raw_wav))/std(Resamp_Filt_Raw_wav), 4*BandPassFilter(2)); %#ok<TNMLP>
 %         play(Player)
 %         pause(2)
