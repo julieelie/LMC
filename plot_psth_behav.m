@@ -1,4 +1,4 @@
-function [SpikeTrains] = plot_psth_behav(Loggers_dir, Date, ExpStartTime, NeuroLoggerID,BatID, Flags, MaxDur, KDE_Cal)
+function [SpikeTrains] = plot_psth_behav(Loggers_dir, Date, ExpStartTime, NeuroLoggerID,BatID, Flags, MaxDur, KDE_Cal, PLOT)
 % AudioLoggerID = ID of the audio logger that the targeting animal is
 % wearing
 % NeuroLoggerID = ID of the neural logger that the targeting animal is
@@ -7,6 +7,10 @@ function [SpikeTrains] = plot_psth_behav(Loggers_dir, Date, ExpStartTime, NeuroL
 % (Flags(2)=1))
 if nargin<8
     KDE_Cal = 0;
+end
+
+if nargin<9
+    PLOT = 0;
 end
 
 % load the data
@@ -206,115 +210,119 @@ if KDE_Cal
     fprintf(1,'DONE\n')
 end
 
-%% Now plotting PSTH
-fprintf(1, 'Plotting PSTH\n')
-% Now plot Raster
-if Flags(1)
-    for bb=1:length(IndBehav)
-        NBehav = size(SpikesTTimes_Behav{bb},1);
-        for uu=1:NT
-            Fig=figure();
-            if KDE_Cal
-                subplot(2,1,1)
-            end
-            
-            for cc=1:NBehav
-                hold on
-                %                 yyaxis left
-                for spike=1:length(SpikesTTimes_Behav{bb}{cc,uu})
-                    hold on
-                    plot(SpikesTTimes_Behav{bb}{cc,uu}(spike)*ones(2,1), cc-[0.9 0.1], 'k-', 'LineWidth',1)
+%% Now plotting PSTH if requested
+if PLOT
+    fprintf(1, 'Plotting PSTH\n')
+    % Now plot Raster
+    if Flags(1)
+        for bb=1:length(IndBehav)
+            NBehav = size(SpikesTTimes_Behav{bb},1);
+            for uu=1:NT
+                Fig=figure();
+                if KDE_Cal
+                    subplot(2,1,1)
                 end
-                hold on
-                %                 yyaxis right
-                %                 plot(Psth_KDEfiltered_TVocCall_t{cc,uu}, Psth_KDEfiltered_TVocCall{cc,uu}/max(Psth_KDEfiltered_TVocCall_scalef(:,uu))+cc-1, 'r-', 'LineWidth',2)
-            end
-            xlabel('Time (continuous during behavior, in ms)')
-            %             yyaxis left
-            ylim([0 NBehav+1])
-            xlim(XLIM)
-            ylabel('Renditions')
-            title(sprintf('%s Raster %s Tetrode %d on %s', UActionText{IndBehav(bb)},NeuroLoggerID, uu, Date))
-            hold off
-            
-            if KDE_Cal
-                subplot(2,1,2)
-                shadedErrorBar(Sum_Psth_KDEfiltered_TBehav{uu,bb}{1}, Sum_Psth_KDEfiltered_TBehav{uu,bb}{2}, flipud(Sum_Psth_KDEfiltered_TBehav{uu,bb}{3})-Sum_Psth_KDEfiltered_TBehav{uu,bb}{2}, {'r-', 'LineWidth',2})
+                
+                for cc=1:NBehav
+                    hold on
+                    %                 yyaxis left
+                    for spike=1:length(SpikesTTimes_Behav{bb}{cc,uu})
+                        hold on
+                        plot(SpikesTTimes_Behav{bb}{cc,uu}(spike)*ones(2,1), cc-[0.9 0.1], 'k-', 'LineWidth',1)
+                    end
+                    hold on
+                    %                 yyaxis right
+                    %                 plot(Psth_KDEfiltered_TVocCall_t{cc,uu}, Psth_KDEfiltered_TVocCall{cc,uu}/max(Psth_KDEfiltered_TVocCall_scalef(:,uu))+cc-1, 'r-', 'LineWidth',2)
+                end
+                xlabel('Time (continuous during behavior, in ms)')
+                %             yyaxis left
+                ylim([0 NBehav+1])
                 xlim(XLIM)
-                ylim(YLIM_T)
-                xlabel('Time (ms)')
-                ylabel('Spike rate (/ms or kHz)')
+                ylabel('Renditions')
+                title(sprintf('%s Raster %s Tetrode %d on %s', UActionText{IndBehav(bb)},NeuroLoggerID, uu, Date))
+                hold off
+                
+                if KDE_Cal
+                    subplot(2,1,2)
+                    shadedErrorBar(Sum_Psth_KDEfiltered_TBehav{uu,bb}{1}, Sum_Psth_KDEfiltered_TBehav{uu,bb}{2}, flipud(Sum_Psth_KDEfiltered_TBehav{uu,bb}{3})-Sum_Psth_KDEfiltered_TBehav{uu,bb}{2}, {'r-', 'LineWidth',2})
+                    xlim(XLIM)
+                    ylim(YLIM_T)
+                    xlabel('Time (ms)')
+                    ylabel('Spike rate (/ms or kHz)')
+                end
+                orient(Fig,'landscape')
+                Fig.PaperPositionMode = 'auto';
+                %             set(Fig,'Units', 'centimeters', 'Position', get(0, 'screensize'));
+                set(Fig,'PaperOrientation','landscape');
+                %             set(Fig,'PaperUnits','normalized');
+                %             set(Fig,'PaperPosition', [50 50 1200 800]);
+                %             pause()
+                if KDE_Cal
+                    print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_%sPSTH_KDE_Tetrode%d.pdf', Date, NeuroLoggerID,UActionText{IndBehav(bb)},uu)),'-dpdf','-fillpage')
+                else
+                    print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_%sPSTH_Tetrode%d.pdf', Date, NeuroLoggerID,UActionText{IndBehav(bb)},uu)),'-dpdf','-fillpage')
+                end
+                close all
+                
             end
-            orient(Fig,'landscape')
-            Fig.PaperPositionMode = 'auto';
-            %             set(Fig,'Units', 'centimeters', 'Position', get(0, 'screensize'));
-            set(Fig,'PaperOrientation','landscape');
-            %             set(Fig,'PaperUnits','normalized');
-            %             set(Fig,'PaperPosition', [50 50 1200 800]);
-            %             pause()
-            if KDE_Cal
-                print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_%sPSTH_KDE_Tetrode%d.pdf', Date, NeuroLoggerID,UActionText{IndBehav(bb)},uu)),'-dpdf','-fillpage')
-            else
-                print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_%sPSTH_Tetrode%d.pdf', Date, NeuroLoggerID,UActionText{IndBehav(bb)},uu)),'-dpdf','-fillpage')
+        end
+    end
+    
+    if Flags(2)
+        for bb=1:length(IndBehav)
+            NBehav = size(SpikesTimes_Behav{bb},1);
+            for uu=1:NSU
+                Fig=figure();
+                if KDE_Cal
+                    subplot(2,1,1)
+                end
+                for cc=1:NBehav
+                    hold on
+                    for spike=1:length(SpikesTimes_Behav{bb}{cc,uu})
+                        hold on
+                        plot(SpikesTimes_Behav{bb}{cc,uu}(spike)*ones(2,1), cc-[0.9 0.1], 'k-', 'LineWidth',1)
+                    end
+                    hold on
+                    %                 yyaxis right
+                    %                 plot(Psth_KDEfiltered_VocCall_t{cc,uu}, Psth_KDEfiltered_VocCall{cc,uu}/max(Psth_KDEfiltered_VocCall_scalef(:,uu))+cc-1, 'r-', 'LineWidth',2)
+                end
+                yyaxis left
+                xlabel('Time (continuous during behavior, in ms)')
+                ylim([0 NBehav+1])
+                xlim(XLIM)
+                ylabel('Renditions')
+                title(sprintf('%s Raster %s Single Unit %d on %s', UActionText{IndBehav(bb)},NeuroLoggerID, uu, Date))
+                hold off
+                
+                if KDE_Cal
+                    subplot(2,1,2)
+                    shadedErrorBar(Sum_Psth_KDEfiltered_Behav{uu,bb}{1}, Sum_Psth_KDEfiltered_Behav{uu,bb}{2}, flipud(Sum_Psth_KDEfiltered_Behav{uu,bb}{3})-Sum_Psth_KDEfiltered_Behav{uu,bb}{2}, {'r-', 'LineWidth',2})
+                    xlim(XLIM)
+                    ylim(YLIM_SU)
+                    xlabel('Time (ms)')
+                    ylabel('Spike rate (/ms or kHz)')
+                end
+                orient(Fig,'landscape')
+                Fig.PaperPositionMode = 'auto';
+                %             set(Fig,'Units', 'centimeters', 'Position', get(0, 'screensize'));
+                set(Fig,'PaperOrientation','landscape');
+                %             set(Fig,'PaperUnits','normalized');
+                %             set(Fig,'PaperPosition', [0 0 1 1]);
+                %             pause()
+                if KDE_Cal
+                    print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_%sPSTH_KDE_SU%d.pdf', Date, NeuroLoggerID,UActionText{IndBehav(bb)},uu)),'-dpdf', '-fillpage')
+                else
+                    print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_%sPSTH_SU%d.pdf', Date, NeuroLoggerID,UActionText{IndBehav(bb)},uu)),'-dpdf', '-fillpage')
+                end
+                close all
             end
-            close all
             
         end
     end
+    fprintf(1, 'DONE\n')
 end
 
-if Flags(2)
-    for bb=1:length(IndBehav)
-        NBehav = size(SpikesTimes_Behav{bb},1);
-        for uu=1:NSU
-            Fig=figure();
-            if KDE_Cal
-                subplot(2,1,1)
-            end
-            for cc=1:NBehav
-                hold on
-                for spike=1:length(SpikesTimes_Behav{bb}{cc,uu})
-                    hold on
-                    plot(SpikesTimes_Behav{bb}{cc,uu}(spike)*ones(2,1), cc-[0.9 0.1], 'k-', 'LineWidth',1)
-                end
-                hold on
-                %                 yyaxis right
-                %                 plot(Psth_KDEfiltered_VocCall_t{cc,uu}, Psth_KDEfiltered_VocCall{cc,uu}/max(Psth_KDEfiltered_VocCall_scalef(:,uu))+cc-1, 'r-', 'LineWidth',2)
-            end
-            yyaxis left
-            xlabel('Time (continuous during behavior, in ms)')
-            ylim([0 NBehav+1])
-            xlim(XLIM)
-            ylabel('Renditions')
-            title(sprintf('%s Raster %s Single Unit %d on %s', UActionText{IndBehav(bb)},NeuroLoggerID, uu, Date))
-            hold off
-            
-            if KDE_Cal
-                subplot(2,1,2)
-                shadedErrorBar(Sum_Psth_KDEfiltered_Behav{uu,bb}{1}, Sum_Psth_KDEfiltered_Behav{uu,bb}{2}, flipud(Sum_Psth_KDEfiltered_Behav{uu,bb}{3})-Sum_Psth_KDEfiltered_Behav{uu,bb}{2}, {'r-', 'LineWidth',2})
-                xlim(XLIM)
-                ylim(YLIM_SU)
-                xlabel('Time (ms)')
-                ylabel('Spike rate (/ms or kHz)')
-            end
-            orient(Fig,'landscape')
-            Fig.PaperPositionMode = 'auto';
-            %             set(Fig,'Units', 'centimeters', 'Position', get(0, 'screensize'));
-            set(Fig,'PaperOrientation','landscape');
-            %             set(Fig,'PaperUnits','normalized');
-            %             set(Fig,'PaperPosition', [0 0 1 1]);
-            %             pause()
-            if KDE_Cal
-                print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_%sPSTH_KDE_SU%d.pdf', Date, NeuroLoggerID,UActionText{IndBehav(bb)},uu)),'-dpdf', '-fillpage')
-            else
-                print(Fig,fullfile(Loggers_dir,sprintf('%s_%s_%sPSTH_SU%d.pdf', Date, NeuroLoggerID,UActionText{IndBehav(bb)},uu)),'-dpdf', '-fillpage')
-            end
-            close all
-        end
-        
-    end
-end
-fprintf(1, 'DONE\n')
+%% Organizing data for return
 if Flags(2)
     SpikeTrains.SpikesTimes_Behav = SpikesTimes_Behav;
     if KDE_Cal
