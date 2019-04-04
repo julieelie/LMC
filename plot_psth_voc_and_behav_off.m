@@ -100,7 +100,7 @@ if Flags(1)
                 % then the spikes
                 for spike=1:length(SpikesTTimes_Behav{bb}{cc,uu})
                     hold on
-                    plot(SpikesTTimes_Behav{bb}{cc,uu}(spike)*ones(2,1)+BehavXLim(1), RowCount+cc-[0.9 0.1], 'k-', 'LineWidth',1)
+                    plot(SpikesTTimes_Behav{bb}{cc,uu}(spike)*ones(2,1)+sum(abs(BehavXLim))-MaxDur + BehavXLim(1), RowCount+cc-[0.9 0.1], 'k-', 'LineWidth',1)
                 end
                 hold on
                 %                 yyaxis right
@@ -195,8 +195,8 @@ if Flags(1)
             % First plot lines to get the legend right
             for bb=1:length(UActionBehav)
                 hold on
-                plot(Sum_Psth_KDEfiltered_TBehav{uu,bb}{1}+BehavXLim(1), mean(Sum_Psth_KDEfiltered_TBehav{uu,bb}{2})*ones(size(Sum_Psth_KDEfiltered_TBehav{uu,bb}{1})),'Color',ColorCode(2+bb,:), 'LineStyle','-', 'LineWidth',2)
-                Ind = ((Sum_Psth_KDEfiltered_TBehav{uu,bb}{1}+BehavXLim(1))>XLIM(1)) .* ((Sum_Psth_KDEfiltered_TBehav{uu,bb}{1}+BehavXLim(1)) < XLIM(2));
+                plot(Sum_Psth_KDEfiltered_TBehav{uu,bb}{1}+BehavXLim(1) +sum(abs(BehavXLim))-MaxDur, mean(Sum_Psth_KDEfiltered_TBehav{uu,bb}{2})*ones(size(Sum_Psth_KDEfiltered_TBehav{uu,bb}{1})),'Color',ColorCode(2+bb,:), 'LineStyle','-', 'LineWidth',2)
+                Ind = ((Sum_Psth_KDEfiltered_TBehav{uu,bb}{1}+BehavXLim(1)+sum(abs(BehavXLim))-MaxDur)>XLIM(1)) .* ((Sum_Psth_KDEfiltered_TBehav{uu,bb}{1}+BehavXLim(1)+sum(abs(BehavXLim))-MaxDur) < XLIM(2));
                 if ~isempty(Ind)
                     MaxSR(bb) = max(Sum_Psth_KDEfiltered_TBehav{uu,bb}{2}(logical(Ind)));
                 end
@@ -236,7 +236,7 @@ if Flags(1)
                 fprintf(1,' -> KDE %s\n', UActionBehav{bb})
                 hold on
                 SizeD = size(Sum_Psth_KDEfiltered_TBehav{uu,bb}{1});
-                shadedErrorBar(Sum_Psth_KDEfiltered_TBehav{uu,bb}{1}+BehavXLim(1), mean(Sum_Psth_KDEfiltered_TBehav{uu,bb}{2})*ones(SizeD), repmat(mean(Sum_Psth_KDEfiltered_TBehav{uu,bb}{3},2),SizeD), {'Color',ColorCode(2+bb,:), 'LineStyle','-', 'LineWidth',2})
+                shadedErrorBar(Sum_Psth_KDEfiltered_TBehav{uu,bb}{1}+BehavXLim(1)+sum(abs(BehavXLim))-MaxDur, mean(Sum_Psth_KDEfiltered_TBehav{uu,bb}{2})*ones(SizeD), repmat(mean(Sum_Psth_KDEfiltered_TBehav{uu,bb}{3},2),SizeD), {'Color',ColorCode(2+bb,:), 'LineStyle','-', 'LineWidth',2})
             end
             
             
@@ -312,7 +312,7 @@ if Flags(2)
                 % then the spikes
                 for spike=1:length(SpikesTimes_Behav{bb}{cc,uu})
                     hold on
-                    plot(SpikesTimes_Behav{bb}{cc,uu}(spike)*ones(2,1)+BehavXLim(1), RowCount+cc-[0.9 0.1], 'k-', 'LineWidth',1)
+                    plot(SpikesTimes_Behav{bb}{cc,uu}(spike)*ones(2,1)+BehavXLim(1)+sum(abs(BehavXLim))-MaxDur, RowCount+cc-[0.9 0.1], 'k-', 'LineWidth',1)
                 end
                 hold on
                 %                 yyaxis right
@@ -406,8 +406,8 @@ if Flags(2)
             % First plot the lines to get the legend right
             for bb=1:length(UActionBehav)
                 hold on
-                plot(Sum_Psth_KDEfiltered_Behav{uu,bb}{1}+BehavXLim(1), mean(Sum_Psth_KDEfiltered_Behav{uu,bb}{2}) * ones(size(Sum_Psth_KDEfiltered_Behav{uu,bb}{2})), 'Color',ColorCode(2+bb,:), 'LineStyle','-', 'LineWidth',2)
-                Ind = ((Sum_Psth_KDEfiltered_Behav{uu,bb}{1}+BehavXLim(1))>XLIM(1)) .* ((Sum_Psth_KDEfiltered_Behav{uu,bb}{1}+BehavXLim(1)) < XLIM(2));
+                plot(Sum_Psth_KDEfiltered_Behav{uu,bb}{1}+BehavXLim(1)+sum(abs(BehavXLim))-MaxDur, mean(Sum_Psth_KDEfiltered_Behav{uu,bb}{2}) * ones(size(Sum_Psth_KDEfiltered_Behav{uu,bb}{2})), 'Color',ColorCode(2+bb,:), 'LineStyle','-', 'LineWidth',2)
+                Ind = ((Sum_Psth_KDEfiltered_Behav{uu,bb}{1}+BehavXLim(1)+sum(abs(BehavXLim))-MaxDur)>XLIM(1)) .* ((Sum_Psth_KDEfiltered_Behav{uu,bb}{1}+BehavXLim(1)+sum(abs(BehavXLim))-MaxDur) < XLIM(2));
                 if ~isempty(Ind)
                     MaxSR(bb) = max(Sum_Psth_KDEfiltered_Behav{uu,bb}{2}(logical(Ind)));
                 end
@@ -445,7 +445,7 @@ if Flags(2)
                 fprintf(1,' -> KDE %s\n', UActionBehav{bb})
                 hold on
                 SizeD = size(Sum_Psth_KDEfiltered_Behav{uu,bb}{2});
-                shadedErrorBar(Sum_Psth_KDEfiltered_Behav{uu,bb}{1}+BehavXLim(1), mean(Sum_Psth_KDEfiltered_Behav{uu,bb}{2})* ones(SizeD), repmat(mean(Sum_Psth_KDEfiltered_Behav{uu,bb}{3},2),SizeD), {'Color',ColorCode(2+bb,:), 'LineStyle','-', 'LineWidth',2})
+                shadedErrorBar(Sum_Psth_KDEfiltered_Behav{uu,bb}{1}+BehavXLim(1)+sum(abs(BehavXLim))-MaxDur, mean(Sum_Psth_KDEfiltered_Behav{uu,bb}{2})* ones(SizeD), repmat(mean(Sum_Psth_KDEfiltered_Behav{uu,bb}{3},2),SizeD), {'Color',ColorCode(2+bb,:), 'LineStyle','-', 'LineWidth',2})
             end
             
             if (length(HearOnlyInd)>1) && KDE_Cal

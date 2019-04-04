@@ -14,7 +14,7 @@ end
 
 % load the data
 fprintf(1,'Loading data....')
-load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, Delay)), 'IndVocStartRaw_merged', 'IndVocStopRaw_merged', 'Neuro_spikes','Neuro_spikesT','Neuro_spikes_Baseline','BSL_transc_time_refined');
+load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, Delay)), 'IndVocStartRaw_merged', 'IndVocStopRaw_merged', 'Neuro_spikes','Neuro_spikesT');
 load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date, ExpStartTime)), 'FS','Piezo_wave');
 % EventDir = dir(fullfile(Loggers_dir,sprintf('*%s', NeuroLoggerID(2:end)), 'extracted_data',sprintf('*%s*EVENTS.mat', Date)));
 % load(fullfile(EventDir.folder, EventDir.name), 'DataDeletionOnsetOffset_usec_sync')
@@ -24,8 +24,9 @@ if nargin<7
     Delay = 500;% time in ms to extract data before and after vocalization onset/offset
 end
 
+
 Bin_ms = 1; % size of the KDE binning
-Response_samprate = 1/(Bin_ms*10^-3);% Sampling rate of the KDE in Hz
+Response_samprate = 1/Bin_ms;% Sampling rate of the KDE in kHz
 
 
 %% extract the spike arrival times from NeuroLoggerID for each vocalization cut of AudioLoggerID
@@ -53,7 +54,6 @@ end
 
 % Now loop through calls and gather data
 VocDuration = nan(1,VocCall);
-Voc_BSLDuration = nan(1,VocCall);
 if Flags(2)
     NSU = size(Neuro_spikes.(Fns_Neuro{FocIndNeuro}),2);
     SpikesTimes_VocCall = cell(VocCall,NSU);
@@ -81,7 +81,7 @@ for vv=1:NV
         for nn=1:Ncall(vv)
             VocCall = VocCall+1;
             VocDuration(VocCall) = (IndVocStopRaw_merged{VocInd(vv)}{FocIndAudio}(nn) -IndVocStartRaw_merged{VocInd(vv)}{FocIndAudio}(nn))/FS*1000;
-            Voc_BSLDuration(VocCall) = BSL_transc_time_refined(VocInd(vv),2)-BSL_transc_time_refined(VocInd(vv),1);
+            
             % Identify if any deletion period fall within the spike sequence for the call
             %             VocStartTransc = Voc_transc_time_refined(vv,1) + IndVocStartRaw_merged{vv}{FocIndAudio}(nn)/FS*1000 - Delay;
             %             VocStopTransc = Voc_transc_time_refined(vv,1) + IndVocStopRaw_merged{vv}{FocIndAudio}(nn)/FS*1000 + Delay;
@@ -135,7 +135,7 @@ if sum(Ncall)
 %             Average_Psth_KDEfiltered_TVocCall=cell(NT,1);
             Sum_Psth_KDEfiltered_TVocCall=cell(NT,3); % This will contain the spike rate calculated from all renditions (loosing the variability between renditions) with an error estimated from the confidence interval of the spike density function
             for uu=1:NT
-                t=round((max(VocDuration) + Delay)/Bin_ms)*Bin_ms : Bin_ms : Delay;
+                t=-round((max(VocDuration) + Delay)/Bin_ms)*Bin_ms : Bin_ms : Delay;
 %                 Average_Psth_KDEfiltered_TVocCall{uu} = nan(3,length(t)); % This will conain the average spike rate over renditions, it's std and the time points at which it was calculated
                 PSTH_local = nan(length(VocDuration),length(t));
                 for vv=1:length(VocDuration)
@@ -150,31 +150,9 @@ if sum(Ncall)
                 
                 AllSpikes_local = cell2mat(SpikesTTimes_VocCall(:,uu));
                 % calculate the density estimate
-                if isempty(AllSpikes_local)
-                    y=ones(1,length(t))./(2*length(t));
-                    Sum_Psth_KDEfiltered_TVocCall{uu,1} = t;
-                    Sum_Psth_KDEfiltered_TVocCall{uu,2} =  y ./(sum(~isnan(PSTH_local)))* Response_samprate/1000;
-                    Sum_Psth_KDEfiltered_TVocCall{uu,3} = nan(2, length(t));
-                else
-                    if length(AllSpikes_local)==1
-                        y=ones(1,length(t))./length(t);
-                        Sum_Psth_KDEfiltered_TVocCall{uu,2} =  y * length(AllSpikes_local) ./(sum(~isnan(PSTH_local))) * Response_samprate/1000;
-                        Sum_Psth_KDEfiltered_TVocCall{uu,1} = t;
-                        Sum_Psth_KDEfiltered_TVocCall{uu,3} = nan(2, length(t));
-                    else
-                        % calculate the density estimate
-                        [y,Sum_Psth_KDEfiltered_TVocCall{uu,1},OptW,~,~,bconf95]=sskernel(AllSpikes_local,t);
-                        % y is a density function that sums to 1
-                        % Multiplying by the total number of spikes gives the number of expecting spike per time bin for all behavioral events (here 10 ms)
-                        % Dividing by the number of behavioral events per time bin
-                        % gives the number of expected spikes per behavioral event
-                        % Multiplying by the response sampling rate in kHz gives the expected spike rate to one behavioral event in spike/ms
-                        Sum_Psth_KDEfiltered_TVocCall{uu,2} =  y * length(AllSpikes_local) ./(sum(~isnan(PSTH_local))) * Response_samprate/1000;
-                        Sum_Psth_KDEfiltered_TVocCall{uu,3} =  abs(flipud(bconf95) .* length(AllSpikes_local) ./(sum(~isnan(PSTH_local))) .* Response_samprate ./1000 - repmat(Sum_Psth_KDEfiltered_TVocCall{uu,2},2,1));
-                    end
-                    fprintf(1, 'Done calculating kernel density estimate of vocalization production tetrode %d/%d, using kernel bandwidth= %f\n', uu, NT, OptW);
-                end
-                
+                % calculate the density estimate
+                [Sum_Psth_KDEfiltered_TVocCall{uu,2},Sum_Psth_KDEfiltered_TVocCall{uu,1},Sum_Psth_KDEfiltered_TVocCall{uu,3}] = kde_wrapper(AllSpikes_local,t,Response_samprate,sum(~isnan(PSTH_local)));
+                fprintf(1, 'Done calculating kernel density estimate of vocalization production tetrode %d/%d\n', uu, NT);
             end
         end
         
@@ -197,9 +175,8 @@ if sum(Ncall)
 %                 Average_Psth_KDEfiltered_VocCall{uu}(3,:) = nanstd(PSTH_local)./(sum(~isnan(PSTH_local))).^0.5;
                 
                 AllSpikes_local = cell2mat(SpikesTimes_VocCall(:,uu));
-                [KDE_local,Sum_Psth_KDEfiltered_VocCall{uu,1},KDE_Error_local] = kde_wrapper(AllSpikes_local,t,Response_samprate);
-                Sum_Psth_KDEfiltered_VocCall{uu,2} =  KDE_local ./(sum(~isnan(PSTH_local)));
-                Sum_Psth_KDEfiltered_VocCall{uu,3} = KDE_Error_local./(sum(~isnan(PSTH_local)));
+                [Sum_Psth_KDEfiltered_VocCall{uu,2},Sum_Psth_KDEfiltered_VocCall{uu,1},Sum_Psth_KDEfiltered_VocCall{uu,3}] = kde_wrapper(AllSpikes_local,t,Response_samprate,sum(~isnan(PSTH_local)));
+                
                 fprintf(1, 'Done calculating kernel density estimate of vocalization production SU %d/%d\n', uu, NSU);
             end
         end
@@ -475,33 +452,8 @@ if KDE_Cal
             
             AllSpikes_local = cell2mat(SpikesTTimes_HearCall(:,uu));
             % calculate the density estimate
-            if isempty(AllSpikes_local)
-                y=ones(1,length(t))./(2*length(t));
-                Sum_Psth_KDEfiltered_THearCall{uu,1} = t;
-                Sum_Psth_KDEfiltered_THearCall{uu,2} =  y ./(sum(~isnan(PSTH_local)))* Response_samprate/1000;
-                Sum_Psth_KDEfiltered_THearCall{uu,3} = nan(2, length(t));
-            else
-                if length(AllSpikes_local)==1
-                    y=ones(1,length(t))./length(t);
-                    Sum_Psth_KDEfiltered_THearCall{uu,2} =  y * length(AllSpikes_local) ./(sum(~isnan(PSTH_local))) * Response_samprate/1000;
-                    Sum_Psth_KDEfiltered_THearCall{uu,1} = t;
-                    Sum_Psth_KDEfiltered_THearCall{uu,3} = nan(2, length(t));
-                else
-                    % calculate the density estimate
-                    [y,Sum_Psth_KDEfiltered_THearCall{uu,1},OptW,~,~,bconf95]=sskernel(AllSpikes_local,t);
-                    % y is a density function that sums to 1
-                    % Multiplying by the total number of spikes gives the number of expecting spike per time bin for all behavioral events (here 10 ms)
-                    % Dividing by the number of behavioral events per time bin
-                    % gives the number of expected spikes per behavioral event
-                    % Multiplying by the response sampling rate in kHz gives the expected spike rate to one behavioral event in spike/ms
-                    Sum_Psth_KDEfiltered_THearCall{uu,2} =  y * length(AllSpikes_local) ./(sum(~isnan(PSTH_local))) * Response_samprate/1000;
-                    Sum_Psth_KDEfiltered_THearCall{uu,3} =  abs(flipud(bconf95) .* length(AllSpikes_local) ./(sum(~isnan(PSTH_local))) .* Response_samprate ./1000 - repmat(Sum_Psth_KDEfiltered_THearCall{uu,2},2,1));
-                end
-                fprintf(1, 'Done calculating kernel density estimate of vocalization perception tetrode %d/%d, using kernel bandwidth= %f\n', uu, NT, OptW);
-                
-                
-            end
-            
+            [Sum_Psth_KDEfiltered_THearCall{uu,2}, Sum_Psth_KDEfiltered_THearCall{uu,1}, Sum_Psth_KDEfiltered_THearCall{uu,3}] = kde_wrapper(AllSpikes_local, t,Response_samprate, (sum(~isnan(PSTH_local))));
+            fprintf(1, 'Done calculating kernel density estimate of vocalization perception tetrode %d/%d\n', uu, NT);
         end
     else
         fprintf('No vocalization heard\n')
@@ -527,11 +479,10 @@ if KDE_Cal
 %             Average_Psth_KDEfiltered_HearCall{uu}(2,:) = nanmean(PSTH_local);
 %             Average_Psth_KDEfiltered_HearCall{uu}(3,:) = nanstd(PSTH_local)./(sum(~isnan(PSTH_local))).^0.5;
             
-             AllSpikes_local = cell2mat(SpikesTimes_HearCall(:,uu));
+            AllSpikes_local = cell2mat(SpikesTimes_HearCall(:,uu));
             % calculate the density estimate
-            [KDE_local, Sum_Psth_KDEfiltered_HearCall{uu,1}, Error_local] = kde_wrapper(AllSpikes_local,t,Response_samprate);
-            Sum_Psth_KDEfiltered_HearCall{uu,2} =  KDE_local ./(sum(~isnan(PSTH_local)));
-            Sum_Psth_KDEfiltered_HearCall{uu,3} = Error_local ./(sum(~isnan(PSTH_local)));
+            [Sum_Psth_KDEfiltered_HearCall{uu,2}, Sum_Psth_KDEfiltered_HearCall{uu,1}, Sum_Psth_KDEfiltered_HearCall{uu,3}] = kde_wrapper(AllSpikes_local,t,Response_samprate,sum(~isnan(PSTH_local)));
+            
         end
     else
         fprintf('No vocalization heard\n')
@@ -698,8 +649,13 @@ if Flags(2)
     end
 end
 SpikeTrains.VocDuration = VocDuration;
-SpikeTrains.NSU = NSU;
-SpikeTrains.NT = NT;
+if Flags(1)
+    SpikeTrains.NT = NT;
+end
+if Flags(2)
+    SpikeTrains.NSU = NSU;
+end
+
 if (HearCall>1) && sum(HearOnly)
     SpikeTrains.HearDuration = HearDuration;
     SpikeTrains.HearOnlyInd = HearOnlyInd;
