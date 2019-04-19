@@ -30,7 +30,7 @@ if Flags(2)
     load(DataFile, 'Neuro_spikes');
 end
 
-load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date, ExpStartTime)), 'FS','Piezo_wave');
+load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date, ExpStartTime)), 'FS','Piezo_wave','Raw_wave');
 % EventDir = dir(fullfile(Loggers_dir,sprintf('*%s', NeuroLoggerID(2:end)), 'extracted_data',sprintf('*%s*EVENTS.mat', Date)));
 % load(fullfile(EventDir.folder, EventDir.name), 'DataDeletionOnsetOffset_usec_sync')
 fprintf(1,'DONE\n')
@@ -68,6 +68,7 @@ end
 
 % Now loop through calls and gather data
 VocDuration = nan(1,VocCall);
+VocWave = cell(1,VocCall);
 Voc_BSLDuration = nan(1,VocCall);
 if Flags(2)
     NSU = size(Neuro_spikes.(Fns_Neuro{FocIndNeuro}),2);
@@ -100,6 +101,7 @@ for vv=1:NV
         for nn=1:Ncall(vv)
             VocCall = VocCall+1;
             VocDuration(VocCall) = (IndVocStopRaw_merged{VocInd(vv)}{FocIndAudio}(nn) -IndVocStartRaw_merged{VocInd(vv)}{FocIndAudio}(nn))/FS*1000;
+            VocWave{VocCall} = RawWave{VocInd(vv)}((IndVocStartRaw_merged{VocInd(vv)}{FocIndAudio}(nn) - Delay*FS) : (IndVocStopRaw_merged{VocInd(vv)}{FocIndAudio}(nn)+Delay*FS)); % contains the vocalization with the same delay before/after as the neural response
             Voc_BSLDuration(VocCall) = BSL_transc_time_refined(VocInd(vv),2)-BSL_transc_time_refined(VocInd(vv),1);
             % Identify if any deletion period fall within the spike sequence for the call
             %             VocStartTransc = Voc_transc_time_refined(vv,1) + IndVocStartRaw_merged{vv}{FocIndAudio}(nn)/FS*1000 - Delay;
@@ -741,6 +743,7 @@ if Flags(2)
     SpikeTrains.NSU = NSU;
 end
 SpikeTrains.VocDuration = VocDuration;
+SpikeTrains.VocWave =  VocWave;
 
 
 if (HearCall>1) && sum(HearOnly)
