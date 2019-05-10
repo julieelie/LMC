@@ -101,7 +101,17 @@ for vv=1:NV
         for nn=1:Ncall(vv)
             VocCall = VocCall+1;
             VocDuration(VocCall) = (IndVocStopRaw_merged{VocInd(vv)}{FocIndAudio}(nn) -IndVocStartRaw_merged{VocInd(vv)}{FocIndAudio}(nn))/FS*1000;
-            VocWave{VocCall} = RawWave{VocInd(vv)}((IndVocStartRaw_merged{VocInd(vv)}{FocIndAudio}(nn) - Delay*FS) : (IndVocStopRaw_merged{VocInd(vv)}{FocIndAudio}(nn)+Delay*FS)); % contains the vocalization with the same delay before/after as the neural response
+            IndOn = IndVocStartRaw_merged{VocInd(vv)}{FocIndAudio}(nn) - Delay*FS/1000;
+            IndOff = IndVocStopRaw_merged{VocInd(vv)}{FocIndAudio}(nn)+Delay*FS/1000;
+            DurWave_local = length(Raw_wave{VocInd(vv)});
+            WL = Raw_wave{VocInd(vv)}( max(1,IndOn):min(DurWave_local, IndOff));
+            if IndOn<1
+                WL = [zeros(abs(IndOn),1); WL];
+            end
+            if IndOff>DurWave_local
+                WL = [WL ; zeros(IndOff-DurWave_local,1)];
+            end
+            VocWave{VocCall} = WL; % contains the vocalization with the same delay before/after as the neural response
             Voc_BSLDuration(VocCall) = BSL_transc_time_refined(VocInd(vv),2)-BSL_transc_time_refined(VocInd(vv),1);
             % Identify if any deletion period fall within the spike sequence for the call
             %             VocStartTransc = Voc_transc_time_refined(vv,1) + IndVocStartRaw_merged{vv}{FocIndAudio}(nn)/FS*1000 - Delay;
@@ -263,7 +273,7 @@ if sum(Ncall)
                 end
                 XLIM = [-Delay mean(VocDuration)+Delay];
                 xlabel('Time centered at production onset (ms)')
-                yyaxis left
+%                 yyaxis left
                 ylim([0 VocCall+1])
                 xlim(XLIM)
                 ylabel('Vocalization production renditions')
@@ -317,7 +327,7 @@ if sum(Ncall)
                 for oo=1:VocCall
                     cc=IDur(oo);
                     hold on
-                    yyaxis left
+%                     yyaxis left
                     plot([0 VocDuration(cc)], oo-[0.5 0.5], '-','LineWidth',250/VocCall,'Color', [1 0.8 0.8]) % vocalizations
                     %         for dd=1:size(DataDeletion_VocCall{cc},1)
                     %             hold on
@@ -325,22 +335,27 @@ if sum(Ncall)
                     %         end
                     for spike=1:length(SpikesTimes_VocCall{cc,uu})
                         hold on
-                        plot(SpikesTimes_VocCall{cc,uu}(spike)*ones(2,1), oo-[0.9 0.1], 'k-', 'LineWidth',1)
+%                         plot(SpikesTimes_VocCall{cc,uu}(spike)*ones(2,1), oo-[0.9 0.1], 'k-', 'LineWidth',2)
+                        plot(SpikesTimes_VocCall{cc,uu}(spike), oo, 'ko','MarkerSize',3,'MarkerFaceColor', 'k')
                     end
                     hold on
                     %                 yyaxis right
                     %                 plot(Psth_KDEfiltered_VocCall_t{cc,uu}, Psth_KDEfiltered_VocCall{cc,uu}/max(Psth_KDEfiltered_VocCall_scalef(:,uu))+cc-1, 'r-', 'LineWidth',2)
                 end
                 XLIM = [-Delay mean(VocDuration)+Delay];
-                yyaxis left
+%                 yyaxis left
                 xlabel('Time centered at production onset (ms)')
                 ylim([0 VocCall+1])
+                set(gca,'YTick', [0 50 100 150], 'YTickLabel', [0 50 100 150], 'XTick',[],'XTickLabel',[])
                 xlim(XLIM)
-                ylabel('Vocalization production renditions')
+                ylabel('Vocalization Rendition #')
                 title(sprintf('Raster %s Single Unit %d on %s', NeuroLoggerID, uu, Date))
+                VL = vline(0,'b:');
+                VL.LineWidth=2;
                 hold off
                 
                 if KDE_Cal
+%                     figure()
                     subplot(2,1,2)
                     %                 plot(Average_Psth_KDEfiltered_VocCall{uu}(1,:), Average_Psth_KDEfiltered_VocCall{uu}(2,:), 'r--', 'LineWidth',2)
                     %                 hold on
@@ -349,11 +364,14 @@ if sum(Ncall)
                     %                 hold on
                     %                 shadedErrorBar(Average_Psth_KDEfiltered_VocCall{uu}(1,:), Average_Psth_KDEfiltered_VocCall{uu}(2,:), Average_Psth_KDEfiltered_VocCall{uu}(3,:), {'r--', 'LineWidth',2})
                     %                 hold on
-                    shadedErrorBar(Sum_Psth_KDEfiltered_VocCall{uu,1}, Sum_Psth_KDEfiltered_VocCall{uu,2}, Sum_Psth_KDEfiltered_VocCall{uu,3}, {'r-', 'LineWidth',2})
+                    shadedErrorBar(Sum_Psth_KDEfiltered_VocCall{uu,1}, Sum_Psth_KDEfiltered_VocCall{uu,2}.*10^3, Sum_Psth_KDEfiltered_VocCall{uu,3}.*10^3, {'r-', 'LineWidth',2})
                     xlim(XLIM)
-                    ylim([0 max(Sum_Psth_KDEfiltered_VocCall{uu,2})*1.3])
-                    xlabel('Time centered at production onset (ms)')
-                    ylabel('Spike rate (/ms or kHz)')
+                    ylim([0 max(Sum_Psth_KDEfiltered_VocCall{uu,2}(logical((Sum_Psth_KDEfiltered_VocCall{uu,1}>XLIM(1)).*(Sum_Psth_KDEfiltered_VocCall{uu,1}<XLIM(2))))).*1.3*10^3])
+                    xlabel('Time (ms)')
+                    ylabel('Firing Rate (Hz)')
+%                     set(gca,'YTick',[0 5 10 15],'YTickLabel',[0 5 10 15])
+                    VL=vline(0,'b:');
+                    VL.LineWidth=2;
                     hold off
                 end
                 orient(Fig,'landscape')

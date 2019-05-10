@@ -23,12 +23,14 @@ for ll=1:NLogger
     LData = load(fullfile(LDir(1).folder, LDir(1).name), 'logger_type', 'logger_serial_number');
     LoggerType{ll}  = LData.logger_type;
     if strcmp(LoggerType{ll}, 'Mous') || strcmp(LoggerType{ll}, 'Rat')
+        LocalFlags = Flags;
         if Flags(4)    
             SUFiles = dir(fullfile(LData_folder, '*TT*SS*.mat'));
             if isempty(SUFiles)
                SUNTTFiles = dir(fullfile(LData_folder, '*TT*SS*.ntt'));
                if isempty(SUNTTFiles)
-                   error('No spike sorted files available although these data are requested\n');
+                   warning('No spike sorted files available although these data are requested\n');
+                   LocalFlags(4) = 0;
                else
                    error('ntt files of spike sorted data need to be converted to mat files on a windows machine!\n');
                end
@@ -44,7 +46,7 @@ for ll=1:NLogger
             IndBehav = find(strcmp(UActionText, BehaviorType{bb}));
             if ~isempty(IndBehav)
                 fprintf(1, '** %s **\n', BehaviorType{bb})
-                [Neuro_Raw.(sprintf('Logger%s', LData.logger_serial_number)){IndBehav}, Neuro_LFP.(sprintf('Logger%s', LData.logger_serial_number)){IndBehav}, Neuro_spikesT.(sprintf('Logger%s', LData.logger_serial_number)){IndBehav},Neuro_spikes.(sprintf('Logger%s', LData.logger_serial_number)){IndBehav}] = extract_timeslot_LFP_spikes(LData_folder, AllActions_Time{IndBehav}, NeuroBuffer,MaxEventDur, Flags);
+                [Neuro_Raw.(sprintf('Logger%s', LData.logger_serial_number)){IndBehav}, Neuro_LFP.(sprintf('Logger%s', LData.logger_serial_number)){IndBehav}, Neuro_spikesT.(sprintf('Logger%s', LData.logger_serial_number)){IndBehav},Neuro_spikes.(sprintf('Logger%s', LData.logger_serial_number)){IndBehav}] = extract_timeslot_LFP_spikes(LData_folder, AllActions_Time{IndBehav}, NeuroBuffer,MaxEventDur, LocalFlags);
             end
         end
     end

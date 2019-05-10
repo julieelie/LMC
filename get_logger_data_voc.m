@@ -114,12 +114,12 @@ for ll=1:length(AudioLogs)
             IndTSOff = find(LData.Timestamps_of_first_samples_usec>(VocOffset_time*10^3), 1, 'First');
             if ~isempty(IndTSOff)
                 % deduct the corresponding onset and offset samples
-                if ~isnan(LData.Estimated_channelFS_Transceiver(IndTSOn))
+                if IndTSOn<=length(LData.Estimated_channelFS_Transceiver) && ~isnan(LData.Estimated_channelFS_Transceiver(IndTSOn))
                     IndSampOn = round(LData.Indices_of_first_and_last_samples(IndTSOn,1) + LData.Estimated_channelFS_Transceiver(IndTSOn)*(10^-6)*(VocOnset_time*10^3 - LData.Timestamps_of_first_samples_usec(IndTSOn)));
                 else
                     IndSampOn = round(LData.Indices_of_first_and_last_samples(IndTSOn,1) + nanmean(LData.Estimated_channelFS_Transceiver)*(10^-6)*(VocOnset_time*10^3 - LData.Timestamps_of_first_samples_usec(IndTSOn)));
                 end
-                if ~isnan(LData.Estimated_channelFS_Transceiver(IndTSOff))
+                if IndTSOff<=length(LData.Estimated_channelFS_Transceiver) && ~isnan(LData.Estimated_channelFS_Transceiver(IndTSOff)) 
                     IndSampOff = round(LData.Indices_of_first_and_last_samples(IndTSOff,1) - LData.Estimated_channelFS_Transceiver(IndTSOff)*(10^-6)*(LData.Timestamps_of_first_samples_usec(IndTSOff) - VocOffset_time*10^3));
                 else
                     IndSampOff = round(LData.Indices_of_first_and_last_samples(IndTSOff,1) - nanmean(LData.Estimated_channelFS_Transceiver)*(10^-6)*(LData.Timestamps_of_first_samples_usec(IndTSOff) - VocOffset_time*10^3));

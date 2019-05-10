@@ -28,18 +28,20 @@ for ll=1:NLogger
     LData = load(fullfile(LDir(1).folder, LDir(1).name), 'logger_type', 'logger_serial_number');
     LoggerType{ll}  = LData.logger_type;
     if strcmp(LoggerType{ll}, 'Mous') || strcmp(LoggerType{ll}, 'Rat')
+        LocalFlags = Flags;
         if Flags(4)    
             SUFiles = dir(fullfile(LData_folder, '*TT*SS*.mat'));
             if isempty(SUFiles)
                SUNTTFiles = dir(fullfile(LData_folder, '*TT*SS*.ntt'));
                if isempty(SUNTTFiles)
-                   error('No spike sorted files available although these data are requested\n');
+                   warning('No spike sorted files available for %s although these data are requested\nOnly Tetrode data will be extracted\n',Logger_dirs(ll).name);
+                   LocalFlags(4) = 0;
                else
                    error('ntt files of spike sorted data need to be converted to mat files on a windows machine!\n');
                end
             end
         end
-        [Neuro_Raw.(sprintf('Logger%s', LData.logger_serial_number)), Neuro_LFP.(sprintf('Logger%s', LData.logger_serial_number)), Neuro_spikesT.(sprintf('Logger%s', LData.logger_serial_number)),Neuro_spikes.(sprintf('Logger%s', LData.logger_serial_number)),Neuro_spikesTDeNoiseInd.(sprintf('Logger%s', LData.logger_serial_number))] = extract_timeslot_LFP_spikes(LData_folder, Voc_transc_time_refined, NeuroBuffer,MaxEventDur, Flags, DenoiseT,Rthreshold);       
+        [Neuro_Raw.(sprintf('Logger%s', LData.logger_serial_number)), Neuro_LFP.(sprintf('Logger%s', LData.logger_serial_number)), Neuro_spikesT.(sprintf('Logger%s', LData.logger_serial_number)),Neuro_spikes.(sprintf('Logger%s', LData.logger_serial_number)),Neuro_spikesTDeNoiseInd.(sprintf('Logger%s', LData.logger_serial_number))] = extract_timeslot_LFP_spikes(LData_folder, Voc_transc_time_refined, NeuroBuffer,MaxEventDur, LocalFlags, DenoiseT,Rthreshold);       
     end
 end
 if Flags(1)
@@ -95,18 +97,20 @@ for ll=1:length(IndLog)
     LData_folder = fullfile(Logger_dirs(IndLog(ll)).folder, Logger_dirs(IndLog(ll)).name,'extracted_data');
     LDir = dir(fullfile(LData_folder, '*CSC*.mat'));
     LData = load(fullfile(LDir(1).folder, LDir(1).name), 'logger_type', 'logger_serial_number');
+    LocalFlags = Flags;
     if Flags(4)
         SUFiles = dir(fullfile(LData_folder, '*TT*SS*.mat'));
         if isempty(SUFiles)
             SUNTTFiles = dir(fullfile(LData_folder, '*TT*SS*.ntt'));
             if isempty(SUNTTFiles)
-                error('No spike sorted files available although these data are requested\n');
+                warning('No spike sorted files available for %s although these data are requested\nOnly Tetrode data will be extracted\n',Logger_dirs(ll).name);
+                LocalFlags(4) = 0;
             else
                 error('ntt files of spike sorted data need to be converted to mat files on a windows machine!\n');
             end
         end
     end
-    [Neuro_Raw_Baseline.(sprintf('Logger%s', LData.logger_serial_number)), Neuro_LFP_Baseline.(sprintf('Logger%s', LData.logger_serial_number)), Neuro_spikesT_Baseline.(sprintf('Logger%s', LData.logger_serial_number)),Neuro_spikes_Baseline.(sprintf('Logger%s', LData.logger_serial_number))] = extract_timeslot_LFP_spikes(LData_folder, BSL_transc_time_refined, 0,MaxEventDur, Flags);       
+    [Neuro_Raw_Baseline.(sprintf('Logger%s', LData.logger_serial_number)), Neuro_LFP_Baseline.(sprintf('Logger%s', LData.logger_serial_number)), Neuro_spikesT_Baseline.(sprintf('Logger%s', LData.logger_serial_number)),Neuro_spikes_Baseline.(sprintf('Logger%s', LData.logger_serial_number))] = extract_timeslot_LFP_spikes(LData_folder, BSL_transc_time_refined, 0,MaxEventDur, LocalFlags);       
 end
 if Flags(1)
     save(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, NeuroBuffer)), 'Neuro_Raw_Baseline', '-append');

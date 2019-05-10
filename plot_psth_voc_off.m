@@ -275,7 +275,7 @@ if sum(Ncall)
                     %         end
                     for spike=1:length(SpikesTimes_VocCall{cc,uu})
                         hold on
-                        plot(SpikesTimes_VocCall{cc,uu}(spike)*ones(2,1), oo-[0.9 0.1], 'k-', 'LineWidth',1)
+                        plot(SpikesTimes_VocCall{cc,uu}(spike)*ones(2,1), oo-[0.9 0.1], 'k-', 'LineWidth',2)
                     end
                     hold on
                     %                 yyaxis right
@@ -286,8 +286,10 @@ if sum(Ncall)
                 xlabel('Time centered at production offset (ms)')
                 ylim([0 VocCall+1])
                 xlim(XLIM)
-                ylabel('Vocalization production renditions')
+                ylabel('Vocalization Rendition #')
                 title(sprintf('Raster %s Single Unit %d on %s', NeuroLoggerID, uu, Date))
+                VL = vline(0,'g:');
+                VL.LineWidth=2;
                 hold off
                 
                 if KDE_Cal
@@ -299,11 +301,13 @@ if sum(Ncall)
                     %                 hold on
                     %                 shadedErrorBar(Average_Psth_KDEfiltered_VocCall{uu}(1,:), Average_Psth_KDEfiltered_VocCall{uu}(2,:), Average_Psth_KDEfiltered_VocCall{uu}(3,:), {'r--', 'LineWidth',2})
                     %                 hold on
-                    shadedErrorBar(Sum_Psth_KDEfiltered_VocCall{uu,1}, Sum_Psth_KDEfiltered_VocCall{uu,2}, Sum_Psth_KDEfiltered_VocCall{uu,3}, {'r-', 'LineWidth',2})
+                    shadedErrorBar(Sum_Psth_KDEfiltered_VocCall{uu,1}, Sum_Psth_KDEfiltered_VocCall{uu,2}.*10^3, Sum_Psth_KDEfiltered_VocCall{uu,3}.*10^3, {'r-', 'LineWidth',2})
                     xlim(XLIM)
-                    ylim([0 max(Sum_Psth_KDEfiltered_VocCall{uu,2})*1.3])
+                    ylim([0 max(Sum_Psth_KDEfiltered_VocCall{uu,2})*1.3*10^3])
                     xlabel('Time centered at production offset (ms)')
-                    ylabel('Spike rate (/ms)')
+                    ylabel('Firing Rate (Hz)')
+                    VL=vline(0,'g:');
+                    VL.LineWidth=2;
                     hold off
                 end
                 orient(Fig,'landscape')
