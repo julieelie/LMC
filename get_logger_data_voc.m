@@ -25,7 +25,7 @@ BandPassFilter = [1000 5000 9000];
 %Parameter for detecting who is vocalizing:
 Fhigh_power = 20; %Hz
 Fs_env = 1000; %Hz Sample frequency of the enveloppe
-Dur_RMS = 10; % duration of the sample in min for the calculation of average running RMS
+Dur_RMS = 1; % duration of the silence sample in min for the calculation of average running RMS
 %% Load the localization info of vocalization extracts
 VocExt=load(fullfile(Audio_dir, sprintf('%s_%s_VocExtractTimes.mat', Date, ExpStartTime)));
 % Get the number of vocalizations
@@ -72,19 +72,27 @@ for ll=1:length(AudioLogs)
     % Get the average running rms in the lower frequency band and higher
     % frequency band for that logger in a 5 min extract in the middle of
     % the recording
-    fprintf(1, 'Calculating average RMS values on a %d min sample\n',Dur_RMS);
+    fprintf(1, 'Calculating average RMS values on a %d min sample of silence\n',Dur_RMS);
     FS_Logger_local = nanmean(LData.Estimated_channelFS_Transceiver);
     SampleDur = round(Dur_RMS*60*FS_Logger_local);
     StartSamp = round(length(LData.AD_count_int16)/2);
     [z,p,k] = butter(6,BandPassFilter(1:2)/(round(FS_Logger_local)/2),'bandpass');
     sos_low = zp2sos(z,p,k);
+    BadSection = 1;
+    while BadSection
+        Filtered_voltage_trace = filtfilt(sos_low,1,double(LData.AD_count_int16(StartSamp + (1:SampleDur))));
+        Amp_env_voltage_low=running_rms(Filtered_voltage_trace, FS_Logger_local, Fhigh_power, Fs_env);
+        if any(Amp_env_voltage_low>50) % there is most likely a vocalization in this sequence look somewhere else!
+            StartSamp = StartSamp + SampleDur +1;
+        else
+            BadSection = 0;
+        end
+    end
     [z,p,k] = butter(6,BandPassFilter(2:3)/(round(FS_Logger_local)/2),'bandpass');
     sos_high = zp2sos(z,p,k);
-    Filtered_voltage_trace = filtfilt(sos_low,1,double(LData.AD_count_int16(StartSamp + (1:SampleDur))));
-    Amp_env_voltage_low=running_rms(Filtered_voltage_trace, FS_Logger_local, Fhigh_power, Fs_env);
-    
     Filtered_voltage_trace = filtfilt(sos_high,1,double(LData.AD_count_int16(StartSamp + (1:SampleDur))));
     Amp_env_voltage_high=running_rms(Filtered_voltage_trace, FS_Logger_local, Fhigh_power, Fs_env);
+    
     RMSHigh.(sprintf('Logger%s', LData.logger_serial_number))(1) = mean(Amp_env_voltage_high);
     RMSHigh.(sprintf('Logger%s', LData.logger_serial_number))(2) = std(Amp_env_voltage_high);
     RMSLow.(sprintf('Logger%s', LData.logger_serial_number))(1) = mean(Amp_env_voltage_low);
@@ -242,9 +250,13 @@ for vv=1:Nvoc
     else
            HRMS_Ind = find(RMS_audioLog == max(RMS_audioLog));
         fprintf('The %dth logger, %s, is chosen as the loudest vocalizer\n',HRMS_Ind, Fns_AL{HRMS_Ind});
-        Agree = input('Do you agree? yes (leave empty), No (any input)\n');
-        if ~isempty(Agree)
-            HRMS_Ind = input('Indicate your choice:\n');
+        RMS_audioLog_temp = RMS_audioLog;
+        RMS_audioLog_temp(HRMS_Ind)=[];
+        if any(RMS_audioLog_temp*10 > RMS_audioLog(HRMS_Ind)) % only ask for manual input if the difference is not obvious (RMS 10 times higher than the other loggers)
+            Agree = input('Do you agree? yes (leave empty), No (any input)\n');
+            if ~isempty(Agree)
+                HRMS_Ind = input('Indicate your choice:\n');
+            end
         end
 
         % resample the sounds so they are at the same sample frequency of 4
@@ -334,7 +346,7 @@ for vv=1:Nvoc
         end
         if (mean(LagDiff)<-1.5*Buffer*4*BandPassFilter(2)/1000) || mean(LagDiff)>-0.5*Buffer*4*BandPassFilter(2)/1000
             fprintf(1,'The result of the cross-correlation is most likely abherrent: LagDiff=%d\n', LagDiff);
-            User_in = input('Do you want to input another value (suggested -1970; leave empty to not change the value; return .1 to return keyboard):\n');
+            User_in = input('Do you want to input another value (suggested -1970; leave empty to not change the value; return ".1" to return keyboard):\n');
             PauseTime = 2;
             if isempty(User_in)
                 % not changing LagDiff
