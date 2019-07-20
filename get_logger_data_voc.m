@@ -20,7 +20,7 @@ pnames = {'SerialNumber'};
 dflts  = {[]};
 [SerialNumber] = internal.stats.parseArgs(pnames,dflts,varargin{:});
 
-Buffer = 100; % Let's cut the audio extracts Buffer ms before and after the predicted time according to audio/transceiver allignment to better allign
+Buffer = 2000; % Let's cut the audio extracts Buffer ms before and after the predicted time according to audio/transceiver allignment to better allign
 BandPassFilter = [1000 5000 9000];
 %Parameter for detecting who is vocalizing:
 Fhigh_power = 20; %Hz

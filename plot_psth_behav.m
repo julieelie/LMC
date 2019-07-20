@@ -175,7 +175,7 @@ if KDE_Cal
                     end
                 end
                 
-                AllSpikes_local = cell2mat(SpikesTTimes_Behav{bb}(:,uu));
+                AllSpikes_local = cell2mat(SpikesTTimes_Behav{bb}(:,uu)');
                 % calculate the density estimate
                 [Sum_Psth_KDEfiltered_TBehav{uu,bb}{2},Sum_Psth_KDEfiltered_TBehav{uu,bb}{1},Sum_Psth_KDEfiltered_TBehav{uu,bb}{3}] = kde_wrapper(AllSpikes_local,t,Response_samprate,sum(~isnan(PSTH_local)));
                 fprintf(1, 'Done calculating kernel density estimate for %s events tetrode %d/%d\n', UActionText{IndBehav(bb)}, uu, NT);

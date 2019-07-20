@@ -69,20 +69,21 @@ for pp=1:length(ListOfPaths)
     BufferBeforeOnset = 200; %ms
     
 %     %% RUN Behavioral and audio data EXtraction
-%      result_operant_bat(Path2ParamFile)
+     result_operant_bat(Path2ParamFile)
     
-    %% Clean the tetrode data to try keep only spikes
+    
+     %% Clean the tetrode data to try keep only spikes
 %     fprintf(' SORTING SPIKES FROM NOISE ON TETRODES \n')
 %     RThresh = 0.92;
 %     PLOT=0;
 %     sort_spike_from_noise_wrapper(Logger_dir,RThresh,PLOT);
     
-%     %% Extract the neural data corresponding to the vocalizations
-%     fprintf(' EXTRACTING NEURAL DATA CORRESPONDING TO VOCALIZATIONS \n')
-%     FlagsExtr = [0 0 1 1]; % FlagsExtr(1)= Raw data, FlagsExtr(2) = LFP, FlagsExtr(3) = Tetrodes, FlagsExtr(4) = single units
+    %% Extract the neural data corresponding to the vocalizations
+    fprintf(' EXTRACTING NEURAL DATA CORRESPONDING TO VOCALIZATIONS \n')
+    FlagsExtr = [0 0 1 1]; % FlagsExtr(1)= Raw data, FlagsExtr(2) = LFP, FlagsExtr(3) = Tetrodes, FlagsExtr(4) = single units
     DenoiseT=1;
     Rthreshold = [0.92 0.94 0.96 0.98];
-%     cut_neuralData_voc(Logger_dir,Date, ExpStartTime,FlagsExtr,BufferBeforeOnset,DenoiseT,Rthreshold);
+    cut_neuralData_voc(Logger_dir,Date, ExpStartTime,FlagsExtr,BufferBeforeOnset,DenoiseT,Rthreshold);
     
     %% Plot PSTH of the bats hearing or producing a vocalization during the operant conditioning
     % Find the ID of the Neural loggers and corresponding audiologger for each implanted bat
@@ -109,101 +110,101 @@ for pp=1:length(ListOfPaths)
         [SpikeTimesVoc.(NeuroLoggerID)]=plot_psth_voc(Logger_dir, Date, ExpStartTime, AudioLoggerID, NeuroLoggerID, Flags, BufferBeforeOnset, KDE_Cal,PLOT);
         [SpikeTimesVocOff.(NeuroLoggerID)]=plot_psth_voc_off(Logger_dir, Date, ExpStartTime, AudioLoggerID, NeuroLoggerID, Flags, BufferBeforeOnset, KDE_Cal,PLOT);
     end
-%     save(fullfile(Logger_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, BufferBeforeOnset)), 'SpikeTimesVoc','-append')
-%     save(fullfile(Logger_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, BufferBeforeOnset)), 'SpikeTimesVocOff','-append')
+    save(fullfile(Logger_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, BufferBeforeOnset)), 'SpikeTimesVoc','-append')
+    save(fullfile(Logger_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, BufferBeforeOnset)), 'SpikeTimesVocOff','-append')
     close all
     %     pause()
     
-%      %% Extract data of the bats doing other actions during the free behavior session (RecOnly)
-%     fprintf(' EXTRACTING ONSET/OFFSET TIMES OF OTHER BEHAVIORS DURING FREE SESSION \n')
-%     RecOnlySession = dir(fullfile(AudioDataPath, '*RecOnly_events.txt'));
-%     if isempty(RecOnlySession)
-%         fprintf(1,'No free interaction session on that day!\n')
-%     else
-%         if length(RecOnlySession)>1
-%             fprintf(1, 'Several RecOnly session were done on that day:\n')
-%             for ss=1:length(RecOnlySession)
-%                 fprintf(1, '%d. %s\n', ss, RecOnlySession(ss).name);
-%             end
-%             Inputss = input('Your choice:\n');
-%             RecOnlySession = RecOnlySession(Inputss);
-%         end
-%         Date = RecOnlySession.name(6:11);
-%         ExpStartTime = RecOnlySession.name(13:16);
-%         % extract the time onset/offset of behaviors
-%         get_logger_data_behav(AudioDataPath, Logger_dir, Date, ExpStartTime)
-%         %
-%         %% Extract the neural data corresponding to other actions during the free behavior session (RecOnly)
-%         fprintf(' EXTRACTING NEURAL DATA CORRESPONDING TO OTHER BEHAVIORS DURING FREE SESSION \n')
-%         FlagsExtr = [0 0 1 1]; % FlagsExtr(1)= Raw data, FlagsExtr(2) = LFP, FlagsExtr(3) = Tetrodes, FlagsExtr(4) = single units
-%         BufferBeforeBehavOnset = 0;
-%         RecOnlySession = dir(fullfile(AudioDataPath, '*RecOnly_events.txt'));
-%         if length(RecOnlySession)>1
-%             fprintf(1, 'Several RecOnly session were done on that day:\n')
-%             for ss=1:length(RecOnlySession)
-%                 fprintf(1, '%d. %s\n', ss, RecOnlySession(ss).name);
-%             end
-%             Inputss = input('Your choice:\n');
-%             RecOnlySession = RecOnlySession(Inputss);
-%         end
-%         Date = RecOnlySession.name(6:11);
-%         ExpStartTime = RecOnlySession.name(13:16);
-%         cut_neuralData_behav(Logger_dir,Date, ExpStartTime,FlagsExtr,BufferBeforeBehavOnset);
-%         %
-%         %% Plot PSTH of the bats doing other actions during free socialization!
-%         RecOnlySession = dir(fullfile(AudioDataPath, '*RecOnly_events.txt'));
-%         if length(RecOnlySession)>1
-%             fprintf(1, 'Several RecOnly session were done on that day:\n')
-%             for ss=1:length(RecOnlySession)
-%                 fprintf(1, '%d. %s\n', ss, RecOnlySession(ss).name);
-%             end
-%             Inputss = input('Your choice:\n');
-%             RecOnlySession = RecOnlySession(Inputss);
-%         end
-%         Date = RecOnlySession.name(6:11);
-%         ExpStartTime = RecOnlySession.name(13:16);
-%         % Find the ID of the Neural loggers and corresponding ID tag of each implanted bat
-%         MaxDur = 700; % duration by which each long behavioral sequence should be cut often set at 600 but for 190118, 700 is better
-%         [~,~,RecTableData]=xlsread(Path2RecordingTable,1,'A1:P200','basic');
-%         RowData = find((cell2mat(RecTableData(2:end,1))== str2double(Date))) +1;
-%         DataInfo = RecTableData(RowData,:);
-%         Header = RecTableData(1,:);
-%         BatIDCol = find(contains(Header, 'Bat'));
-%         NLCol = find(contains(Header, 'NL'));
-%         NL_ID = cell2mat(DataInfo(NLCol));
-%         for nl=1:length(NL_ID)
-%             NeuroLoggerID = ['Logger' num2str(NL_ID(nl))];
-%             Bat_ID = DataInfo{BatIDCol(find(BatIDCol<NLCol(nl),1,'last'))};
-%             Flags=[1 1];% Flags = whether to print PSTH of Tetrode (Flags(1)=1) and/or Single units
-%             % (Flags(2)=1))
-%             PLOT = 0; % set to 1 to plot the results, 0 to just return data
-%             KDE_Cal = 1;
-%             fprintf(1,' PSTH of NEURAL DATA CORRESPONDING TO OTHER BEHAVIORS DURING FREE SOCIALIZATION %s \n', NeuroLoggerID)
-%             [SpikeTimesBehav.(NeuroLoggerID)]= plot_psth_behav(Logger_dir, Date, ExpStartTime, NeuroLoggerID,Bat_ID, Flags, MaxDur, KDE_Cal, PLOT);
-%         end
-%         save(fullfile(Logger_dir, sprintf('%s_%s_BehavExtractData_%d.mat', Date, ExpStartTime,BufferBeforeBehavOnset)),'SpikeTimesBehav','-append');
-%         close all
-%     end
-% %     
-%     %% Plot one PSTH per unit with all actions
-%     if isempty(RecOnlySession)
-%             fprintf(1,'No free interaction session on that day!\n')
-%             for nl=1:length(NL_ID)
-%                 NeuroLoggerID = ['Logger' num2str(NL_ID(nl))];
-%                 SpikeTimesBehav.(NeuroLoggerID) = [];
-%             end
-%     else
-%         load(fullfile(Logger_dir, sprintf('%s_%s_BehavExtractData_%d.mat', Date, ExpStartTime,BufferBeforeBehavOnset)) , 'SpikeTimesBehav');
-%     end
-%     for nl=1:length(NL_ID)
-%         NeuroLoggerID = ['Logger' num2str(NL_ID(nl))];
-%         Bat_ID = DataInfo{BatIDCol(find(BatIDCol<NLCol(nl),1,'last'))};
-%         Flags=[1 1];% Flags = whether to print PSTH of Tetrode (Flags(1)=1) and/or Single units
-%         % (Flags(2)=1))
-%         KDE_Cal = 1;
-%         
-%         fprintf(1,' PSTH of NEURAL DATA CORRESPONDING TO BEHAVIORS DURING FREE SOCIALIZATION AND VOCAL ACTIVITY DURING OPERANT CONDITIONING %s\n', NeuroLoggerID)
-%         plot_psth_voc_and_behav(SpikeTimesBehav.(NeuroLoggerID),SpikeTimesVoc.(NeuroLoggerID),Logger_dir,Date, NeuroLoggerID,Flags, BufferBeforeOnset,MaxDur, KDE_Cal);
-%         plot_psth_voc_and_behav_off(SpikeTimesBehav.(NeuroLoggerID),SpikeTimesVocOff.(NeuroLoggerID),Logger_dir,Date, NeuroLoggerID,Flags, BufferBeforeOnset,MaxDur, KDE_Cal);
-%     end
+     %% Extract data of the bats doing other actions during the free behavior session (RecOnly)
+    fprintf(' EXTRACTING ONSET/OFFSET TIMES OF OTHER BEHAVIORS DURING FREE SESSION \n')
+    RecOnlySession = dir(fullfile(AudioDataPath, '*RecOnly_events.txt'));
+    if isempty(RecOnlySession)
+        fprintf(1,'No free interaction session on that day!\n')
+    else
+        if length(RecOnlySession)>1
+            fprintf(1, 'Several RecOnly session were done on that day:\n')
+            for ss=1:length(RecOnlySession)
+                fprintf(1, '%d. %s\n', ss, RecOnlySession(ss).name);
+            end
+            Inputss = input('Your choice:\n');
+            RecOnlySession = RecOnlySession(Inputss);
+        end
+        Date = RecOnlySession.name(6:11);
+        ExpStartTime = RecOnlySession.name(13:16);
+        % extract the time onset/offset of behaviors
+        get_logger_data_behav(AudioDataPath, Logger_dir, Date, ExpStartTime)
+        %
+        %% Extract the neural data corresponding to other actions during the free behavior session (RecOnly)
+        fprintf(' EXTRACTING NEURAL DATA CORRESPONDING TO OTHER BEHAVIORS DURING FREE SESSION \n')
+        FlagsExtr = [0 0 1 1]; % FlagsExtr(1)= Raw data, FlagsExtr(2) = LFP, FlagsExtr(3) = Tetrodes, FlagsExtr(4) = single units
+        BufferBeforeBehavOnset = 0;
+        RecOnlySession = dir(fullfile(AudioDataPath, '*RecOnly_events.txt'));
+        if length(RecOnlySession)>1
+            fprintf(1, 'Several RecOnly session were done on that day:\n')
+            for ss=1:length(RecOnlySession)
+                fprintf(1, '%d. %s\n', ss, RecOnlySession(ss).name);
+            end
+            Inputss = input('Your choice:\n');
+            RecOnlySession = RecOnlySession(Inputss);
+        end
+        Date = RecOnlySession.name(6:11);
+        ExpStartTime = RecOnlySession.name(13:16);
+        cut_neuralData_behav(Logger_dir,Date, ExpStartTime,FlagsExtr,BufferBeforeBehavOnset);
+        %
+        %% Plot PSTH of the bats doing other actions during free socialization!
+        RecOnlySession = dir(fullfile(AudioDataPath, '*RecOnly_events.txt'));
+        if length(RecOnlySession)>1
+            fprintf(1, 'Several RecOnly session were done on that day:\n')
+            for ss=1:length(RecOnlySession)
+                fprintf(1, '%d. %s\n', ss, RecOnlySession(ss).name);
+            end
+            Inputss = input('Your choice:\n');
+            RecOnlySession = RecOnlySession(Inputss);
+        end
+        Date = RecOnlySession.name(6:11);
+        ExpStartTime = RecOnlySession.name(13:16);
+        % Find the ID of the Neural loggers and corresponding ID tag of each implanted bat
+        MaxDur = 700; % duration by which each long behavioral sequence should be cut often set at 600 but for 190118, 700 is better
+        [~,~,RecTableData]=xlsread(Path2RecordingTable,1,'A1:P200','basic');
+        RowData = find((cell2mat(RecTableData(2:end,1))== str2double(Date))) +1;
+        DataInfo = RecTableData(RowData,:);
+        Header = RecTableData(1,:);
+        BatIDCol = find(contains(Header, 'Bat'));
+        NLCol = find(contains(Header, 'NL'));
+        NL_ID = cell2mat(DataInfo(NLCol));
+        for nl=1:length(NL_ID)
+            NeuroLoggerID = ['Logger' num2str(NL_ID(nl))];
+            Bat_ID = DataInfo{BatIDCol(find(BatIDCol<NLCol(nl),1,'last'))};
+            Flags=[1 1];% Flags = whether to print PSTH of Tetrode (Flags(1)=1) and/or Single units
+            % (Flags(2)=1))
+            PLOT = 0; % set to 1 to plot the results, 0 to just return data
+            KDE_Cal = 1;
+            fprintf(1,' PSTH of NEURAL DATA CORRESPONDING TO OTHER BEHAVIORS DURING FREE SOCIALIZATION %s \n', NeuroLoggerID)
+            [SpikeTimesBehav.(NeuroLoggerID)]= plot_psth_behav(Logger_dir, Date, ExpStartTime, NeuroLoggerID,Bat_ID, Flags, MaxDur, KDE_Cal, PLOT);
+        end
+        save(fullfile(Logger_dir, sprintf('%s_%s_BehavExtractData_%d.mat', Date, ExpStartTime,BufferBeforeBehavOnset)),'SpikeTimesBehav','-append');
+        close all
+    end
+%     
+    %% Plot one PSTH per unit with all actions
+    if isempty(RecOnlySession)
+            fprintf(1,'No free interaction session on that day!\n')
+            for nl=1:length(NL_ID)
+                NeuroLoggerID = ['Logger' num2str(NL_ID(nl))];
+                SpikeTimesBehav.(NeuroLoggerID) = [];
+            end
+    else
+        load(fullfile(Logger_dir, sprintf('%s_%s_BehavExtractData_%d.mat', Date, ExpStartTime,BufferBeforeBehavOnset)) , 'SpikeTimesBehav');
+    end
+    for nl=1:length(NL_ID)
+        NeuroLoggerID = ['Logger' num2str(NL_ID(nl))];
+        Bat_ID = DataInfo{BatIDCol(find(BatIDCol<NLCol(nl),1,'last'))};
+        Flags=[1 1];% Flags = whether to print PSTH of Tetrode (Flags(1)=1) and/or Single units
+        % (Flags(2)=1))
+        KDE_Cal = 1;
+        
+        fprintf(1,' PSTH of NEURAL DATA CORRESPONDING TO BEHAVIORS DURING FREE SOCIALIZATION AND VOCAL ACTIVITY DURING OPERANT CONDITIONING %s\n', NeuroLoggerID)
+        plot_psth_voc_and_behav(SpikeTimesBehav.(NeuroLoggerID),SpikeTimesVoc.(NeuroLoggerID),Logger_dir,Date, NeuroLoggerID,Flags, BufferBeforeOnset,MaxDur, KDE_Cal);
+        plot_psth_voc_and_behav_off(SpikeTimesBehav.(NeuroLoggerID),SpikeTimesVocOff.(NeuroLoggerID),Logger_dir,Date, NeuroLoggerID,Flags, BufferBeforeOnset,MaxDur, KDE_Cal);
+    end
 end
