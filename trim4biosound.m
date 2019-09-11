@@ -45,6 +45,7 @@ for ss=1:Nsound
         Filename_local = fullfile(OutputDirMic, sprintf('%s_mic_%d.wav',File,cc));
         Y=Y-mean(Y);% center the sound
         audiowrite(Filename_local, Y, FS);
+        
         fprintf(1,'    ->Piezo\n')
         Y = Piezo_wave.(LoggerNames{VocBatInd}){ss}(IndVocStartPiezo_merged{ss}{VocBatInd}(cc):IndVocStopPiezo_merged{ss}{VocBatInd}(cc));
         [z,p,k] = butter(6,BandPassFiltPiezo/(Piezo_FS.(LoggerNames{VocBatInd})(ss)/2),'bandpass');
