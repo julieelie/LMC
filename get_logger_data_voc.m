@@ -20,7 +20,7 @@ pnames = {'SerialNumber'};
 dflts  = {[]};
 [SerialNumber] = internal.stats.parseArgs(pnames,dflts,varargin{:});
 
-Buffer = 2000; % Let's cut the audio extracts Buffer ms before and after the predicted time according to audio/transceiver allignment to better allign
+Buffer = 100; % Let's cut the audio extracts Buffer ms before and after the predicted time according to audio/transceiver allignment to better allign
 BandPassFilter = [1000 5000 9000];
 %Parameter for detecting who is vocalizing:
 Fhigh_power = 20; %Hz
@@ -70,7 +70,7 @@ for ll=1:length(AudioLogs)
     end
     LData = load(fullfile(LDir(1).folder, LDir(1).name));
     % Get the average running rms in the lower frequency band and higher
-    % frequency band for that logger in a 5 min extract in the middle of
+    % frequency band for that logger in a Dur_RMS min extract in the middle of
     % the recording
     fprintf(1, 'Calculating average RMS values on a %d min sample of silence\n',Dur_RMS);
     FS_Logger_local = nanmean(LData.Estimated_channelFS_Transceiver);
@@ -82,7 +82,7 @@ for ll=1:length(AudioLogs)
     while BadSection
         Filtered_voltage_trace = filtfilt(sos_low,1,double(LData.AD_count_int16(StartSamp + (1:SampleDur))));
         Amp_env_voltage_low=running_rms(Filtered_voltage_trace, FS_Logger_local, Fhigh_power, Fs_env);
-        if any(Amp_env_voltage_low>50) % there is most likely a vocalization in this sequence look somewhere else!
+        if any(Amp_env_voltage_low>75) % there is most likely a vocalization in this sequence look somewhere else! Threshold used to be 50 but I changed it because of TTL pulses noise
             StartSamp = StartSamp + SampleDur +1;
         else
             BadSection = 0;
@@ -191,6 +191,9 @@ for vv=1:Nvoc
     title('Environmental Mic filtering and resampling')
     legend('Raw voltage trace', sprintf('BandPass %d %d Hz', BandPassFilter(1:2)))
     
+    Player = audioplayer(Filt_Raw_wav, FS);
+    play(Player)
+    
 %     % roughly detect loadest vocalization on the environment microphone by
 %     % calculating an RMS in windows of 100ms
 %     Wins = 1:(FS/100):length(Filt_Raw_wav);
@@ -255,143 +258,155 @@ for vv=1:Nvoc
         if any(RMS_audioLog_temp*10 > RMS_audioLog(HRMS_Ind)) % only ask for manual input if the difference is not obvious (RMS 10 times higher than the other loggers)
             Agree = input('Do you agree? yes (leave empty), No (any input)\n');
             if ~isempty(Agree)
-                HRMS_Ind = input('Indicate your choice:\n');
+                HRMS_Ind = input('Indicate your choice ("1" first logger, "2" second logger..., "" no reallignment):\n');
             end
-        end
-
-        % resample the sounds so they are at the same sample frequency of 4
-        % times the low pass filter value
-        Resamp_Filt_Raw_wav = resample(Filt_Raw_wav, 4*BandPassFilter(2), FS);
-        subplot(length(AudioLogs)+1,1,length(AudioLogs)+1)
-        t2 = (0:(length(Resamp_Filt_Raw_wav)-1))*FS/(4*BandPassFilter(2));
-        hold on
-        plot(t2, Resamp_Filt_Raw_wav, 'g-')
-        legend(sprintf('BandPass + Resampled %d Hz', 4*BandPassFilter(2)))
-        hold off
-        Resamp_Filt_Logger_wav = cell(length(HRMS_Ind),1);
-        for ll=1:length(HRMS_Ind)
-            FS_ll = round(Piezo_FS.(Fns_AL{HRMS_Ind(ll)})(vv));
-            Resamp_Filt_Logger_wav{ll} = resample(Filt_Logger_wav{HRMS_Ind(ll)}, 4*BandPassFilter(2),FS_ll);
-            subplot(length(AudioLogs)+1,1,HRMS_Ind(ll))
-            t2 = (0:(length(Resamp_Filt_Logger_wav{ll})-1))*FS_ll/(4*BandPassFilter(2));
-            hold on
-            plot(t2, Resamp_Filt_Logger_wav{ll} , 'g-')
-            legend(sprintf('BandPass + Resampled %d Hz', 4*BandPassFilter(2)))
-            hold off
         end
         
-        %Resamp_Filt_Logger_wav{ll}(109365:(length(t2)-14937))=zeros(size((109365:(length(t2)-14937))));
-        % Localize vocalizations on the selected loggers and set to zero the
-        % signal outside of putative vocalizations.
-        % calculate a running RMS of the audio signal with a 1ms bin
-        % resolution. a vocalization is defined as 50 consecutive time bins
-        % (50ms) above the mean running RMS here
-        Consecutive_bins = 50;
-        Fhigh_power = 20; %Hz
-        Fs_env = 1000; %Hz
-        Amp_env_voltage = cell(length(HRMS_Ind),1);
-        Clean_Resamp_Filt_Logger_wav = cell(length(HRMS_Ind),1);
-        for ll=1:length(HRMS_Ind)
-            Amp_env_voltage{ll}=running_rms(Resamp_Filt_Logger_wav{ll}, 4*BandPassFilter(2), Fhigh_power, Fs_env);
-            Vocp = Amp_env_voltage{ll}>median(Amp_env_voltage{ll});
-            IndVocStart = strfind(Vocp, ones(1,Consecutive_bins));
-            IndVocStart_diffind = find(diff(IndVocStart)>1);
-            IndVocStart = [IndVocStart(1) IndVocStart(IndVocStart_diffind +1)];
-            NV = length(IndVocStart);
-            IndVocStop = nan(NV,1);
-            Clean_Resamp_Filt_Logger_wav{ll} = zeros(size(Resamp_Filt_Logger_wav{ll}));
-            for ii=1:NV
-                IVStop = find(Vocp(IndVocStart(ii):end)==0, 1, 'first');
-                if isempty(IVStop)
-                    IVStop = length(Vocp(IndVocStart(ii):end));
+        if ~isempty(HRMS_Ind)
+            % resample the sounds so they are at the same sample frequency of 4
+            % times the low pass filter value
+            Resamp_Filt_Raw_wav = resample(Filt_Raw_wav, 4*BandPassFilter(2), FS);
+            subplot(length(AudioLogs)+1,1,length(AudioLogs)+1)
+            t2 = (0:(length(Resamp_Filt_Raw_wav)-1))*FS/(4*BandPassFilter(2));
+            hold on
+            plot(t2, Resamp_Filt_Raw_wav, 'g-')
+            legend(sprintf('BandPass + Resampled %d Hz', 4*BandPassFilter(2)))
+            hold off
+            Resamp_Filt_Logger_wav = cell(length(HRMS_Ind),1);
+            for ll=1:length(HRMS_Ind)
+                FS_ll = round(Piezo_FS.(Fns_AL{HRMS_Ind(ll)})(vv));
+                Resamp_Filt_Logger_wav{ll} = resample(Filt_Logger_wav{HRMS_Ind(ll)}, 4*BandPassFilter(2),FS_ll);
+                subplot(length(AudioLogs)+1,1,HRMS_Ind(ll))
+                t2 = (0:(length(Resamp_Filt_Logger_wav{ll})-1))*FS_ll/(4*BandPassFilter(2));
+                hold on
+                plot(t2, Resamp_Filt_Logger_wav{ll} , 'g-')
+                legend(sprintf('BandPass + Resampled %d Hz', 4*BandPassFilter(2)))
+                hold off
+            end
+
+            %Resamp_Filt_Logger_wav{ll}(109365:(length(t2)-14937))=zeros(size((109365:(length(t2)-14937))));
+            % Localize vocalizations on the selected loggers and set to zero the
+            % signal outside of putative vocalizations.
+            % calculate a running RMS of the audio signal with a 1ms bin
+            % resolution. a vocalization is defined as 50 consecutive time bins
+            % (50ms) above the mean running RMS here
+            Consecutive_bins = 50;
+            Fhigh_power = 20; %Hz
+            Fs_env = 1000; %Hz
+            Amp_env_voltage = cell(length(HRMS_Ind),1);
+            Clean_Resamp_Filt_Logger_wav = cell(length(HRMS_Ind),1);
+            for ll=1:length(HRMS_Ind)
+                Amp_env_voltage{ll}=running_rms(Resamp_Filt_Logger_wav{ll}, 4*BandPassFilter(2), Fhigh_power, Fs_env);
+                Vocp = Amp_env_voltage{ll}>median(Amp_env_voltage{ll});
+                IndVocStart = strfind(Vocp, ones(1,Consecutive_bins));
+                IndVocStart_diffind = find(diff(IndVocStart)>1);
+                IndVocStart = [IndVocStart(1) IndVocStart(IndVocStart_diffind +1)];
+                NV = length(IndVocStart);
+                IndVocStop = nan(NV,1);
+                Clean_Resamp_Filt_Logger_wav{ll} = zeros(size(Resamp_Filt_Logger_wav{ll}));
+                for ii=1:NV
+                    IVStop = find(Vocp(IndVocStart(ii):end)==0, 1, 'first');
+                    if isempty(IVStop)
+                        IVStop = length(Vocp(IndVocStart(ii):end));
+                    end
+                    IndVocStop(ii) = IndVocStart(ii) + IVStop;
+                    IndVocStart(ii) = round(IndVocStart(ii)/Fs_env*4*BandPassFilter(2));
+                    IndVocStop(ii) = round(IndVocStop(ii)/Fs_env*4*BandPassFilter(2));
+                    if IndVocStop(ii)>length(Clean_Resamp_Filt_Logger_wav{ll}) % This sound element reaches the end of the recording and downsampling messed up the exact indices values
+                        Clean_Resamp_Filt_Logger_wav{ll}(IndVocStart(ii):end) = Resamp_Filt_Logger_wav{ll}(IndVocStart(ii):end);
+                    else
+                        Clean_Resamp_Filt_Logger_wav{ll}(IndVocStart(ii):IndVocStop(ii)) = Resamp_Filt_Logger_wav{ll}(IndVocStart(ii):IndVocStop(ii));
+                    end
                 end
-                IndVocStop(ii) = IndVocStart(ii) + IVStop;
-                IndVocStart(ii) = round(IndVocStart(ii)/Fs_env*4*BandPassFilter(2));
-                IndVocStop(ii) = round(IndVocStop(ii)/Fs_env*4*BandPassFilter(2));
-                if IndVocStop(ii)>length(Clean_Resamp_Filt_Logger_wav{ll}) % This sound element reaches the end of the recording and downsampling messed up the exact indices values
-                    Clean_Resamp_Filt_Logger_wav{ll}(IndVocStart(ii):end) = Resamp_Filt_Logger_wav{ll}(IndVocStart(ii):end);
+                figure(1)
+                subplot(length(AudioLogs)+1,1,HRMS_Ind(ll))
+                t2 = (0:(length(Resamp_Filt_Logger_wav{ll})-1))*FS_ll/(4*BandPassFilter(2));
+                hold on
+                plot(t2, Clean_Resamp_Filt_Logger_wav{ll} , 'c-')
+                legend('Cleaned signal for cross-correlation')
+                hold off
+            end
+
+
+            % cross correlate the raw data with the logger and detect what the lag
+            % is.
+            Xcor = cell(length(HRMS_Ind),1);
+            Lag = cell(length(HRMS_Ind),1);
+            LagDiff = nan(length(HRMS_Ind),1);
+            TimeDiff_audio_temp = nan(length(HRMS_Ind),1);
+            F2 = figure(2);
+            sgtitle(sprintf('Voc %d/%d',vv,Nvoc))
+            for ll=1:length(HRMS_Ind)
+                [Xcor{ll},Lag{ll}] = xcorr(Resamp_Filt_Raw_wav,Clean_Resamp_Filt_Logger_wav{ll}, (Buffer*2)*4*BandPassFilter(2)); % Running a cross correlation between the raw signal and each audio logger signal with a maximum lag equal to twice the Buffer size
+                [~,I] = max(abs(Xcor{ll}));
+                LagDiff(ll) = Lag{ll}(I);
+                TimeDiff_audio_temp(ll) = LagDiff(ll)/(4*BandPassFilter(2));
+                subplot(length(HRMS_Ind),1,ll)
+                plot(Lag{ll},Xcor{ll})
+                hold on
+                line([LagDiff(ll) LagDiff(ll)], [min(Xcor{ll}) max(Xcor{ll})], 'Color','r', 'LineStyle','--');
+                text(LagDiff(ll) , mean(Xcor{ll}), sprintf('%d    %.1fms',LagDiff(ll), TimeDiff_audio_temp(ll)*1000))
+                hold off
+            end
+            if (mean(LagDiff)<-1.5*Buffer*4*BandPassFilter(2)/1000) || mean(LagDiff)>-0.5*Buffer*4*BandPassFilter(2)/1000
+                fprintf(1,'The result of the cross-correlation is most likely abherrent: LagDiff=%d\n', LagDiff);
+                User_in = input('Do you want to input another value (suggested -1970; leave empty to not change the value; return ".1" to return keyboard):\n');
+                PauseTime = 2;
+                if isempty(User_in)
+                    % not changing LagDiff
+                elseif User_in == 0.1
+                    keyboard
                 else
-                    Clean_Resamp_Filt_Logger_wav{ll}(IndVocStart(ii):IndVocStop(ii)) = Resamp_Filt_Logger_wav{ll}(IndVocStart(ii):IndVocStop(ii));
+                    LagDiff = User_in;
                 end
-            end
-            figure(1)
-            subplot(length(AudioLogs)+1,1,HRMS_Ind(ll))
-            t2 = (0:(length(Resamp_Filt_Logger_wav{ll})-1))*FS_ll/(4*BandPassFilter(2));
-            hold on
-            plot(t2, Clean_Resamp_Filt_Logger_wav{ll} , 'c-')
-            legend('Cleaned signal for cross-correlation')
-            hold off
-        end
-
-
-        % cross correlate the raw data with the logger and detect what the lag
-        % is.
-        Xcor = cell(length(HRMS_Ind),1);
-        Lag = cell(length(HRMS_Ind),1);
-        LagDiff = nan(length(HRMS_Ind),1);
-        TimeDiff_audio_temp = nan(length(HRMS_Ind),1);
-        F2 = figure(2);
-        sgtitle(sprintf('Voc %d/%d',vv,Nvoc))
-        for ll=1:length(HRMS_Ind)
-            [Xcor{ll},Lag{ll}] = xcorr(Resamp_Filt_Raw_wav,Clean_Resamp_Filt_Logger_wav{ll}, (Buffer*2)*4*BandPassFilter(2)); % Running a cross correlation between the raw signal and each audio logger signal with a maximum lag equal to twice the Buffer size
-            [~,I] = max(abs(Xcor{ll}));
-            LagDiff(ll) = Lag{ll}(I);
-            TimeDiff_audio_temp(ll) = LagDiff(ll)/(4*BandPassFilter(2));
-            subplot(length(HRMS_Ind),1,ll)
-            plot(Lag{ll},Xcor{ll})
-            hold on
-            line([LagDiff(ll) LagDiff(ll)], [min(Xcor{ll}) max(Xcor{ll})], 'Color','r', 'LineStyle','--');
-            text(LagDiff(ll) , mean(Xcor{ll}), sprintf('%d    %.1fms',LagDiff(ll), TimeDiff_audio_temp(ll)*1000))
-            hold off
-        end
-        if (mean(LagDiff)<-1.5*Buffer*4*BandPassFilter(2)/1000) || mean(LagDiff)>-0.5*Buffer*4*BandPassFilter(2)/1000
-            fprintf(1,'The result of the cross-correlation is most likely abherrent: LagDiff=%d\n', LagDiff);
-            User_in = input('Do you want to input another value (suggested -1970; leave empty to not change the value; return ".1" to return keyboard):\n');
-            PauseTime = 2;
-            if isempty(User_in)
-                % not changing LagDiff
-            elseif User_in == 0.1
-                keyboard
+                if LagDiff>0
+                    fprintf(1,'The result of the cross-correlation requests that the sound should be alligned taking %.1fms before the sound extract.\nThis data is not available given the buffer size used here Buffer = %d ms\nIncrease the value line23 of get_logger_data_voc.m if you want to do a better allignment job\nFor now the lag will be set to the maximum value:0\n',LagDiff(ll)/(4*BandPassFilter(2)), Buffer);
+                    LagDiff = 0;
+                end
             else
-                LagDiff = User_in;
+                PauseTime=1;
             end
-            if LagDiff>0
-                fprintf(1,'The result of the cross-correlation requests that the sound should be alligned taking %.1fms before the sound extract.\nThis data is not available given the buffer size used here Buffer = %d ms\nIncrease the value line23 of get_logger_data_voc.m if you want to do a better allignment job\nFor now the lag will be set to the maximum value:0\n',LagDiff(ll)/(4*BandPassFilter(2)), Buffer);
-                LagDiff = 0;
+
+            % check the allignment
+            F3=figure(3);
+            sgtitle(sprintf('Voc %d/%d',vv,Nvoc))
+            subplot(length(HRMS_Ind)+1,1,1)
+            plot(Resamp_Filt_Raw_wav, 'k-')
+            title(sprintf('Mic filtered resampled data Voc %d/%d',vv,Nvoc))
+            for ll=1:length(HRMS_Ind)
+                subplot(length(HRMS_Ind)+1,1,ll+1)
+                plot(Resamp_Filt_Logger_wav{ll}(-LagDiff(ll) + (0:(length(Resamp_Filt_Logger_wav{ll}) - (Buffer*2*10^-3)*4*BandPassFilter(2)))), 'k')
+                hold on
+                plot(Clean_Resamp_Filt_Logger_wav{ll}(-LagDiff(ll) + (0:(length(Clean_Resamp_Filt_Logger_wav{ll}) - (Buffer*2*10^-3)*4*BandPassFilter(2)))), 'c')
+                title(sprintf('Logger filtered resampled data Voc %d/%d',vv,Nvoc))
             end
+            pause(PauseTime)
+    %         Player= audioplayer((Resamp_Filt_Raw_wav -mean(Resamp_Filt_Raw_wav))/std(Resamp_Filt_Raw_wav), 4*BandPassFilter(2)); %#ok<TNMLP>
+    %         play(Player)
+    %         pause(2)
+            clf(F1)
+            clf(F2)
+            clf(F3)
+            LagDiff = mean(LagDiff);
+
+            % calculating the portion of data to erase or add in front of the
+            % vocalization on the logger recordings.
+            TimeDiff_audio = LagDiff/(4*BandPassFilter(2)); % this should be negative the reference being the vocalization onset -buffer of 100ms
+            OnsetAudiosamp(vv) = round(-TimeDiff_audio*Piezo_FS.(Fns_AL{ll})(vv)); % This new onset is taking into account the Buffer that was added at the beginning, suppressing it
+            OffsetAudiosamp(vv) = round(OnsetAudiosamp(vv) + length(Piezo_wave.(Fns_AL{ll}){vv}) - 2*Buffer*(10^-3)*Piezo_FS.(Fns_AL{ll})(vv));
+            Voc_transc_time_refined(vv,1) =VocExt.Voc_transc_time(vv,1) - Buffer -TimeDiff_audio*1000; % This is the new estimate of VocExt.Voc_transc_time(vv,1) in ms
+            Voc_transc_time_refined(vv,2) = Voc_transc_time_refined(vv,1) + diff(VocExt.Voc_transc_time(vv,:)); % This is the new estimate of VocExt.Voc_transc_time(vv,2) in ms
         else
-            PauseTime=1;
+            fprintf(1,'No better estimate of call allignment\n')
+            % calculating the portion of data to erase or add in front of the
+            % vocalization on the logger recordings.
+            TimeDiff_audio = -Buffer; % this should be negative the reference being the vocalization onset -buffer
+            OnsetAudiosamp(vv) = round(-TimeDiff_audio*Piezo_FS.(Fns_AL{ll})(vv)); % This new onset is taking into account the Buffer that was added at the beginning, suppressing it
+            OffsetAudiosamp(vv) = round(OnsetAudiosamp(vv) + length(Piezo_wave.(Fns_AL{ll}){vv}) - 2*Buffer*(10^-3)*Piezo_FS.(Fns_AL{ll})(vv) -1);
+            Voc_transc_time_refined(vv,1) =VocExt.Voc_transc_time(vv,1); % Keep the same estimate of VocExt.Voc_transc_time(vv,1) in ms
+            Voc_transc_time_refined(vv,2) = Voc_transc_time_refined(vv,1); % Keep the same estimate of VocExt.Voc_transc_time(vv,2) in ms
         end
-
-        % check the allignment
-        F3=figure(3);
-        sgtitle(sprintf('Voc %d/%d',vv,Nvoc))
-        subplot(length(HRMS_Ind)+1,1,1)
-        plot(Resamp_Filt_Raw_wav, 'k-')
-        title(sprintf('Mic filtered resampled data Voc %d/%d',vv,Nvoc))
-        for ll=1:length(HRMS_Ind)
-            subplot(length(HRMS_Ind)+1,1,ll+1)
-            plot(Resamp_Filt_Logger_wav{ll}(-LagDiff(ll) + (0:(length(Resamp_Filt_Logger_wav{ll}) - (Buffer*2*10^-3)*4*BandPassFilter(2)))), 'k')
-            hold on
-            plot(Clean_Resamp_Filt_Logger_wav{ll}(-LagDiff(ll) + (0:(length(Clean_Resamp_Filt_Logger_wav{ll}) - (Buffer*2*10^-3)*4*BandPassFilter(2)))), 'c')
-            title(sprintf('Logger filtered resampled data Voc %d/%d',vv,Nvoc))
-        end
-        pause(PauseTime)
-%         Player= audioplayer((Resamp_Filt_Raw_wav -mean(Resamp_Filt_Raw_wav))/std(Resamp_Filt_Raw_wav), 4*BandPassFilter(2)); %#ok<TNMLP>
-%         play(Player)
-%         pause(2)
-        clf(F1)
-        clf(F2)
-        clf(F3)
-        LagDiff = mean(LagDiff);
-
-        % calculating the portion of data to erase or add in front of the
-        % vocalization on the logger recordings.
-        TimeDiff_audio = LagDiff/(4*BandPassFilter(2)); % this should be negative the reference being the vocalization onset -buffer of 100ms
-        OnsetAudiosamp(vv) = round(-TimeDiff_audio*Piezo_FS.(Fns_AL{ll})(vv)); % This new onset is taking into account the Buffer that was added at the beginning, suppressing it
-        OffsetAudiosamp(vv) = round(OnsetAudiosamp(vv) + length(Piezo_wave.(Fns_AL{ll}){vv}) - 2*Buffer*(10^-3)*Piezo_FS.(Fns_AL{ll})(vv));
-        Voc_transc_time_refined(vv,1) =VocExt.Voc_transc_time(vv,1) - Buffer -TimeDiff_audio*1000; % This is the new estimate of VocExt.Voc_transc_time(vv,1) in ms
-        Voc_transc_time_refined(vv,2) = Voc_transc_time_refined(vv,1) + diff(VocExt.Voc_transc_time(vv,:)); % This is the new estimate of VocExt.Voc_transc_time(vv,2) in ms
+        
     end
 end
 

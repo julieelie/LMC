@@ -5,9 +5,9 @@ addpath(genpath('/Users/elie/Documents/CODE/SoundAnalysisBats'))
 TranscExtract = 1; % set to 1 to extract logger data and transceiver time
 ForceExtract = 0; % set to 1 to redo the extraction of loggers otherwise the calculations will use the previous extraction data
 ForceAllign = 0; % In case the TTL pulses allignment was already done but you want to do it again, set to 1
-ForceVocExt1 = 0; % In case the extraction of vocalizations that triggered rewarding system was already done but you want to do it again set to 1
-ForceVocExt2 = 0; % In case the extraction of vocalizations that triggered rewarding system was already done but you want to do it again set to 1
-ForceWhoID = 0; % In case the identification of bats was already done but you want to re-do it again
+ForceVocExt1 = 1; % In case the localization on raw files of vocalizations that were manually extracted was already done but you want to do it again set to 1
+ForceVocExt2 = 1; % In case the localization on Loggers of vocalizations that were manually extracted was already done but you want to do it again set to 1
+ForceWhoID = 1; % In case the identification of bats was already done but you want to re-do it again
 close all
 
 % Get the recording date
@@ -148,15 +148,12 @@ if TranscExtract
         end
     end
     
-    % Get the serial numbers of the audiologgers that the two implanted
+    % Get the serial numbers of all audiologgers
     % bats wear
-    NLCol = find(contains(Header, 'NL'));
     ALThroatCol = find(contains(Header, 'AL-throat'));
-    SerialNumberAL = nan(length(NLCol),1);
-    SerialNumberNL = nan(length(NLCol),1);
-    for dd=1:length(NLCol)
-        SerialNumberAL(dd) = DataInfo{ALThroatCol(find(ALThroatCol<NLCol(dd),1,'last'))};
-        SerialNumberNL(dd) = DataInfo{NLCol(dd)};
+    SerialNumberAL = nan(length(ALThroatCol),1);
+    for dd=1:length(ALThroatCol)
+        SerialNumberAL(dd) = DataInfo{ALThroatCol(dd)};
     end
     
     % Alligning TTL pulses between soundmexpro and Deuteron
@@ -164,36 +161,36 @@ if TranscExtract
     
     TTL_dir = dir(fullfile(AudioDataPath,sprintf( '%s_%s_TTLPulseTimes.mat', Date, ExpStartTime)));
     if isempty(TTL_dir) || ForceAllign
-        fprintf(1,'*** Alligning TTL pulses for the RecOnly session ***\n');
+        fprintf(1,'\n*** Alligning TTL pulses for the RecOnly session ***\n');
         align_soundmexAudio_2_logger(AudioDataPath, Logger_dir, ExpStartTime,'TTL_pulse_generator','Avisoft','Method','risefall', 'Session_strings', {'all voc reward stop', 'rec only stop'}, 'Logger_list', [SerialNumberAL; SerialNumberNL]);
 %         align_soundmexAudio_2_logger(AudioDataPath, Logger_dir, ExpStartTime,'TTL_pulse_generator','Avisoft','Method','risefall', 'Session_strings', {'rec only start', 'rec only stop'}, 'Logger_list', [SerialNumberAL; SerialNumberNL]);
     else
-        fprintf(1,'*** ALREADY DONE: Alligning TTL pulses for the operant session ***\n');
+        fprintf(1,'\n*** ALREADY DONE: Alligning TTL pulses for the operant session ***\n');
     end
     if isempty(VocExt_dir) || ForceVocExt1
-        fprintf(1,'*** Localizing and extracting vocalizations that were manually extracted ***\n');
+        fprintf(1,'\n*** Localizing and extracting vocalizations that were manually extracted ***\n');
         voc_localize(VocManExtDir, AudioDataPath,Date, ExpStartTime)
     else
-        fprintf(1,'*** ALREADY DONE: Localizing and extracting vocalizations that triggered the sound detection ***\n');
+        fprintf(1,'\n*** ALREADY DONE: Localizing and extracting vocalizations that were manually extracted ***\n');
     end
     
     %% Identify the same vocalizations on the piezos and save sound extracts, onset and offset times
-    fprintf(' LOCALIZING VOCALIZATIONS ON PIEZO RECORDINGS\n')
     LogVoc_dir = dir(fullfile(Logger_dir, sprintf('%s_%s_VocExtractData.mat', Date, ExpStartTime)));
     if isempty(LogVoc_dir) || ForceVocExt1 || ForceVocExt2
+        fprintf('\n*** Localizing vocalizations on piezo recordings ***\n')
         get_logger_data_voc(AudioDataPath, Logger_dir,Date, ExpStartTime, 'SerialNumber',SerialNumberAL);
     else
-        fprintf(1,'Using already processed data\n')
+        fprintf('\n*** ALREADY DONE: Localizing vocalizations on piezo recordings ***\n')
         
     end
     
     %% Identify who is calling
-    fprintf(' IDENTIFY WHO IS CALLING\n')
+    fprintf('\n*** Identify who is calling ***\n')
     WhoCall_dir = dir(fullfile(Logger_dir, sprintf('*%s_%s*whocalls*', Date, ExpStartTime)));
     if isempty(WhoCall_dir) || ForceVocExt1 || ForceWhoID || ForceVocExt2
         who_calls(Logger_dir,Date, ExpStartTime,200,1);
     else
-        fprintf(1,'Using already processed data\n')
+        fprintf('\n*** ALREADY DONE: Identify who is calling ***\n')
     end
     
     
