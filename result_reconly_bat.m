@@ -1,4 +1,4 @@
-function result_reconly_bat(Path2ParamFile, Path2RecordingTable, Logger_dir)
+function result_reconly_bat(Path2ParamFile, VocManExtDir, Path2RecordingTable, Logger_dir)
 addpath(genpath('/Users/elie/Documents/CODE/LMC'))
 addpath(genpath('/Users/elie/Documents/CODE/LoggerDataProcessing'))
 addpath(genpath('/Users/elie/Documents/CODE/SoundAnalysisBats'))
@@ -15,13 +15,15 @@ close all
 Date = DataFile(6:11);
 
 % Set the path to the manual extracts
-VocManExtDir = fullfile( '/Users/elie/Google Drive/BatmanData/BatmanCuts', ['20' Date]);
+if nargin<2
+    VocManExtDir = fullfile( '/Users/elie/Google Drive/BatmanData/BatmanCuts', ['20' Date]);
+end
 
-if TranscExtract && nargin<2
+if TranscExtract && nargin<3
     % Set the path to the recording log
     Path2RecordingTable = '/Users/elie/Google Drive/BatmanData/RecordingLogs/recording_logs.xlsx';
 end
-if TranscExtract && nargin<3
+if TranscExtract && nargin<4
     % Set the path to logger data
     Logger_dir = fullfile(AudioDataPath(1:(strfind(AudioDataPath, 'audio')-1)), 'logger',['20' Date]);
 end
