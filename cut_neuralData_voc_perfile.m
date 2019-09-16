@@ -1,4 +1,4 @@
-function cut_neuralData_voc_perfile(InputDataFile,  ExpStartTime, Flags, DenoiseT, Rthreshold)
+function cut_neuralData_voc_perfile(InputDataFile, Flags, DenoiseT, Rthreshold)
 %% This function uses the better estimation of vocalization onset/offset in transceiver time (ms) calculated by get_logger_data_voc
 % (Voc_transc_time_refined) And extract the corresponding neural data in
 % the inout datafile as long as neural data of baseline activity in the
@@ -21,13 +21,10 @@ function cut_neuralData_voc_perfile(InputDataFile,  ExpStartTime, Flags, Denoise
 %       spikes requested
 
 
-if nargin<5
-    NeuroBuffer = 100; % NeuroBuffer ms will be added before the onset and after the offset of the behavioral event when extracting neural data and spikes times will be alligned to behavioral event onset
-end
-if nargin<6
+if nargin<3
     DenoiseT = 0; % No sort of the tetrode spike from noise
 end
-if nargin<7
+if nargin<4
     Rthreshold = [0.92 0.94 0.96 0.98];
 end
 MaxEventDur = NaN; % Set to NaN: The neural data is extracted for the whole duration of each event
@@ -98,13 +95,12 @@ elseif contains(DataFile, 'CSC')
         % Find the boundaries for obtaining silence sections of 1 second before 1s of each vocalization event
         BSL_transc_time_refined = find_dead_time(Voc_transc_time_refined,BaselineDelay,BaselineDur);
         
-        if Flags(1) % extract Raw data
-            [Voc_NeuroRaw] = extract_timeslot_Raw(InputDataFile, Voc_transc_time_refined, BSL_transc_time_refined, NeuroBuffer,MaxEventDur);
-            save(fullfile(Loggers_dir, sprintf('%s_%s_%s_Raw%s.mat', SubjectID, Date, ExpStartTimes{nn},NeuralInputID)), Voc_NeuroRaw);
+        [Voc_NeuroRawLFP] = extract_timeslot_RawLFP(InputDataFile, Voc_transc_time_refined, BSL_transc_time_refined, NeuroBuffer,MaxEventDur,NeuralInputID, Flags);
+        if Flags(1)
+            save(fullfile(Loggers_dir, sprintf('%s_%s_%s_Raw%s.mat', SubjectID, Date, ExpStartTimes{nn},NeuralInputID)), Voc_NeuroRawLFP.Raw);
         end
         if Flags(2) % extract LFP data
-            [Voc_NeuroLFP] = extract_timeslot_LFP(InputDataFile, Voc_transc_time_refined, BSL_transc_time_refined, NeuroBuffer,MaxEventDur);
-            save(fullfile(Loggers_dir, sprintf('%s_%s_%s_LFP%s.mat', SubjectID, Date, ExpStartTimes{nn},NeuralInputID)), Voc_NeuroLFP);
+            save(fullfile(Loggers_dir, sprintf('%s_%s_%s_LFP%s.mat', SubjectID, Date, ExpStartTimes{nn},NeuralInputID)), Voc_NeuroRawLFP.LFP);
         end
     end
 elseif contains('SS')
@@ -208,16 +204,70 @@ end
 
 
 
-% Extracting Raw data
-    function [OutData] = extract_timeslot_Raw(InputFile, Voc_transc_time, BSL_transc_time, Buffer,MaxEventDur)
-        
-    end
-
-
-
-% Extracting LFP data
-    function [OutData] = extract_timeslot_LFP(InputFile, Voc_transc_time, BSL_transc_time, Buffer,MaxEventDur)
-        
+% Extracting Raw and/or LFP data
+    function [OutData] = extract_timeslot_RawLFP(InputFile, Voc_transc_time, BSL_transc_time, Buffer,MaxEventDur,ChannelID, Flag)
+        Nevent = size(Voc_transc_time,1);
+        if Flag(1)
+            OutData.Raw.RawVoc = cell(Nevent,1);
+            OutData.Raw.RawBSL = cell(Nevent,1);
+        end
+        if Flag(2)
+            OutData.LFP.LFPVoc = cell(Nevent,1);
+            OutData.LFP.LFPBSL = cell(Nevent,1);
+        end
+        % reframe the extraction windows of each vocalization
+        [EventOnset_time ,EventOffset_time] = reframe(Voc_transc_time, Buffer, MaxEventDur);
+        % load the data
+        LData = load(InputFile, 'Timestamps_of_first_samples_usec', 'Estimated_channelFS_Transceiver','AD_count_int16','Indices_of_first_and_last_samples','Sampling_period_usec_Logger');
+        % loop through events and extract the snippet of Raw data
+        NanFSInd = find(isnan(LData.Estimated_channelFS_Transceiver));
+        GoodFSInd = find(~isnan(LData.Estimated_channelFS_Transceiver));
+        for vv=1:Nevent
+            fprintf('Raw data Channel %d Event %d/%d\n', ChannelID, vv, Nevent);
+            if prod(~isnan(Voc_transc_time(vv,:)))
+                % find the time stamp on the logger that is closest to before
+                % the snippet of event onset
+                [IndSampOn, IndSampOff, FS] = time2indices_logger(EventOnset_time(vv), EventOffset_time(vv), length(LData.AD_count_int16), LData.Timestamps_of_first_samples_usec, LData.Indices_of_first_and_last_samples, LData.Estimated_channelFS_Transceiver, LData.Sampling_period_usec_Logger, NanFSInd, GoodFSInd);
+                % extract the voltage snippet and bandpass the raw signal
+                % if extracting LFP
+                if ~isempty(IndSampOn) && Flag(1) && ~Flag(2)
+                    OutData.Raw.RawVoc{vv} = double(LData.AD_count_int16(IndSampOn:IndSampOff) - mean(LData.AD_count_int16));
+                elseif ~isempty(IndSampOn) && ~Flag(1) && Flag(2)
+                    [z,p,k] = butter(12,BandPassFilter(1)/(FS/2),'low');
+                    sos = zp2sos(z,p,k);
+                    RawVoc = double(LData.AD_count_int16(IndSampOn:IndSampOff) - mean(LData.AD_count_int16));
+                    OutData.LFP.LFPVoc{vv} = (filtfilt(sos,1,RawVoc)); % % low-pass filter the voltage trace
+                elseif ~isempty(IndSampOn) && Flag(1) && Flag(2)
+                    OutData.Raw.RawVoc{vv} = double(LData.AD_count_int16(IndSampOn:IndSampOff) - mean(LData.AD_count_int16));
+                    [z,p,k] = butter(12,BandPassFilter(1)/(FS/2),'low');
+                    sos = zp2sos(z,p,k);
+                    OutData.LFP.LFPVoc{vv} = (filtfilt(sos,1,OutData.Raw.RawVoc{vv})); % % low-pass filter the voltage trace
+                end
+                
+            end
+            
+            if prod(~isnan(BSL_transc_time(vv,:)))
+                % find the time stamp on the logger that is closest to before
+                % the snippet of event onset
+                [IndSampOn, IndSampOff, FS] = time2indices_logger(BSL_transc_time(vv,1), BSL_transc_time(vv,2), length(LData.AD_count_int16), LData.Timestamps_of_first_samples_usec, LData.Indices_of_first_and_last_samples, LData.Estimated_channelFS_Transceiver, LData.Sampling_period_usec_Logger, NanFSInd, GoodFSInd);
+                % extract the voltage snippet and bandpass the raw signal
+                % if extracting LFP
+                if ~isempty(IndSampOn) && Flag(1) && ~Flag(2)
+                    OutData.Raw.RawBSL{vv} = double(LData.AD_count_int16(IndSampOn:IndSampOff) - mean(LData.AD_count_int16));
+                elseif ~isempty(IndSampOn) && ~Flag(1) && Flag(2)
+                    [z,p,k] = butter(12,BandPassFilter(1)/(FS/2),'low');
+                    sos = zp2sos(z,p,k);
+                    RawBSL = double(LData.AD_count_int16(IndSampOn:IndSampOff) - mean(LData.AD_count_int16));
+                    OutData.LFP.LFPBSL{vv} = (filtfilt(sos,1,RawBSL)); % % low-pass filter the voltage trace
+                elseif ~isempty(IndSampOn) && Flag(1) && Flag(2)
+                    OutData.Raw.RawBSL{vv} = double(LData.AD_count_int16(IndSampOn:IndSampOff) - mean(LData.AD_count_int16));
+                    [z,p,k] = butter(12,BandPassFilter(1)/(FS/2),'low');
+                    sos = zp2sos(z,p,k);
+                    OutData.LFP.LFPBSL{vv} = (filtfilt(sos,1,OutData.Raw.RawBSL{vv})); % % low-pass filter the voltage trace
+                end
+                
+            end
+        end
     end
 
 
@@ -262,4 +312,67 @@ end
             end
         end
     end
+
+
+
+% Find the indices onset/offset in the raw logger file corresponding to requested transceiver times 
+    function [IndSampOn, IndSampOff, FS] = time2indices_logger(TimeOnset, TimeOffset, RawDataLength, Timestamps_of_first_samples_usec, Indices_of_first_and_last_samples,Estimated_channelFS_Transceiver,Sampling_period_usec_Logger,NanFSInd, GoodFSInd)
+        IndTSOn = find(Timestamps_of_first_samples_usec<(TimeOnset*10^3), 1, 'Last');
+        if ~isempty(IndTSOn) %This event did happen after recording onset
+            % deduct the corresponding onset  sample
+            if ~isempty(intersect(NanFSInd,IndTSOn)) || IndTSOn>length(Estimated_channelFS_Transceiver) % there is no sample frequency estimate for that recorded file, take the previous or following estimate
+                OKFs = [find(GoodFSInd<IndTSOn,1, 'Last') find(GoodFSInd>IndTSOn,1, 'First')];
+                if ~isempty(OKFs)
+                    Local_FS = Estimated_channelFS_Transceiver(GoodFSInd(OKFs(1)));
+                else
+                    Local_FS = 1/Sampling_period_usec_Logger*10^6;
+                end
+            else
+                Local_FS =Estimated_channelFS_Transceiver(IndTSOn);
+            end
+            IndSampOn = round(Indices_of_first_and_last_samples(IndTSOn,1) + Local_FS*(10^-6)*(TimeOnset*10^3 - Timestamps_of_first_samples_usec(IndTSOn)));
+            
+            % find the time stamp on the logger that is closest to after
+            % the snippet of event offset
+            if (TimeOffset*10^3)<Timestamps_of_first_samples_usec(end) % The end of the event is before the onset of the last recorded file
+                IndTSOff = find(Timestamps_of_first_samples_usec>(TimeOffset*10^3), 1, 'First');
+                % deduct the corresponding onset offset samples
+                if ~isempty(intersect(NanFSInd,IndTSOff)) || IndTSOff>length(Estimated_channelFS_Transceiver) % there is no sample frequency estimate for that recorded file, take the previous or following estimate
+                    OKFs = [find(GoodFSInd<IndTSOff,1, 'Last') find(GoodFSInd>IndTSOff,1, 'First')];
+                    if ~isempty(OKFs)
+                        Local_FS = Estimated_channelFS_Transceiver(GoodFSInd(OKFs(1)));
+                        FS = nanmean(Estimated_channelFS_Transceiver(IndTSOn:GoodFSInd(OKFs(1))));
+                    else
+                        Local_FS = 1/Sampling_period_usec_Logger*10^6;
+                    end
+                    
+                else
+                    Local_FS = Estimated_channelFS_Transceiver(IndTSOff);
+                    FS = nanmean(Estimated_channelFS_Transceiver(IndTSOn:IndTSOff));
+                end
+                IndSampOff = round(Indices_of_first_and_last_samples(IndTSOff,1) - Local_FS*(10^-6)*(Timestamps_of_first_samples_usec(IndTSOff) - EventOffset_time(vv)*10^3));
+                
+            else % The end of the event is after the onset of the last recorded file
+                IndTSOff = length(Timestamps_of_first_samples_usec);
+                % deduct the corresponding offset samples
+                if ~isempty(intersect(NanFSInd,IndTSOff)) || IndTSOff>length(Estimated_channelFS_Transceiver) % there is no sample frequency estimate for that recorded file, take the previous or following estimate
+                    OKFs = [find(GoodFSInd<IndTSOff,1, 'Last') find(GoodFSInd>IndTSOff,1, 'First')];
+                    if ~isempty(OKFs)
+                        Local_FS = Estimated_channelFS_Transceiver(GoodFSInd(OKFs(1)));
+                    else
+                        Local_FS = 1/Sampling_period_usec_Logger*10^6;
+                    end
+                else
+                    Local_FS =Estimated_channelFS_Transceiver(IndTSOff);
+                end
+                IndSampOff = round(Indices_of_first_and_last_samples(IndTSOff,1) + Local_FS*(10^-6)*(TimeOffset*10^3 - Timestamps_of_first_samples_usec(IndTSOff)));
+                FS = nanmean(Estimated_channelFS_Transceiver(IndTSOn:end));
+            end
+            IndSampOff = min(RawDataLength, IndSampOff);
+        else
+            IndSampOn = [];
+            IndSampOff = [];
+        end
+    end
+
 end
