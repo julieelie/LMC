@@ -5,6 +5,7 @@ addpath(genpath('/Users/elie/Documents/CODE/LoggerDataProcessing'))
 addpath(genpath('/Users/elie/Documents/CODE/SoundAnalysisBats'))
 Path2RecordingTable = '/Users/elie/Google Drive/BatmanData/RecordingLogs/recording_logs.xlsx';
 
+%% RUN audio data extraction for the operant tests
 ListOfPaths = {
     %'/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190130/HoHa_190130_1007_VocTrigger_param.txt';
     %'/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190129/HoHa_190129_1023_VocTrigger_param.txt';
@@ -53,25 +54,58 @@ for pp=1:length(ListOfPaths)
 %     Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190214/HoHa_190214_1130_VocTrigger_param.txt';
     
     
-    
-    %% RUN Behavioral and audio data EXtraction
      result_operant_bat(Path2ParamFile)
     
 end
 
+%% RUN audio data extraction for the reconly sessions
+Path2ParamFile = ''; % Needs to point to a reconly param files
+result_reconly_bat(Path2ParamFile)
 
+%% RUN other behavior extraction for the reconly session
+    fprintf(' EXTRACTING ONSET/OFFSET TIMES OF OTHER BEHAVIORS DURING FREE SESSION \n')
+    RecOnlySession = dir(fullfile(AudioDataPath, '*RecOnly_events.txt'));
+    if isempty(RecOnlySession)
+        fprintf(1,'No free interaction session on that day!\n')
+    else
+        if length(RecOnlySession)>1
+            fprintf(1, 'Several RecOnly session were done on that day:\n')
+            for ss=1:length(RecOnlySession)
+                fprintf(1, '%d. %s\n', ss, RecOnlySession(ss).name);
+            end
+            Inputss = input('Your choice:\n');
+            RecOnlySession = RecOnlySession(Inputss);
+        end
+        Date = RecOnlySession.name(6:11);
+        ExpStartTime = RecOnlySession.name(13:16);
+        % extract the time onset/offset of behaviors
+        get_logger_data_behav(AudioDataPath, Logger_dir, Date, ExpStartTime)
+    end
 %% Loop through neurons to extract spike data
-    % Generate the list of paths to gather the data
-    BasePath = '/Volumes/server_home/users/JulieE/';
-    [ListSSU] = gather_neural_datapath(BasePath);
+% Generate the list of paths to gather the data
+BasePath = '/Volumes/server_home/users/JulieE/LMC';
+[ListSSU] = gather_neural_datapath(BasePath);
+% Define the path were the data will be saved
+OutputPath = fullfile(BasePath, 'ResultsFiles');
     
-    % Extract the neural data corresponding to the vocalizations identified
-    % by voc_localize and voc_localize_operant for each cell
-    for ss=1:length(ListSSU)
-        cut_neuralData_voc_perfile(InputDataFile, Flags, OutputPath, DenoiseT, Rthreshold)
+%% Extract the neural data corresponding to the bouts of vocalizations identified
+% by voc_localize and voc_localize_operant for each cell
+fprintf(' EXTRACTING NEURAL DATA CORRESPONDING TO VOCALIZATIONS \n')
+% Files2Run = 1:length(ListSSU);
+Files2Run = 1:17;
+for ss=Files2Run
+    cut_neuralData_voc_perfile(ListSSU{ss}, OutputPath)
+end
+
+%% calculate the PSTH of vocalizations
+fprintf(1,' CALCULATING PSTH of NEURAL DATA CORRESPONDING TO VOCALIZATIONS\n');
+% Files2Run = 1:length(ListSSU);
+Files2Run = 1:17;
+for ss=Files2Run
+    psth_voc_cal(ListSSU{ss}, OutputPath)
+end
     
-    
-    % Get the path to audio data for operant conditioning experiment
+    %% Get the path to audio data for operant conditioning experiment
     [AudioDataPath, DataFile ,~]=fileparts(Path2ParamFile);
     Date = DataFile(6:11);
     fprintf(1,'Working on %s\n', Date)
@@ -218,14 +252,14 @@ ListSSU = cell(10^3,1); % initialize the list to 1000
 ExpFolders = dir(fullfile(BasePath,'LMC*'));
 NSSU = 0; % counter for single units
 for ee=1:length(ExpFolders)
-    fprintf(1, '\n  -> Looking into  %s... ', fullfile(ExpFolders(ee).folder,ExpFolders(ee).name))
+    fprintf(1, '\n  -> Looking into  %s...\n ', fullfile(ExpFolders(ee).folder,ExpFolders(ee).name))
     DateFolders = dir(fullfile(ExpFolders(ee).folder,ExpFolders(ee).name, 'logger','20*'));
     for dd=1:length(DateFolders)
-        fprintf(1, '%s   ', DateFolders(dd).name);
+        fprintf(1, '   %s\n', DateFolders(dd).name);
         LoggerFolders = dir(fullfile(DateFolders(dd).folder, DateFolders(dd).name,'Logger*'));
         for ll = 1:length(LoggerFolders)
-            SSFiles = dir(LoggerFolders(ll).folder, LoggerFolders(ll).name, 'extracted_data', '*_TT*_SS*.mat');
-            if isempty(SSFiles)
+            SSFiles = dir(fullfile(LoggerFolders(ll).folder, LoggerFolders(ll).name, 'extracted_data', '*_TT*_SS*.mat'));
+            if ~isempty(SSFiles)
                 for ssf=1:length(SSFiles)
                     NSSU = NSSU +1;
                     ListSSU{NSSU} = fullfile(SSFiles(ssf).folder, SSFiles(ssf).name);

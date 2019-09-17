@@ -1,12 +1,25 @@
-function cut_neuralData_voc_perfile(InputDataFile, Flags, DenoiseT, Rthreshold)
-%% This function uses the better estimation of vocalization onset/offset in transceiver time (ms) calculated by get_logger_data_voc
+function cut_neuralData_voc_perfile(InputDataFile, OutputPath, Flags, DenoiseT, Rthreshold)
+%% This function uses the better estimation of vocalization boouts onset/offset in transceiver time (ms) calculated by get_logger_data_voc
 % (Voc_transc_time_refined) And extract the corresponding neural data in
-% the inout datafile as long as neural data of baseline activity in the
-% seconds preceding the vocalization
+% the input datafile. A Buffer in ms is used to silghtly enlarged the
+% window given by Voc_transc_time_refined. It is set to be the buffer used
+% to merge calls in bouts when these are parsed out and individualized by who_calls.
+% This is reasonnable here to assume that there is no vocalizations if
+% NeuroBuffer is set to be 200ms, but is dangerous for the first and last
+% vocalizations of the bouts as NeuroBuffer becomes larger.
+% This functions also extracts neural data of baseline activity in the
+% seconds preceding the vocalization, this baseline calculation assumes
+% that there is no vocalization or behavioral event between the behavioral
+% events indicated by Voc_trans_time_refined.
+% 
 
 % INPUT:
 %       InputDataFile: path to a tetrode mat file, a single unit mat file or the
 %       raw data (*CSC*.mat file)
+
+%       OutputPath: string that indicate where the data should be saved. If
+%       not specified or left empty, the data will be saved in the folder
+%       of the inputfile
 
 %       Flags: 2 scalar binary variable that indicate in the case of a CSC
 %       input whether the Raw data and or the LFP should be extracted
@@ -21,10 +34,18 @@ function cut_neuralData_voc_perfile(InputDataFile, Flags, DenoiseT, Rthreshold)
 %       spikes requested
 
 
-if nargin<3
-    DenoiseT = 0; % No sort of the tetrode spike from noise
+% OUPUT
+%       A file containing the neural data requested saved in OutputPath.
+%       Spike arrival times are saved in ms in reference to the onset of
+%       the vocalization bouts given by Voc_transc_time_refined.
+
+if nargin<3 || isempty(Flags)
+    Flags = [0 1];
 end
 if nargin<4
+    DenoiseT = 0; % No sort of the tetrode spike from noise
+end
+if nargin<5
     Rthreshold = [0.92 0.94 0.96 0.98];
 end
 MaxEventDur = NaN; % Set to NaN: The neural data is extracted for the whole duration of each event
@@ -33,6 +54,12 @@ BaselineDelay = 1000;
 
 %% Identify the neural data and run the corresponding extraction
 [Path2Data, DataFile]=fileparts(InputDataFile);
+PathParts = regexp(Path2Data, '/', 'split');
+Loggers_dir = ['/' fullfile(PathParts{1:end-2})];
+if nargin<2 || isempty(OutputPath)
+    OutputPath = Loggers_dir;
+end
+
 if contains(DataFile, 'Tetrode')
     % this is a tetrode file
     % Get the date of the recording
@@ -46,16 +73,14 @@ if contains(DataFile, 'Tetrode')
     SubjectID = DataFile(1:5);
     
     % Loop through audio data
-    PathParts = regexp(Path2Data, '/', 'split');
-    Loggers_dir = fullfile(PathParts(1:end-2));
-    AudioDir = dir(fullfile(Loggers_dir, sprintf('%s*VocExtractData.mat', Date))); % These are all the results of vocalization localization for both operant conditioning and free session
+    AudioDir = dir(fullfile(Loggers_dir, sprintf('%s*VocExtractData.mat', Date(3:end)))); % These are all the results of vocalization localization for both operant conditioning and free session
     Nsession = length(AudioDir);
     ExpStartTimes = cell(Nsession,1);
     for nn=1:Nsession
         Idx_2 = strfind(AudioDir(nn).name, '_');
         ExpStartTimes{nn} = AudioDir(nn).name((Idx_2(1)+1) : (Idx_2(2)-1));
-        load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date, ExpStartTimes{nn})), 'Voc_transc_time_refined');
-        AudioDir2 = dir(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_*.mat', Date, ExpStartTimes{nn}))); % These are the results of vocalization identificaion and merging with Who calls for this session
+        load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date(3:end), ExpStartTimes{nn})), 'Voc_transc_time_refined');
+        AudioDir2 = dir(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_*.mat', Date(3:end), ExpStartTimes{nn}))); % These are the results of vocalization identificaion and merging with Who calls for this session
         Idx_3 = strfind(AudioDir2(nn).name, '_');
         Idxmat = strfind(AudioDir2(nn).name, '.mat');
         NeuroBuffer = str2double(AudioDir2.name((Idx_3+1):(Idxmat-1))); % This is the merged threshold used in the extracted vocalization data in ms we want to use the same value as the neural buffer
@@ -63,7 +88,12 @@ if contains(DataFile, 'Tetrode')
         BSL_transc_time_refined = find_dead_time(Voc_transc_time_refined,BaselineDelay,BaselineDur);
         % extract Tetrode data
         [Voc_NeuroT] = extract_timeslot_Tetrode(InputDataFile, Voc_transc_time_refined, BSL_transc_time_refined, NeuroBuffer,MaxEventDur, DenoiseT, Rthreshold, SubjectID, Date, NeuralInputID);
-        save(fullfile(Loggers_dir, sprintf('%s_%s_%s_Tet%s.mat', SubjectID, Date, ExpStartTimes{nn},NeuralInputID)), Voc_NeuroT);
+        OutputFile = fullfile(OutputPath, sprintf('%s_%s_%s_Tet%s.mat', SubjectID, Date, ExpStartTimes{nn},NeuralInputID));
+        if exist(OutputFile, 'file')
+            save(OutputFile, 'Voc_NeuroT','-append');
+        else
+            save(OutputFile, 'Voc_NeuroT');
+        end
     end
     
 elseif contains(DataFile, 'CSC')
@@ -79,69 +109,84 @@ elseif contains(DataFile, 'CSC')
     SubjectID = DataFile(1:5);
     
     % Loop through audio data
-    PathParts = regexp(Path2Data, '/', 'split');
-    Loggers_dir = fullfile(PathParts(1:end-2));
-    AudioDir = dir(fullfile(Loggers_dir, sprintf('%s*VocExtractData.mat', Date))); % These are all the results of vocalization localization for both operant conditioning and free session
+    AudioDir = dir(fullfile(Loggers_dir, sprintf('%s*VocExtractData.mat', Date(3:end)))); % These are all the results of vocalization localization for both operant conditioning and free session
     Nsession = length(AudioDir);
     ExpStartTimes = cell(Nsession,1);
     for nn=1:Nsession
         Idx_2 = strfind(AudioDir(nn).name, '_');
         ExpStartTimes{nn} = AudioDir(nn).name((Idx_2(1)+1) : (Idx_2(2)-1));
-        load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date, ExpStartTimes{nn})), 'Voc_transc_time_refined');
-        AudioDir2 = dir(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_*.mat', Date, ExpStartTimes{nn}))); % These are the results of vocalization identificaion and merging with Who calls for this session
+        load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date(3:end), ExpStartTimes{nn})), 'Voc_transc_time_refined');
+        AudioDir2 = dir(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_*.mat', Date(3:end), ExpStartTimes{nn}))); % These are the results of vocalization identificaion and merging with Who calls for this session
         Idx_3 = strfind(AudioDir2(nn).name, '_');
         Idxmat = strfind(AudioDir2(nn).name, '.mat');
         NeuroBuffer = str2double(AudioDir2.name((Idx_3+1):(Idxmat-1))); % This is the merged threshold used in the extracted vocalization data in ms we want to use the same value as the neural buffer
         % Find the boundaries for obtaining silence sections of 1 second before 1s of each vocalization event
         BSL_transc_time_refined = find_dead_time(Voc_transc_time_refined,BaselineDelay,BaselineDur);
         
-        [Voc_NeuroRawLFP] = extract_timeslot_RawLFP(InputDataFile, Voc_transc_time_refined, BSL_transc_time_refined, NeuroBuffer,MaxEventDur,NeuralInputID, Flags);
+        [Voc_NeuroRaw, Voc_NeuroLFP] = extract_timeslot_RawLFP(InputDataFile, Voc_transc_time_refined, BSL_transc_time_refined, NeuroBuffer,MaxEventDur,NeuralInputID, Flags);
         if Flags(1)
-            save(fullfile(Loggers_dir, sprintf('%s_%s_%s_Raw%s.mat', SubjectID, Date, ExpStartTimes{nn},NeuralInputID)), Voc_NeuroRawLFP.Raw);
+            OutputFile = fullfile(OutputPath, sprintf('%s_%s_%s_Raw%s.mat', SubjectID, Date, ExpStartTimes{nn},NeuralInputID));
+            if exist(OutputFile, 'file')
+                save(OutputFile, 'Voc_NeuroRaw','-append');
+            else
+                save(OutputFile, 'Voc_NeuroRaw');
+            end
         end
         if Flags(2) % extract LFP data
-            save(fullfile(Loggers_dir, sprintf('%s_%s_%s_LFP%s.mat', SubjectID, Date, ExpStartTimes{nn},NeuralInputID)), Voc_NeuroRawLFP.LFP);
+            OutputFile = fullfile(OutputPath, sprintf('%s_%s_%s_LFP%s.mat', SubjectID, Date, ExpStartTimes{nn},NeuralInputID));
+            if exist(OutputFile, 'File')
+                save(OutputFile, 'Voc_NeuroLFP', '-append');
+            else
+                save(OutputFile, 'Voc_NeuroLFP');
+            end
         end
     end
-elseif contains('SS')
+elseif contains(DataFile,'SS')
     % this is a spike sorted unit
     % Get the date of the recording
     Idx_ = strfind(DataFile, '_');
     Date = DataFile((Idx_(1)+1) : (Idx_(2)-1));
     
     % Get the tetrode ID
-    NeuralInputID{1} = DataFile(strfind(DataFile, 'TT')+3);
+    NeuralInputID{1} = DataFile(strfind(DataFile, 'TT')+2);
     % Get the SS ID
-    NeuralInputID{2} = DataFile((strfind(DataFile, 'SS')+2):(strfind(DataFile, '.mat')-1));
+    NeuralInputID{2} = DataFile((Idx_(end)+1):end);
     
     % Get the subject ID
     SubjectID = DataFile(1:5);
     
     % Loop through audio data
-    PathParts = regexp(Path2Data, '/', 'split');
-    Loggers_dir = fullfile(PathParts(1:end-2));
-    AudioDir = dir(fullfile(Loggers_dir, sprintf('%s*VocExtractData.mat', Date))); % These are all the results of vocalization localization for both operant conditioning and free session
+    AudioDir = dir(fullfile(Loggers_dir, sprintf('%s*VocExtractData.mat', Date(3:end)))); % These are all the results of vocalization localization for both operant conditioning and free session
     Nsession = length(AudioDir);
     ExpStartTimes = cell(Nsession,1);
     for nn=1:Nsession
         Idx_2 = strfind(AudioDir(nn).name, '_');
         ExpStartTimes{nn} = AudioDir(nn).name((Idx_2(1)+1) : (Idx_2(2)-1));
-        load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date, ExpStartTimes{nn})), 'Voc_transc_time_refined');
-        AudioDir2 = dir(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_*.mat', Date, ExpStartTimes{nn}))); % These are the results of vocalization identificaion and merging with Who calls for this session
+        load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date(3:end), ExpStartTimes{nn})), 'Voc_transc_time_refined');
+        AudioDir2 = dir(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_*.mat', Date(3:end), ExpStartTimes{nn}))); % These are the results of vocalization identificaion and merging with Who calls for this session
         Idx_3 = strfind(AudioDir2(nn).name, '_');
         Idxmat = strfind(AudioDir2(nn).name, '.mat');
-        NeuroBuffer = str2double(AudioDir2.name((Idx_3+1):(Idxmat-1))); % This is the merged threshold used in the extracted vocalization data in ms we want to use the same value as the neural buffer
+        NeuroBuffer = str2double(AudioDir2.name((Idx_3(end)+1):(Idxmat-1))); % This is the merged threshold used in the extracted vocalization data in ms we want to use the same value as the neural buffer
         % Find the boundaries for obtaining silence sections of 1 second before 1s of each vocalization event
         BSL_transc_time_refined = find_dead_time(Voc_transc_time_refined,BaselineDelay,BaselineDur);
         [Voc_NeuroSSU] = extract_timeslot_SSU(InputDataFile, Voc_transc_time_refined, BSL_transc_time_refined, NeuroBuffer,MaxEventDur);
-        save(fullfile(Loggers_dir, sprintf('%s_%s_%s_SSU%s-%s.mat', SubjectID, Date, ExpStartTimes{nn},NeuralInputID{1},NeuralInputID{2})), Voc_NeuroSSU);
+        OutputFile = fullfile(OutputPath, sprintf('%s_%s_%s_SSU%s-%s.mat', SubjectID, Date, ExpStartTimes{nn},NeuralInputID{1},NeuralInputID{2}));
+        if exist(OutputFile, 'file')
+            save(OutputFile, 'Voc_NeuroSSU','-append');
+        else
+            save(OutputFile, 'Voc_NeuroSSU');
+        end
     end
 end
 
 
 %% INTERNAL FUNCTIONS
-% Internal function to calculate sections of times where we can extract baseline activity
+% Calculate sections of times between behavioral events
+% where we can extract baseline activity
     function [DeadTimes] = find_dead_time(InputTime, Delay, Duration)
+        % InputTime is a 2 column vector with # rows = # behavioral events.
+        % Delay: how long before the onset of each event in ms
+        % Duration: how long should be the baseline extract in ms
         NEvent = size(InputTime,1);
         DeadTimes = nan(size(InputTime));
         for ee=1:NEvent
@@ -205,15 +250,17 @@ end
 
 
 % Extracting Raw and/or LFP data
-    function [OutData] = extract_timeslot_RawLFP(InputFile, Voc_transc_time, BSL_transc_time, Buffer,MaxEventDur,ChannelID, Flag)
+    function [OutDataRaw, OutDataLFP] = extract_timeslot_RawLFP(InputFile, Voc_transc_time, BSL_transc_time, Buffer,MaxEventDur,ChannelID, Flag)
         Nevent = size(Voc_transc_time,1);
+        OutDataRaw = struct();
+        OutDataLFP = struct();
         if Flag(1)
-            OutData.Raw.RawVoc = cell(Nevent,1);
-            OutData.Raw.RawBSL = cell(Nevent,1);
+            OutDataRaw.RawVoc = cell(Nevent,1);
+            OutDataRaw.RawBSL = cell(Nevent,1);
         end
         if Flag(2)
-            OutData.LFP.LFPVoc = cell(Nevent,1);
-            OutData.LFP.LFPBSL = cell(Nevent,1);
+            OutDataLFP.LFPVoc = cell(Nevent,1);
+            OutDataLFP.LFPBSL = cell(Nevent,1);
         end
         % reframe the extraction windows of each vocalization
         [EventOnset_time ,EventOffset_time] = reframe(Voc_transc_time, Buffer, MaxEventDur);
@@ -231,17 +278,17 @@ end
                 % extract the voltage snippet and bandpass the raw signal
                 % if extracting LFP
                 if ~isempty(IndSampOn) && Flag(1) && ~Flag(2)
-                    OutData.Raw.RawVoc{vv} = double(LData.AD_count_int16(IndSampOn:IndSampOff) - mean(LData.AD_count_int16));
+                    OutDataRaw.RawVoc{vv} = double(LData.AD_count_int16(IndSampOn:IndSampOff) - mean(LData.AD_count_int16));
                 elseif ~isempty(IndSampOn) && ~Flag(1) && Flag(2)
                     [z,p,k] = butter(12,BandPassFilter(1)/(FS/2),'low');
                     sos = zp2sos(z,p,k);
                     RawVoc = double(LData.AD_count_int16(IndSampOn:IndSampOff) - mean(LData.AD_count_int16));
-                    OutData.LFP.LFPVoc{vv} = (filtfilt(sos,1,RawVoc)); % % low-pass filter the voltage trace
+                    OutDataLFP.LFPVoc{vv} = (filtfilt(sos,1,RawVoc)); % % low-pass filter the voltage trace
                 elseif ~isempty(IndSampOn) && Flag(1) && Flag(2)
-                    OutData.Raw.RawVoc{vv} = double(LData.AD_count_int16(IndSampOn:IndSampOff) - mean(LData.AD_count_int16));
+                    OutDataRaw.RawVoc{vv} = double(LData.AD_count_int16(IndSampOn:IndSampOff) - mean(LData.AD_count_int16));
                     [z,p,k] = butter(12,BandPassFilter(1)/(FS/2),'low');
                     sos = zp2sos(z,p,k);
-                    OutData.LFP.LFPVoc{vv} = (filtfilt(sos,1,OutData.Raw.RawVoc{vv})); % % low-pass filter the voltage trace
+                    OutDataLFP.LFPVoc{vv} = (filtfilt(sos,1,OutDataRaw.RawVoc{vv})); % % low-pass filter the voltage trace
                 end
                 
             end
@@ -253,17 +300,17 @@ end
                 % extract the voltage snippet and bandpass the raw signal
                 % if extracting LFP
                 if ~isempty(IndSampOn) && Flag(1) && ~Flag(2)
-                    OutData.Raw.RawBSL{vv} = double(LData.AD_count_int16(IndSampOn:IndSampOff) - mean(LData.AD_count_int16));
+                    OutDataRaw.RawBSL{vv} = double(LData.AD_count_int16(IndSampOn:IndSampOff) - mean(LData.AD_count_int16));
                 elseif ~isempty(IndSampOn) && ~Flag(1) && Flag(2)
                     [z,p,k] = butter(12,BandPassFilter(1)/(FS/2),'low');
                     sos = zp2sos(z,p,k);
                     RawBSL = double(LData.AD_count_int16(IndSampOn:IndSampOff) - mean(LData.AD_count_int16));
-                    OutData.LFP.LFPBSL{vv} = (filtfilt(sos,1,RawBSL)); % % low-pass filter the voltage trace
+                    OutDataLFP.LFPBSL{vv} = (filtfilt(sos,1,RawBSL)); % % low-pass filter the voltage trace
                 elseif ~isempty(IndSampOn) && Flag(1) && Flag(2)
-                    OutData.Raw.RawBSL{vv} = double(LData.AD_count_int16(IndSampOn:IndSampOff) - mean(LData.AD_count_int16));
+                    OutDataRaw.RawBSL{vv} = double(LData.AD_count_int16(IndSampOn:IndSampOff) - mean(LData.AD_count_int16));
                     [z,p,k] = butter(12,BandPassFilter(1)/(FS/2),'low');
                     sos = zp2sos(z,p,k);
-                    OutData.LFP.LFPBSL{vv} = (filtfilt(sos,1,OutData.Raw.RawBSL{vv})); % % low-pass filter the voltage trace
+                    OutDataLFP.LFPBSL{vv} = (filtfilt(sos,1,OutDataRaw.RawBSL{vv})); % % low-pass filter the voltage trace
                 end
                 
             end
@@ -285,7 +332,7 @@ end
         for vv=1:Nevent
             % Find the spike arrival times that are between the
             % requested times and center them to the onset of the
-            % behavioral event
+            % behavioral event, save in ms
             OutData.SpikeSUVoc{vv} = Spikes.Spike_arrival_times(logical((Spikes.Spike_arrival_times>(EventOnset_time(vv)*10^3)) .* (Spikes.Spike_arrival_times<(EventOffset_time(vv)*10^3))))/10^3 - Voc_transc_time(vv,1);
             OutData.SpikeSUBSL{vv} = Spikes.Spike_arrival_times(logical((Spikes.Spike_arrival_times>(BSL_transc_time(vv,1)*10^3)) .* (Spikes.Spike_arrival_times<(BSL_transc_time(vv,2)*10^3))))/10^3 - Voc_transc_time(vv,1);
         end
@@ -295,6 +342,11 @@ end
 
 % Enlarge the window of extraction
     function [EventOnset_time, EventOffset_time] = reframe(OnsetOffset_time, Buffer, MaxEventDur)
+        % reframe in time adding Buffer ms before and after the
+        % OnsetOffset_time given in ms to the extent of creating an event
+        % of maximum duration MaxEventDur. No maximum duration implemented
+        % if MaxEventDur is Nan.
+        Nevent = size(OnsetOffset_time,1);
         EventOnset_time = nan(Nevent,1);
         EventOffset_time = nan(Nevent, 1);
         for vv=1:Nevent

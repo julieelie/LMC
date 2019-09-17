@@ -4,7 +4,7 @@ function get_logger_data_voc(Audio_dir, Loggers_dir, Date, ExpStartTime, varargi
 % in the logger recordings,
 % the corresponding snippets of sound extracted by voc-localize and
 % voc_localize_operant in the environmental microphone recordings, adding
-% 100 ms of extra logger data before and after the exact sound section.
+% Buffer ms of extra logger data before and after the exact sound section.
 % Second it performs for each sound section a better allignment of the data by performing a
 % cross-correlation between the logger signal that most likely correspond
 % to the vocalizer and the ambient microphone signal. Among other things, it returns a beter
