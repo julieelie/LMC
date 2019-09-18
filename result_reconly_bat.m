@@ -8,6 +8,7 @@ ForceAllign = 0; % In case the TTL pulses allignment was already done but you wa
 ForceVocExt1 = 1; % In case the localization on raw files of vocalizations that were manually extracted was already done but you want to do it again set to 1
 ForceVocExt2 = 1; % In case the localization on Loggers of vocalizations that were manually extracted was already done but you want to do it again set to 1
 ForceWhoID = 1; % In case the identification of bats was already done but you want to re-do it again
+ForceBehav = 1; % Force extracting onset/offset time of other behaviors
 close all
 
 % Get the recording date
@@ -195,6 +196,14 @@ if TranscExtract
         fprintf('\n*** ALREADY DONE: Identify who is calling ***\n')
     end
     
+    %% extract the time onset/offset of behaviors
+    fprintf('\n*** Localizing other behaviors on piezo recordings ***\n')
+    BehavCall_dir = dir(fullfile(Logger_dir, sprintf('%s_%s_BehavExtractData.mat', Date, ExpStartTime)));
+    if isempty(BehavCall_dir) || ForceBehav
+        get_logger_data_behav(AudioDataPath, Logger_dir, Date, ExpStartTime)
+    else
+        fprintf('\n*** ALREADY DONE: Localizing other behaviors on piezo recordings  ***\n')
+    end
     
 elseif isempty(VocExt_dir) || ForceVocExt1
     fprintf(1,'*** Localizing and extracting vocalizations that triggered the sound detection ***\n');

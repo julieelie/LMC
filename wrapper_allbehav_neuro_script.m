@@ -58,31 +58,11 @@ for pp=1:length(ListOfPaths)
     
 end
 
-%% RUN audio data extraction for the reconly sessions
+%% RUN audio data and other behavior extraction for the reconly sessions
 Path2ParamFile = ''; % Needs to point to a reconly param files
 result_reconly_bat(Path2ParamFile)
 
-%% RUN other behavior extraction for the reconly session
-    fprintf(' EXTRACTING ONSET/OFFSET TIMES OF OTHER BEHAVIORS DURING FREE SESSION \n')
-    RecOnlySession = dir(fullfile(AudioDataPath, '*RecOnly_events.txt'));
-    if isempty(RecOnlySession)
-        fprintf(1,'No free interaction session on that day!\n')
-    else
-        if length(RecOnlySession)>1
-            fprintf(1, 'Several RecOnly session were done on that day:\n')
-            for ss=1:length(RecOnlySession)
-                fprintf(1, '%d. %s\n', ss, RecOnlySession(ss).name);
-            end
-            Inputss = input('Your choice:\n');
-            RecOnlySession = RecOnlySession(Inputss);
-        end
-        Date = RecOnlySession.name(6:11);
-        ExpStartTime = RecOnlySession.name(13:16);
-        % extract the time onset/offset of behaviors
-        get_logger_data_behav(AudioDataPath, Logger_dir, Date, ExpStartTime)
-    end
-%% Loop through neurons to extract spike data
-% Generate the list of paths to gather the data
+%% Generate the list of paths to gather the data
 BasePath = '/Volumes/server_home/users/JulieE/LMC';
 [ListSSU] = gather_neural_datapath(BasePath);
 % Define the path were the data will be saved
