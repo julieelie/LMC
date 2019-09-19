@@ -77,6 +77,15 @@ for ss=Files2Run
     cut_neuralData_voc_perfile(ListSSU{ss}, OutputPath)
 end
 
+%% Extract the neural data corresponding to the behaviors identified during the free session
+% by get_logger_data_behav for each cell
+fprintf(' EXTRACTING NEURAL DATA CORRESPONDING TO OTHER BEHAVIORS \n')
+% Files2Run = 1:length(ListSSU);
+Files2Run = 1:17;
+for ss=Files2Run
+    cut_neuralData_behav_perfile(ListSSU{ss}, OutputPath)
+end
+
 %% calculate the PSTH of vocalizations
 fprintf(1,' CALCULATING PSTH of NEURAL DATA CORRESPONDING TO VOCALIZATIONS\n');
 % Files2Run = 1:length(ListSSU);

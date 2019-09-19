@@ -50,9 +50,6 @@ end
 if nargin<6
     Rthreshold = [0.92 0.94 0.96 0.98];
 end
-MaxEventDur = NaN; % Set to NaN: The neural data is extracted for the whole duration of each event
-BaselineDur = 1000; % Duration of the baseline section in ms that is seeked at least BaselineDelay ms before sound onset
-BaselineDelay = 1000;
 
 %% Identify the neural data and run the corresponding extraction
 [Path2Data, DataFile]=fileparts(InputDataFile);
@@ -74,7 +71,7 @@ if contains(DataFile, 'Tetrode')
     % Get the subject ID
     SubjectID = DataFile(1:5);
     
-    % Loop through behavioral data
+    % Loop through behavioral data files
     AudioDir = dir(fullfile(Loggers_dir, sprintf('%s*BehavExtractData.mat', Date(3:end)))); % These are all the results of behavior localization for free session
     Nsession = length(AudioDir);
     ExpStartTimes = cell(Nsession,1);
@@ -85,12 +82,12 @@ if contains(DataFile, 'Tetrode')
         % Select behavioral data
         [Behav_transc_time, Behav_What,Behav_Who] = sort_behavior(AllActions_Time, AllActions_ID, UActionText,BehaviorType,SubjectID);
         % extract Tetrode data
-        [Behav_NeuroT] = extract_timeslot_Tetrode(InputDataFile, Behav_transc_time,MaxEventDur, DenoiseT, Rthreshold, SubjectID, Date, NeuralInputID);
+        [Behav_NeuroT] = extract_timeslot_Tetrode(InputDataFile, Behav_transc_time, DenoiseT, Rthreshold, SubjectID, Date, NeuralInputID);
         OutputFile = fullfile(OutputPath, sprintf('%s_%s_%s_Tet%s.mat', SubjectID, Date, ExpStartTimes{nn},NeuralInputID));
         if exist(OutputFile, 'file')
-            save(OutputFile, 'Behav_NeuroT','-append');
+            save(OutputFile, 'Behav_NeuroT','Behav_What','Behav_Who','-append');
         else
-            save(OutputFile, 'Behav_NeuroT');
+            save(OutputFile, 'Behav_NeuroT','Behav_What','Behav_Who');
         end
     end
     
@@ -106,36 +103,32 @@ elseif contains(DataFile, 'CSC')
     % Get the subject ID
     SubjectID = DataFile(1:5);
     
-    % Loop through audio data
-    AudioDir = dir(fullfile(Loggers_dir, sprintf('%s*VocExtractData.mat', Date(3:end)))); % These are all the results of vocalization localization for both operant conditioning and free session
+    % Loop through behavioral data files
+    AudioDir = dir(fullfile(Loggers_dir, sprintf('%s*BehavExtractData.mat', Date(3:end)))); % These are all the results of behavior localization for free session
     Nsession = length(AudioDir);
     ExpStartTimes = cell(Nsession,1);
     for nn=1:Nsession
         Idx_2 = strfind(AudioDir(nn).name, '_');
         ExpStartTimes{nn} = AudioDir(nn).name((Idx_2(1)+1) : (Idx_2(2)-1));
-        load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date(3:end), ExpStartTimes{nn})), 'Voc_transc_time_refined');
-        AudioDir2 = dir(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_*.mat', Date(3:end), ExpStartTimes{nn}))); % These are the results of vocalization identificaion and merging with Who calls for this session
-        Idx_3 = strfind(AudioDir2(nn).name, '_');
-        Idxmat = strfind(AudioDir2(nn).name, '.mat');
-        NeuroBuffer = str2double(AudioDir2.name((Idx_3+1):(Idxmat-1))); % This is the merged threshold used in the extracted vocalization data in ms we want to use the same value as the neural buffer
-        % Find the boundaries for obtaining silence sections of 1 second before 1s of each vocalization event
-        BSL_transc_time_refined = find_dead_time(Voc_transc_time_refined,BaselineDelay,BaselineDur);
-        
-        [Voc_NeuroRaw, Voc_NeuroLFP] = extract_timeslot_RawLFP(InputDataFile, Voc_transc_time_refined, BSL_transc_time_refined, NeuroBuffer,MaxEventDur,NeuralInputID, Flags);
+        load(fullfile(Loggers_dir, sprintf('%s_%s_BehavExtractData.mat', Date(3:end), ExpStartTimes{nn})), 'AllActions_Time', 'AllActions_ID','UActionText');
+        % Select behavioral data
+        [Behav_transc_time, Behav_What,Behav_Who] = sort_behavior(AllActions_Time, AllActions_ID, UActionText,BehaviorType,SubjectID);
+        % extract the channel data
+        [Behav_NeuroRaw, Behav_NeuroLFP] = extract_timeslot_RawLFP(InputDataFile, Behav_transc_time, NeuralInputID, Flags);
         if Flags(1)
             OutputFile = fullfile(OutputPath, sprintf('%s_%s_%s_Raw%s.mat', SubjectID, Date, ExpStartTimes{nn},NeuralInputID));
             if exist(OutputFile, 'file')
-                save(OutputFile, 'Voc_NeuroRaw','-append');
+                save(OutputFile, 'Behav_NeuroRaw','Behav_What','Behav_Who','-append');
             else
-                save(OutputFile, 'Voc_NeuroRaw');
+                save(OutputFile, 'Behav_NeuroRaw', 'Behav_What','Behav_Who');
             end
         end
         if Flags(2) % extract LFP data
             OutputFile = fullfile(OutputPath, sprintf('%s_%s_%s_LFP%s.mat', SubjectID, Date, ExpStartTimes{nn},NeuralInputID));
             if exist(OutputFile, 'File')
-                save(OutputFile, 'Voc_NeuroLFP', '-append');
+                save(OutputFile, 'Behav_NeuroLFP','Behav_What','Behav_Who', '-append');
             else
-                save(OutputFile, 'Voc_NeuroLFP');
+                save(OutputFile, 'Behav_NeuroLFP','Behav_What','Behav_Who');
             end
         end
     end
@@ -153,26 +146,23 @@ elseif contains(DataFile,'SS')
     % Get the subject ID
     SubjectID = DataFile(1:5);
     
-    % Loop through audio data
-    AudioDir = dir(fullfile(Loggers_dir, sprintf('%s*VocExtractData.mat', Date(3:end)))); % These are all the results of vocalization localization for both operant conditioning and free session
+    % Loop through behavioral data files
+    AudioDir = dir(fullfile(Loggers_dir, sprintf('%s*BehavExtractData.mat', Date(3:end)))); % These are all the results of vocalization localization for both operant conditioning and free session
     Nsession = length(AudioDir);
     ExpStartTimes = cell(Nsession,1);
     for nn=1:Nsession
         Idx_2 = strfind(AudioDir(nn).name, '_');
         ExpStartTimes{nn} = AudioDir(nn).name((Idx_2(1)+1) : (Idx_2(2)-1));
-        load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date(3:end), ExpStartTimes{nn})), 'Voc_transc_time_refined');
-        AudioDir2 = dir(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_*.mat', Date(3:end), ExpStartTimes{nn}))); % These are the results of vocalization identificaion and merging with Who calls for this session
-        Idx_3 = strfind(AudioDir2(nn).name, '_');
-        Idxmat = strfind(AudioDir2(nn).name, '.mat');
-        NeuroBuffer = str2double(AudioDir2.name((Idx_3(end)+1):(Idxmat-1))); % This is the merged threshold used in the extracted vocalization data in ms we want to use the same value as the neural buffer
-        % Find the boundaries for obtaining silence sections of 1 second before 1s of each vocalization event
-        BSL_transc_time_refined = find_dead_time(Voc_transc_time_refined,BaselineDelay,BaselineDur);
-        [Voc_NeuroSSU] = extract_timeslot_SSU(InputDataFile, Voc_transc_time_refined, BSL_transc_time_refined, NeuroBuffer,MaxEventDur);
+        load(fullfile(Loggers_dir, sprintf('%s_%s_BehavExtractData.mat', Date(3:end), ExpStartTimes{nn})), 'AllActions_Time', 'AllActions_ID','UActionText');
+        % Select behavioral data
+        [Behav_transc_time, Behav_What,Behav_Who] = sort_behavior(AllActions_Time, AllActions_ID, UActionText,BehaviorType,SubjectID);
+        % extract single unit spikes
+        [Behav_NeuroSSU] = extract_timeslot_SSU(InputDataFile, Behav_transc_time);
         OutputFile = fullfile(OutputPath, sprintf('%s_%s_%s_SSU%s-%s.mat', SubjectID, Date, ExpStartTimes{nn},NeuralInputID{1},NeuralInputID{2}));
         if exist(OutputFile, 'file')
-            save(OutputFile, 'Voc_NeuroSSU','-append');
+            save(OutputFile, 'Behav_NeuroSSU','Behav_What','Behav_Who','-append');
         else
-            save(OutputFile, 'Voc_NeuroSSU');
+            save(OutputFile, 'Behav_NeuroSSU','Behav_What','Behav_Who');
         end
     end
 end
@@ -183,49 +173,34 @@ end
 % Organize onset/offset time of behaviors as a 2 column matrix, indicate
 % the type of behavior and whether the recorded bat is performing the
 % behavior or observing it performed
-[Behav_transc_time, Behav_What,Behav_Who] = sort_behavior(AllActions_Time, AllActions_ID, UActionText,BehaviorType,SubjectID);
-
-
-% Calculate sections of times between behavioral events
-% where we can extract baseline activity
-    function [DeadTimes] = find_dead_time(InputTime, Delay, Duration)
-        % InputTime is a 2 column vector with # rows = # behavioral events.
-        % Delay: how long before the onset of each event in ms
-        % Duration: how long should be the baseline extract in ms
-        NEvent = size(InputTime,1);
-        DeadTimes = nan(size(InputTime));
-        for ee=1:NEvent
-            PotentialOnset = InputTime(ee,1)-Duration-Delay;
-            if ee==1 % Nothing to fear before
-                DeadTimes(ee,:) = PotentialOnset + [0 Duration];
-            else
-                if PotentialOnset>InputTime(ee-1,2) % all good to go
-                    DeadTimes(ee,:) = PotentialOnset + [0 Duration];
-                else %take at least one second after previous event offset and up to one second before current event onset
-                    DeadTimes(ee,1) = InputTime(ee-1,2) + Delay;
-                    DeadTimes(ee,2) = InputTime(ee,1) - Delay;
-                    if diff(DeadTimes(ee,:))<0 % No baseline available here!
-                        DeadTimes(ee,:) = nan(1,2);
-                    end
-                    
-                end
-            end
+    function [Behav_transc_time, Behav_What,Behav_Who] = sort_behavior(AllActions_Time, AllActions_ID, UActionText,BehaviorType,SubjectID)
+        % Get each behavior number of cuts to allocate space
+        Num_Slots = nan(size(BehaviorType));
+        IB_Ind = nan(size(BehaviorType));
+        for bb=1:length(BehaviorType)
+            IB_Ind(bb) = contains(UActionText, BehaviorType{bb});
+            Num_Slots(bb) = size(AllActions_Time{IB_Ind(bb)},1);
+        end
+        % Initialize variables
+        Behav_transc_time = nan(sum(Num_Slots),2);
+        Behav_What = cell(sum(Num_Slots),2);
+        Behav_Who =  nan(sum(Num_Slots),2);
+        BehavCount = 1;
+        for bb=1:length(BehaviorType)
+            Behav_transc_time(BehavCount:(BehavCount+Num_Slots(bb)-1),:) = AllActions_Time{IB_Ind(bb)};
+            Behav_What{BehavCount:(BehavCount+Num_Slots(bb)-1)} = BehaviorType{bb};
+            Behav_Who(BehavCount:(BehavCount+Num_Slots(bb)-1),:) = logical(AllActions_ID{IB_Ind(bb)} == str2double(SubjectID));
+            BehavCount = BehavCount + Num_Slots(bb)-1;
         end
     end
 
 
 
 % Extracting tetrode data
-    function [OutData] = extract_timeslot_Tetrode(InputFile, Voc_transc_time, BSL_transc_time, Buffer,MaxEventDur, DenoiseT, Rthreshold, SubjectID, Date, TID)
-        
-        
+    function [OutData] = extract_timeslot_Tetrode(InputFile, Voc_transc_time, DenoiseT, Rthreshold, SubjectID, Date, TID)
         Nevent = size(Voc_transc_time,1);
-        OutData.SpikeTVoc = cell(Nevent,1);
-        OutData.SpikeTVocDeNoiseInd = cell(Nevent,length(Rthreshold));
-        OutData.SpikeTBSL = cell(Nevent,1);
-        OutData.SpikeTBSLDeNoiseInd = cell(Nevent,length(Rthreshold));
-        % reframe the extraction windows of each vocalization
-        [EventOnset_time ,EventOffset_time] = reframe(Voc_transc_time, Buffer, MaxEventDur);
+        OutData.SpikeTBehav = cell(Nevent,1);
+        OutData.SpikeTBehavDeNoiseInd = cell(Nevent,length(Rthreshold));
         % Load the spike arrival times for that tetrode
         [Path,~] = fileparts(InputFile);
         Spikes = load(fullfile(Path, sprintf('%s_%s_Tetrode_spikes_time_T%s.mat',SubjectID, Date, TID)), 'Spike_arrival_times');
@@ -235,18 +210,11 @@ end
             % Find the spike arrival times that are between the
             % requested times and center them to the onset of the
             % behavioral event
-            SpikeT_local = logical((Spikes.Spike_arrival_times>(EventOnset_time(vv)*10^3)) .* (Spikes.Spike_arrival_times<(EventOffset_time(vv)*10^3)));
-            OutData.SpikeTVoc{vv} = Spikes.Spike_arrival_times(SpikeT_local)/10^3 - Voc_transc_time(vv,1);
+            SpikeT_local = logical((Spikes.Spike_arrival_times>(Voc_transc_time(vv,1)*10^3)) .* (Spikes.Spike_arrival_times<(Voc_transc_time(vv,2)*10^3)));
+            OutData.SpikeTBehav{vv} = Spikes.Spike_arrival_times(SpikeT_local)/10^3 - Voc_transc_time(vv,1);
             if DenoiseT % get the indices of denoised spikes according to threshold(s)
                 for rr=1:length(Rthreshold)
-                    OutData.SpikeTVocDeNoiseInd{vv,rr} = sort_spike_from_noise(Snip.Snippets(:,:,SpikeT_local), Rthreshold(rr));
-                end
-            end
-            SpikeT_local = logical((Spikes.Spike_arrival_times>(BSL_transc_time(vv,1)*10^3)) .* (Spikes.Spike_arrival_times<(BSL_transc_time(vv,2)*10^3)));
-            OutData.SpikeTBSL{vv} = Spikes.Spike_arrival_times(SpikeT_local)/10^3 - Voc_transc_time(vv,1);
-            if DenoiseT % get the indices of denoised spikes according to threshold(s)
-                for rr=1:length(Rthreshold)
-                    OutData.SpikeTBSLDeNoiseInd{vv,rr} = sort_spike_from_noise(Snip.Snippets(:,:,SpikeT_local), Rthreshold(rr));
+                    OutData.SpikeTBehavDeNoiseInd{vv,rr} = sort_spike_from_noise(Snip.Snippets(:,:,SpikeT_local), Rthreshold(rr));
                 end
             end
         end
@@ -257,20 +225,16 @@ end
 
 
 % Extracting Raw and/or LFP data
-    function [OutDataRaw, OutDataLFP] = extract_timeslot_RawLFP(InputFile, Voc_transc_time, BSL_transc_time, Buffer,MaxEventDur,ChannelID, Flag)
+    function [OutDataRaw, OutDataLFP] = extract_timeslot_RawLFP(InputFile, Voc_transc_time, ChannelID, Flag)
         Nevent = size(Voc_transc_time,1);
         OutDataRaw = struct();
         OutDataLFP = struct();
         if Flag(1)
-            OutDataRaw.RawVoc = cell(Nevent,1);
-            OutDataRaw.RawBSL = cell(Nevent,1);
+            OutDataRaw.RawBehav = cell(Nevent,1);
         end
         if Flag(2)
-            OutDataLFP.LFPVoc = cell(Nevent,1);
-            OutDataLFP.LFPBSL = cell(Nevent,1);
+            OutDataLFP.LFPBehav = cell(Nevent,1);
         end
-        % reframe the extraction windows of each vocalization
-        [EventOnset_time ,EventOffset_time] = reframe(Voc_transc_time, Buffer, MaxEventDur);
         % load the data
         LData = load(InputFile, 'Timestamps_of_first_samples_usec', 'Estimated_channelFS_Transceiver','AD_count_int16','Indices_of_first_and_last_samples','Sampling_period_usec_Logger');
         % loop through events and extract the snippet of Raw data
@@ -281,43 +245,21 @@ end
             if prod(~isnan(Voc_transc_time(vv,:)))
                 % find the time stamp on the logger that is closest to before
                 % the snippet of event onset
-                [IndSampOn, IndSampOff, FS] = time2indices_logger(EventOnset_time(vv), EventOffset_time(vv), length(LData.AD_count_int16), LData.Timestamps_of_first_samples_usec, LData.Indices_of_first_and_last_samples, LData.Estimated_channelFS_Transceiver, LData.Sampling_period_usec_Logger, NanFSInd, GoodFSInd);
+                [IndSampOn, IndSampOff, FS] = time2indices_logger(Voc_transc_time(vv,1), Voc_transc_time(vv,2), length(LData.AD_count_int16), LData.Timestamps_of_first_samples_usec, LData.Indices_of_first_and_last_samples, LData.Estimated_channelFS_Transceiver, LData.Sampling_period_usec_Logger, NanFSInd, GoodFSInd);
                 % extract the voltage snippet and bandpass the raw signal
                 % if extracting LFP
                 if ~isempty(IndSampOn) && Flag(1) && ~Flag(2)
-                    OutDataRaw.RawVoc{vv} = double(LData.AD_count_int16(IndSampOn:IndSampOff) - mean(LData.AD_count_int16));
+                    OutDataRaw.RawBehav{vv} = double(LData.AD_count_int16(IndSampOn:IndSampOff) - mean(LData.AD_count_int16));
                 elseif ~isempty(IndSampOn) && ~Flag(1) && Flag(2)
                     [z,p,k] = butter(12,BandPassFilter(1)/(FS/2),'low');
                     sos = zp2sos(z,p,k);
                     RawVoc = double(LData.AD_count_int16(IndSampOn:IndSampOff) - mean(LData.AD_count_int16));
-                    OutDataLFP.LFPVoc{vv} = (filtfilt(sos,1,RawVoc)); % % low-pass filter the voltage trace
+                    OutDataLFP.LFPBehav{vv} = (filtfilt(sos,1,RawVoc)); % % low-pass filter the voltage trace
                 elseif ~isempty(IndSampOn) && Flag(1) && Flag(2)
-                    OutDataRaw.RawVoc{vv} = double(LData.AD_count_int16(IndSampOn:IndSampOff) - mean(LData.AD_count_int16));
+                    OutDataRaw.RawBehav{vv} = double(LData.AD_count_int16(IndSampOn:IndSampOff) - mean(LData.AD_count_int16));
                     [z,p,k] = butter(12,BandPassFilter(1)/(FS/2),'low');
                     sos = zp2sos(z,p,k);
-                    OutDataLFP.LFPVoc{vv} = (filtfilt(sos,1,OutDataRaw.RawVoc{vv})); % % low-pass filter the voltage trace
-                end
-                
-            end
-            
-            if prod(~isnan(BSL_transc_time(vv,:)))
-                % find the time stamp on the logger that is closest to before
-                % the snippet of event onset
-                [IndSampOn, IndSampOff, FS] = time2indices_logger(BSL_transc_time(vv,1), BSL_transc_time(vv,2), length(LData.AD_count_int16), LData.Timestamps_of_first_samples_usec, LData.Indices_of_first_and_last_samples, LData.Estimated_channelFS_Transceiver, LData.Sampling_period_usec_Logger, NanFSInd, GoodFSInd);
-                % extract the voltage snippet and bandpass the raw signal
-                % if extracting LFP
-                if ~isempty(IndSampOn) && Flag(1) && ~Flag(2)
-                    OutDataRaw.RawBSL{vv} = double(LData.AD_count_int16(IndSampOn:IndSampOff) - mean(LData.AD_count_int16));
-                elseif ~isempty(IndSampOn) && ~Flag(1) && Flag(2)
-                    [z,p,k] = butter(12,BandPassFilter(1)/(FS/2),'low');
-                    sos = zp2sos(z,p,k);
-                    RawBSL = double(LData.AD_count_int16(IndSampOn:IndSampOff) - mean(LData.AD_count_int16));
-                    OutDataLFP.LFPBSL{vv} = (filtfilt(sos,1,RawBSL)); % % low-pass filter the voltage trace
-                elseif ~isempty(IndSampOn) && Flag(1) && Flag(2)
-                    OutDataRaw.RawBSL{vv} = double(LData.AD_count_int16(IndSampOn:IndSampOff) - mean(LData.AD_count_int16));
-                    [z,p,k] = butter(12,BandPassFilter(1)/(FS/2),'low');
-                    sos = zp2sos(z,p,k);
-                    OutDataLFP.LFPBSL{vv} = (filtfilt(sos,1,OutDataRaw.RawBSL{vv})); % % low-pass filter the voltage trace
+                    OutDataLFP.LFPBehav{vv} = (filtfilt(sos,1,OutDataRaw.RawBehav{vv})); % % low-pass filter the voltage trace
                 end
                 
             end
@@ -327,12 +269,10 @@ end
 
 
 % Extracting spike sorted unit data
-    function [OutData] = extract_timeslot_SSU(InputFile, Voc_transc_time, BSL_transc_time, Buffer,MaxEventDur)
+    function [OutData] = extract_timeslot_SSU(InputFile, Voc_transc_time)
         Nevent = size(Voc_transc_time,1);
-        OutData.SpikeSUVoc = cell(Nevent,1);
-        OutData.SpikeSUBSL = cell(Nevent,1);
-        % reframe the extraction windows of each vocalization
-        [EventOnset_time ,EventOffset_time] = reframe(Voc_transc_time, Buffer, MaxEventDur);
+        OutData.SpikeSUBehav = cell(Nevent,1);
+        
         % loading the single unit spike arrival times
         Spikes = load(InputFile, 'Spike_arrival_times');
         % loop through vocalizations and extract spike arrival times
@@ -340,35 +280,7 @@ end
             % Find the spike arrival times that are between the
             % requested times and center them to the onset of the
             % behavioral event, save in ms
-            OutData.SpikeSUVoc{vv} = Spikes.Spike_arrival_times(logical((Spikes.Spike_arrival_times>(EventOnset_time(vv)*10^3)) .* (Spikes.Spike_arrival_times<(EventOffset_time(vv)*10^3))))/10^3 - Voc_transc_time(vv,1);
-            OutData.SpikeSUBSL{vv} = Spikes.Spike_arrival_times(logical((Spikes.Spike_arrival_times>(BSL_transc_time(vv,1)*10^3)) .* (Spikes.Spike_arrival_times<(BSL_transc_time(vv,2)*10^3))))/10^3 - Voc_transc_time(vv,1);
-        end
-    end
-
-
-
-% Enlarge the window of extraction
-    function [EventOnset_time, EventOffset_time] = reframe(OnsetOffset_time, Buffer, MaxEventDur)
-        % reframe in time adding Buffer ms before and after the
-        % OnsetOffset_time given in ms to the extent of creating an event
-        % of maximum duration MaxEventDur. No maximum duration implemented
-        % if MaxEventDur is Nan.
-        Nevent = size(OnsetOffset_time,1);
-        EventOnset_time = nan(Nevent,1);
-        EventOffset_time = nan(Nevent, 1);
-        for vv=1:Nevent
-            if prod(~isnan(OnsetOffset_time(vv,:)))
-                EventOnset_time(vv) = OnsetOffset_time(vv,1) - Buffer;
-                if isnan(MaxEventDur)
-                    EventOffset_time(vv) = OnsetOffset_time(vv,2) + Buffer;
-                elseif diff(OnsetOffset_time(vv,:))>(MaxEventDur + Buffer)
-                    EventOffset_time(vv) = EventOnset_time(vv) + MaxEventDur + 2*Buffer;
-                elseif diff(OnsetOffset_time(vv,:))<MaxEventDur
-                    EventOffset_time(vv) = OnsetOffset_time(vv,2) + Buffer;
-                elseif diff(OnsetOffset_time(vv,:))>MaxEventDur
-                    EventOffset_time(vv) = EventOnset_time(vv) + MaxEventDur + 2*Buffer;
-                end
-            end
+            OutData.SpikeSUBehav{vv} = Spikes.Spike_arrival_times(logical((Spikes.Spike_arrival_times>(Voc_transc_time(vv,1)*10^3)) .* (Spikes.Spike_arrival_times<(Voc_transc_time(vv,2)*10^3))))/10^3 - Voc_transc_time(vv,1);
         end
     end
 
