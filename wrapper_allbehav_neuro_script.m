@@ -59,7 +59,7 @@ for pp=1:length(ListOfPaths)
 end
 
 %% RUN audio data and other behavior extraction for the reconly sessions
-Path2ParamFile = ''; % Needs to point to a reconly param files
+Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC/LMC_CoEd/audio/CoEd_190604_1636_RecOnly_param.txt'; % Needs to point to a reconly param files
 result_reconly_bat(Path2ParamFile)
 
 %% Generate the list of paths to gather the data

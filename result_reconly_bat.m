@@ -5,10 +5,10 @@ addpath(genpath('/Users/elie/Documents/CODE/SoundAnalysisBats'))
 TranscExtract = 1; % set to 1 to extract logger data and transceiver time
 ForceExtract = 0; % set to 1 to redo the extraction of loggers otherwise the calculations will use the previous extraction data
 ForceAllign = 0; % In case the TTL pulses allignment was already done but you want to do it again, set to 1
-ForceVocExt1 = 1; % In case the localization on raw files of vocalizations that were manually extracted was already done but you want to do it again set to 1
-ForceVocExt2 = 1; % In case the localization on Loggers of vocalizations that were manually extracted was already done but you want to do it again set to 1
-ForceWhoID = 1; % In case the identification of bats was already done but you want to re-do it again
-ForceBehav = 1; % Force extracting onset/offset time of other behaviors
+ForceVocExt1 = 0; % In case the localization on raw files of vocalizations that were manually extracted was already done but you want to do it again set to 1
+ForceVocExt2 = 0; % In case the localization on Loggers of vocalizations that were manually extracted was already done but you want to do it again set to 1
+ForceWhoID = 0; % In case the identification of bats was already done but you want to re-do it again
+ForceBehav = 0;% Force extracting onset/offset time of other behaviors
 close all
 
 % Get the recording date
@@ -151,12 +151,16 @@ if TranscExtract
         end
     end
     
-    % Get the serial numbers of all audiologgers
+   
+    % Get the serial numbers of the audiologgers that the two implanted
     % bats wear
+    NLCol = find(contains(Header, 'NL'));
     ALThroatCol = find(contains(Header, 'AL-throat'));
-    SerialNumberAL = nan(length(ALThroatCol),1);
-    for dd=1:length(ALThroatCol)
-        SerialNumberAL(dd) = DataInfo{ALThroatCol(dd)};
+    SerialNumberAL = nan(length(NLCol),1);
+    SerialNumberNL = nan(length(NLCol),1);
+    for dd=1:length(NLCol)
+        SerialNumberAL(dd) = DataInfo{ALThroatCol(find(ALThroatCol<NLCol(dd),1,'last'))};
+        SerialNumberNL(dd) = DataInfo{NLCol(dd)};
     end
     
     % Alligning TTL pulses between soundmexpro and Deuteron
@@ -165,8 +169,8 @@ if TranscExtract
     TTL_dir = dir(fullfile(AudioDataPath,sprintf( '%s_%s_TTLPulseTimes.mat', Date, ExpStartTime)));
     if isempty(TTL_dir) || ForceAllign
         fprintf(1,'\n*** Alligning TTL pulses for the RecOnly session ***\n');
-        align_soundmexAudio_2_logger(AudioDataPath, Logger_dir, ExpStartTime,'TTL_pulse_generator','Avisoft','Method','risefall', 'Session_strings', {'all voc reward stop', 'rec only stop'}, 'Logger_list', [SerialNumberAL; SerialNumberNL]);
-%         align_soundmexAudio_2_logger(AudioDataPath, Logger_dir, ExpStartTime,'TTL_pulse_generator','Avisoft','Method','risefall', 'Session_strings', {'rec only start', 'rec only stop'}, 'Logger_list', [SerialNumberAL; SerialNumberNL]);
+%         align_soundmexAudio_2_logger(AudioDataPath, Logger_dir, ExpStartTime,'TTL_pulse_generator','Avisoft','Method','risefall', 'Session_strings', {'all voc reward stop', 'rec only stop'}, 'Logger_list', [SerialNumberAL; SerialNumberNL]);
+        align_soundmexAudio_2_logger(AudioDataPath, Logger_dir, ExpStartTime,'TTL_pulse_generator','Avisoft','Method','risefall', 'Session_strings', {'rec only start', 'rec only stop'}, 'Logger_list', [SerialNumberAL; SerialNumberNL]);
     else
         fprintf(1,'\n*** ALREADY DONE: Alligning TTL pulses for the operant session ***\n');
     end
@@ -181,7 +185,7 @@ if TranscExtract
     LogVoc_dir = dir(fullfile(Logger_dir, sprintf('%s_%s_VocExtractData.mat', Date, ExpStartTime)));
     if isempty(LogVoc_dir) || ForceVocExt1 || ForceVocExt2
         fprintf('\n*** Localizing vocalizations on piezo recordings ***\n')
-        get_logger_data_voc(AudioDataPath, Logger_dir,Date, ExpStartTime, 'SerialNumber',SerialNumberAL);
+        get_logger_data_voc(AudioDataPath, Logger_dir,Date, ExpStartTime);
     else
         fprintf('\n*** ALREADY DONE: Localizing vocalizations on piezo recordings ***\n')
         
