@@ -67,6 +67,17 @@ BasePath = '/Volumes/server_home/users/JulieE/LMC';
 [ListSSU] = gather_neural_datapath(BasePath);
 % Define the path were the data will be saved
 OutputPath = fullfile(BasePath, 'ResultsFiles');
+
+%% Sanitary check of neurons
+% ( calculate the average spike rate over the...
+% whole experiment, measure stability, quality...
+% of spike sorting.
+fprintf('NEURONS SANITARY CHECK.... ')
+Files2Run = 1:length(ListSSU);
+for ss=Files2Run
+    sanitary_check_perSSfile(ListSSU{ss}, OutputPath)
+end
+fprintf(' DONE \n')
     
 %% Extract the neural data corresponding to the bouts of vocalizations identified
 % by voc_localize and voc_localize_operant (run by result_operant_bat.m) for each cell
