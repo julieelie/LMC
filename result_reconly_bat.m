@@ -8,7 +8,7 @@ ForceAllign = 0; % In case the TTL pulses allignment was already done but you wa
 ForceVocExt1 = 0; % In case the localization on raw files of vocalizations that were manually extracted was already done but you want to do it again set to 1
 ForceVocExt2 = 0; % In case the localization on Loggers of vocalizations that were manually extracted was already done but you want to do it again set to 1
 ForceWhoID = 0; % In case the identification of bats was already done but you want to re-do it again
-ForceBehav = 0;% Force extracting onset/offset time of other behaviors
+ForceBehav = 1;% Force extracting onset/offset time of other behaviors
 close all
 
 % Get the recording date

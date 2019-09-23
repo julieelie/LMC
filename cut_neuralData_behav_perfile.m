@@ -35,7 +35,7 @@ function cut_neuralData_behav_perfile(InputDataFile, OutputPath, BehaviorType,Fl
 % OUPUT
 %       A file containing the neural data requested saved in OutputPath.
 %       Spike arrival times are saved in ms in reference to the onset of
-%       the vocalization bouts given by Voc_transc_time_refined.
+%       the behaviors given by AllActions_Time.
 
 if nargin < 3
     BehaviorType = {'licking' 'chewing' 'quiet' 'teeth-cleaning'};
@@ -171,26 +171,31 @@ end
 %% INTERNAL FUNCTIONS
 
 % Organize onset/offset time of behaviors as a 2 column matrix, indicate
-% the type of behavior and whether the recorded bat is performing the
-% behavior or observing it performed
+% the type of behavior (Behav_what) and whether the recorded bat is performing the
+% behavior or observing it performed (logical Behav_Who)
     function [Behav_transc_time, Behav_What,Behav_Who] = sort_behavior(AllActions_Time, AllActions_ID, UActionText,BehaviorType,SubjectID)
         % Get each behavior number of cuts to allocate space
         Num_Slots = nan(size(BehaviorType));
         IB_Ind = nan(size(BehaviorType));
         for bb=1:length(BehaviorType)
-            IB_Ind(bb) = contains(UActionText, BehaviorType{bb});
-            Num_Slots(bb) = size(AllActions_Time{IB_Ind(bb)},1);
+            IB_Ind_logical = contains(UActionText, BehaviorType{bb});
+            if any(IB_Ind_logical)
+                IB_Ind(bb) = find(IB_Ind_logical);
+                Num_Slots(bb) = size(AllActions_Time{IB_Ind(bb)},1);
+            end
         end
         % Initialize variables
-        Behav_transc_time = nan(sum(Num_Slots),2);
-        Behav_What = cell(sum(Num_Slots),2);
-        Behav_Who =  nan(sum(Num_Slots),2);
+        Behav_transc_time = nan(nansum(Num_Slots),2);
+        Behav_What = cell(nansum(Num_Slots),1);
+        Behav_Who =  nan(nansum(Num_Slots),1);
         BehavCount = 1;
         for bb=1:length(BehaviorType)
-            Behav_transc_time(BehavCount:(BehavCount+Num_Slots(bb)-1),:) = AllActions_Time{IB_Ind(bb)};
-            Behav_What{BehavCount:(BehavCount+Num_Slots(bb)-1)} = BehaviorType{bb};
-            Behav_Who(BehavCount:(BehavCount+Num_Slots(bb)-1),:) = logical(AllActions_ID{IB_Ind(bb)} == str2double(SubjectID));
-            BehavCount = BehavCount + Num_Slots(bb)-1;
+            if ~isnan(Num_Slots(bb))
+                Behav_transc_time(BehavCount:(BehavCount+Num_Slots(bb)-1),:) = AllActions_Time{IB_Ind(bb)};
+                Behav_What(BehavCount:(BehavCount+Num_Slots(bb)-1)) = BehaviorType(bb);
+                Behav_Who(BehavCount:(BehavCount+Num_Slots(bb)-1),:) = logical(AllActions_ID{IB_Ind(bb)} == str2double(SubjectID));
+                BehavCount = BehavCount + Num_Slots(bb);
+            end
         end
     end
 

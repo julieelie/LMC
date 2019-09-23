@@ -69,22 +69,24 @@ BasePath = '/Volumes/server_home/users/JulieE/LMC';
 OutputPath = fullfile(BasePath, 'ResultsFiles');
     
 %% Extract the neural data corresponding to the bouts of vocalizations identified
-% by voc_localize and voc_localize_operant for each cell
-fprintf(' EXTRACTING NEURAL DATA CORRESPONDING TO VOCALIZATIONS \n')
+% by voc_localize and voc_localize_operant (run by result_operant_bat.m) for each cell
+fprintf(' EXTRACTING NEURAL DATA CORRESPONDING TO VOCALIZATIONS.... ')
 % Files2Run = 1:length(ListSSU);
 Files2Run = 1:17;
 for ss=Files2Run
     cut_neuralData_voc_perfile(ListSSU{ss}, OutputPath)
 end
-
+fprintf(' DONE \n')
 %% Extract the neural data corresponding to the behaviors identified during the free session
-% by get_logger_data_behav for each cell
-fprintf(' EXTRACTING NEURAL DATA CORRESPONDING TO OTHER BEHAVIORS \n')
+% by get_logger_data_behav (run by result_reconly_bat.m) for each cell
+fprintf(' EXTRACTING NEURAL DATA CORRESPONDING TO OTHER BEHAVIORS.... ')
 % Files2Run = 1:length(ListSSU);
 Files2Run = 1:17;
 for ss=Files2Run
     cut_neuralData_behav_perfile(ListSSU{ss}, OutputPath)
 end
+fprintf(' DONE \n')
+
 
 %% calculate the PSTH of vocalizations
 fprintf(1,' CALCULATING PSTH of NEURAL DATA CORRESPONDING TO VOCALIZATIONS\n');

@@ -44,6 +44,10 @@ for ff = 1:NF
         BatID{ff} = 59882*ones(LastRow-1,1);
     elseif strcmp(Batname, 'Ho')
         BatID{ff} = 11689*ones(LastRow-1,1);
+    elseif strcmp(Batname, 'Co')
+        BatID{ff} = 59834*ones(LastRow-1,1);
+    elseif strcmp(Batname, 'Ed')
+        BatID{ff} = 65701*ones(LastRow-1,1);
     else
         BatIDLocal = input(sprintf('Imposible to identify Bat ID, please enter Chip ID for file %s', InputFiles(ff).name));
         BatID{ff} = BatIDLocal*ones(flip(size(1:(LastRow-1))));

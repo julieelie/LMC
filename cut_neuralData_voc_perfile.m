@@ -164,8 +164,8 @@ elseif contains(DataFile,'SS')
         ExpStartTimes{nn} = AudioDir(nn).name((Idx_2(1)+1) : (Idx_2(2)-1));
         load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date(3:end), ExpStartTimes{nn})), 'Voc_transc_time_refined');
         AudioDir2 = dir(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_*.mat', Date(3:end), ExpStartTimes{nn}))); % These are the results of vocalization identificaion and merging with Who calls for this session
-        Idx_3 = strfind(AudioDir2(nn).name, '_');
-        Idxmat = strfind(AudioDir2(nn).name, '.mat');
+        Idx_3 = strfind(AudioDir2.name, '_');
+        Idxmat = strfind(AudioDir2.name, '.mat');
         NeuroBuffer = str2double(AudioDir2.name((Idx_3(end)+1):(Idxmat-1))); % This is the merged threshold used in the extracted vocalization data in ms we want to use the same value as the neural buffer
         % Find the boundaries for obtaining silence sections of 1 second before 1s of each vocalization event
         BSL_transc_time_refined = find_dead_time(Voc_transc_time_refined,BaselineDelay,BaselineDur);
