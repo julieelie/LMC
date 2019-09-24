@@ -9,6 +9,7 @@ function  sanitary_check_perSSfile(InputDataFile, OutputPath)
 
 %% Hard coded calculation features
 TimeStep = 1*60; % Time resolution in seconds at which the spike rate shoule be calculated
+RateThreshold = 1/(2*TimeStep); % Frequency in Hertz below which the cell is considered as dead if happening over 5 steps (5min 0 spikes), it conrresponds to default value for the rate in kde_wrapper when there is no spike
 
 %% Massage the input and get info about the SS data
 % Decide about the output directory
@@ -92,12 +93,46 @@ MaxRecTime = max([FreeBehavSession OperantSession PlayBackSession])- min([FreeBe
 MinRecTime = -60*5;
 TimePoints = MinRecTime:TimeStep:MaxRecTime;
 % Center spikes and calculate KDE
-SpikeTimes = (Cell.Spike_arrival_times*(10^-6)-OperantSession(1)); % Spike arrival times centered to the onset of the first experiment or the first spike if the onset of the experiment is unavailable
+SpikeTimes = (Cell.Spike_arrival_times*(10^-6)-OperantSession(1)); % Spike arrival times (s) centered to the onset of the first experiment or the first spike if the onset of the experiment is unavailable
 [KDE,~,KDE_error] = kde_wrapper(SpikeTimes,TimePoints(2:end)-TimeStep/2,1/TimeStep);
+% Replace values of spike rate by NaNs for periods of time where the neuron
+% was not recorded
+% Between Operant and FreeBehav
+DeadTime = ((TimePoints(2:end)-TimeStep/2)>diff(OperantSession)) .* ((TimePoints(2:end)-TimeStep/2)<(FreeBehavSession(1)-OperantSession(1)));
+KDE(find(DeadTime)) = NaN;
+KDE_error(:,find(DeadTime))=NaN;
+% Between Free Behav and Play back
+if ~isnan(PlayBackSession(2))
+    DeadTime = ((TimePoints(2:end)-TimeStep/2)>(FreeBehavSession(2)-OperantSession(1))) .* ((TimePoints(2:end)-TimeStep/2)<(PlayBackSession(1)-OperantSession(1)));
+    KDE(find(DeadTime)) = NaN;
+    KDE_error(:,find(DeadTime))=NaN;
+else
+    DeadTime = ((TimePoints(2:end)-TimeStep/2)>(FreeBehavSession(2)-OperantSession(1)));
+    KDE(find(DeadTime)) = NaN;
+    KDE_error(:,find(DeadTime))=NaN;
+end
+
+
+%% Calculate he peak to peak value for each spike in the best channel
+% Find the best channel to calculate the peak2peak value
+% (channel with largest spike trace)
+P2P_all = nan(size(Cell.Spike_snippets,3),4);
+for cc=1:4 % calculate for each channel the peak2peak for all spikes
+    P2P_all(:,cc)=reshape(max(Cell.Spike_snippets(:,cc,:),[],1) - min(Cell.Spike_snippets(:,cc,:),[],1),size(Cell.Spike_snippets,3),1);
+end
+[~,I]=max(P2P_all,[],2);
+Best_c = nan(1,4);
+for cc=1:4
+    Best_c(cc) = sum(I==cc);
+end
+[~,Best_c] = max(Best_c); % This is the channel with the largest spike
+Peak2Peak = squeeze(max(Cell.Spike_snippets(:,Best_c,:),[],1) - min(Cell.Spike_snippets(:,Best_c,:),[],1));
+Peak2Peak = Peak2Peak/max(Peak2Peak); % Get a value betwen 0 and 1 for the size of the spike.
 
 %% Plot the KDE along time with the zones for each session
 FIG=figure();
-shadedErrorBar((TimePoints(2:end)-TimeStep/2)/60,KDE,KDE_error,{'k--', 'LineWidth',2})
+yyaxis left
+shadedErrorBar((TimePoints(2:end)-TimeStep/2)/60,KDE,KDE_error,{'k-', 'LineWidth',2})
 ylabel('Spike rate (Hz)')
 xlabel('Time (min)')
 MaxYLim = max(FIG.Children.YLim);
@@ -110,17 +145,26 @@ if ~isnan(PlayBackSession(2))
     fill(([PlayBackSession flip(PlayBackSession)]-OperantSession(1))/60, [0 0 MaxYLim*ones(1,2)],ones(1,4), 'FaceColor', [0.3 0.3 0.3], 'FaceAlpha', 0.3);
 end
 hold on
-shadedErrorBar((TimePoints(2:end)-TimeStep/2)/60,KDE,KDE_error,{'k--', 'LineWidth',2})
+shadedErrorBar((TimePoints(2:end)-TimeStep/2)/60,KDE,KDE_error,{'k-', 'LineWidth',2})
 % Plot the spike arrival times for that cell on top of the previous plot
 hold on
-scatter(SpikeTimes/60, MaxYLim/5.*rand(size(SpikeTimes)) + MaxYLim,1,'r')
-hold off
+% scatter(SpikeTimes/60, MaxYLim/5.*rand(size(SpikeTimes)) + MaxYLim,1,'k')
+scatter(SpikeTimes/60, MaxYLim/3.*Peak2Peak + MaxYLim,1,'k')
+hold on
 
 
 %% decide of the stability of the cell
+yyaxis right
+DeadCell_Idx = find(KDE<=RateThreshold);
+% plot((TimePoints(2:end)-TimeStep/2)/60, KDE - 3*diff(KDE_error), 'b')
+hold on
+yyaxis left
+plot((TimePoints(DeadCell_Idx+1)-TimeStep/2)/60, KDE(DeadCell_Idx), 'r+')
+if length(DeadCell_Idx)>=5
+    DeadTime_usec = TimePoints(min(DeadCell)+1)*60*10^6+ OperantSession(1);
+end
+%% get the spike sorting quality for that cell along time
 
-
-%% get the spike sorting quality for that cell
 
 
 OutputFile = fullfile(OutputPath, sprintf('%s_%s_SSU%s-%s.mat', SubjectID, Date,NeuralInputID{1},NeuralInputID{2}));
