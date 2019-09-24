@@ -51,16 +51,16 @@ for ll=1:NLog
     F = find(cellfun(@(x) contains(x,'playback start'),event_types_and_details));
     G = find(cellfun(@(x) contains(x,'playback stop'),event_types_and_details));
     if ~isempty(B)
-        FreeBehavSession(1) = 1e-6*event_timestamps_usec(B);
+        OperantSession(1) = 1e-6*event_timestamps_usec(B);
     end
     if ~isempty(C)
-        FreeBehavSession(2) = 1e-6*event_timestamps_usec(C);
+        OperantSession(2) = 1e-6*event_timestamps_usec(C);
     end
     if ~isempty(D)
-        OperantSession(1) = 1e-6*event_timestamps_usec(D);
+        FreeBehavSession(1) = 1e-6*event_timestamps_usec(D);
     end
     if ~isempty(E)
-        OperantSession(2) = 1e-6*event_timestamps_usec(E);
+        FreeBehavSession(2) = 1e-6*event_timestamps_usec(E);
     end
     if ~isempty(F)
         PlayBackSession(1) = 1e-6*event_timestamps_usec(F);
@@ -96,23 +96,24 @@ SpikeTimes = (Cell.Spike_arrival_times*(10^-6)-OperantSession(1)); % Spike arriv
 [KDE,~,KDE_error] = kde_wrapper(SpikeTimes,TimePoints(2:end)-TimeStep/2,1/TimeStep);
 
 %% Plot the KDE along time with the zones for each session
+FIG=figure();
 shadedErrorBar((TimePoints(2:end)-TimeStep/2)/60,KDE,KDE_error,{'k--', 'LineWidth',2})
 ylabel('Spike rate (Hz)')
 xlabel('Time (min)')
-MaxYLim = get(gcf, 'YLim');
+MaxYLim = max(FIG.Children.YLim);
 hold on
-fill(([OperantSession OperantSession']-OperantSession(1))/60, [0 0 MaxYLim*ones(1,2)], 'FaceColor', [0.5 0.2 0.1], 'FaceAlpha', 0.5);
+patch(([OperantSession flip(OperantSession)]-OperantSession(1))/60, [0 0 MaxYLim*ones(1,2)],ones(1,4), 'FaceColor', [1 0.8 0], 'FaceAlpha', 0.3);
 hold on
-fill(([FreeBehavSession FreeBehavSession']-OperantSession(1))/60, [0 0 MaxYLim*ones(1,2)], 'FaceColor', [0 0.2 0.8], 'FaceAlpha', 0.5);
+fill(([FreeBehavSession flip(FreeBehavSession)]-OperantSession(1))/60, [0 0 MaxYLim*ones(1,2)],ones(1,4), 'FaceColor', [0.2 0.7 1], 'FaceAlpha', 0.3);
 hold on
 if ~isnan(PlayBackSession(2))
-    fill(([PlayBackSession PlayBackSession']-OperantSession(1))/60, [0 0 MaxYLim*ones(1,2)], 'FaceColor', [0.3 0.3 0.3], 'FaceAlpha', 0.5);
+    fill(([PlayBackSession flip(PlayBackSession)]-OperantSession(1))/60, [0 0 MaxYLim*ones(1,2)],ones(1,4), 'FaceColor', [0.3 0.3 0.3], 'FaceAlpha', 0.3);
 end
 hold on
 shadedErrorBar((TimePoints(2:end)-TimeStep/2)/60,KDE,KDE_error,{'k--', 'LineWidth',2})
 % Plot the spike arrival times for that cell on top of the previous plot
 hold on
-scatter(SpikeTimes/60, MaxYLim.*rand(size(SpikeTimes))/3 + MaxYLim,2,'r')
+scatter(SpikeTimes/60, MaxYLim/5.*rand(size(SpikeTimes)) + MaxYLim,1,'r')
 hold off
 
 

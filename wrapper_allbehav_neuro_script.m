@@ -73,7 +73,8 @@ OutputPath = fullfile(BasePath, 'ResultsFiles');
 % whole experiment, measure stability, quality...
 % of spike sorting.
 fprintf('NEURONS SANITARY CHECK.... ')
-Files2Run = 1:length(ListSSU);
+% Files2Run = 1:length(ListSSU);
+Files2Run = 1:17;
 for ss=Files2Run
     sanitary_check_perSSfile(ListSSU{ss}, OutputPath)
 end
@@ -83,7 +84,6 @@ fprintf(' DONE \n')
 % by voc_localize and voc_localize_operant (run by result_operant_bat.m) for each cell
 fprintf(' EXTRACTING NEURAL DATA CORRESPONDING TO VOCALIZATIONS.... ')
 % Files2Run = 1:length(ListSSU);
-Files2Run = 1:17;
 for ss=Files2Run
     cut_neuralData_voc_perfile(ListSSU{ss}, OutputPath)
 end
