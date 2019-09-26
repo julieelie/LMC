@@ -32,6 +32,9 @@ NeuralInputID{2} = DataFile((Idx_(end)+1):end);
 % Get the subject ID
 SubjectID = DataFile(1:5);
 
+% Get the corresponding tetrode file
+TetrodeFile = dir(fullfile(Path2Data, sprintf('%s_%s_TT%s*Sorted*.mat',SubjectID,Date,NeuralInputID{1})));
+
 %% Get the time in transceiver time of each session in s
 All_loggers = dir(fullfile(Loggers_dir, '*ogger*'));
 DirFlags = [All_loggers.isdir];
@@ -131,7 +134,12 @@ Peak2Peak = Peak2Peak/max(Peak2Peak); % Get a value betwen 0 and 1 for the size 
 
 %% Plot the KDE along time with the zones for each session
 Fig = figure();
-SS1=subplot(2,1,1);
+if ~isempty(TetrodeFile)
+    SS1=subplot(2,1,1);
+else
+    SS1 = subplot(1,1,1);
+end
+        
 shadedErrorBar((TimePoints(2:end)-TimeStep/2)/60,KDE,KDE_error,{'k-', 'LineWidth',2})
 ylabel('Spike rate (Hz)')
 xlabel('Time (min)')
@@ -151,10 +159,10 @@ hold on
 % scatter(SpikeTimes/60, MaxYLim/5.*rand(size(SpikeTimes)) + MaxYLim,1,'k')
 scatter(SpikeTimes/60, MaxYLim/3.*Peak2Peak + MaxYLim,1,'k')
 hold on
+title(sprintf('%s on %s TT%s SS%s', SubjectID, Date, NeuralInputID{1},NeuralInputID{2}))
 
 %% get the spike sorting quality for that cell along time
-% Get the corresponding tetrode file
-TetrodeFile = dir(fullfile(Path2Data, sprintf('%s_%s_TT%s*Sorted*.mat',SubjectID,Date,NeuralInputID{1})));
+
 if ~isempty(TetrodeFile)
     TData = load(fullfile(TetrodeFile.folder, TetrodeFile.name));
     SS_i = find(TData.SS_U_ID == str2double(NeuralInputID{2}));
@@ -171,20 +179,38 @@ if ~isempty(TetrodeFile)
     ylabel('IsolationDistance (log10 scale)')
     xlabel('Time (min)')
     SS2.XLim = XLimSS1;
-    title(sprintf('Spike sorting quality cluster %d, LRatio = %.1f, IDist = %.1f', TData.SS_U_ID(SS_i), TData.LRatio(SS_i),TData.IsolationDistance(SS_i)));
+    title(sprintf('cluster %d, LRatio = %.1f, IDist = %.1f', TData.SS_U_ID(SS_i), TData.LRatio(SS_i),TData.IsolationDistance(SS_i)));
     hold off
     
 end
+
 %% decide of the stability of the cell
-subplot(2,1,1)
-% yyaxis right
-DeadCell_Idx = find(KDE<=RateThreshold);
-% plot((TimePoints(2:end)-TimeStep/2)/60, KDE - 3*diff(KDE_error), 'b')
+DurDead = 10; % dead period are consecutive DurDead minutes below the RateThreshold
+% find consecutive periods of 10 min very low rate
+DeadCell_Idx = strfind(KDE<=RateThreshold, ones(1,DurDead)); 
+DeadCell_Idx = unique(reshape(repmat(DeadCell_Idx',1,DurDead) + repmat(0:(DurDead-1),length(DeadCell_Idx),1), length(DeadCell_Idx)*DurDead,1));
+% plot these unstable data points
+if ~isempty(TetrodeFile)
+    SS1=subplot(2,1,1);
+else
+    SS1 = subplot(1,1,1);
+end
 hold on
-% yyaxis left
 plot((TimePoints(DeadCell_Idx+1)-TimeStep/2)/60, KDE(DeadCell_Idx), 'r+')
+
+% find consecutive periods of 10 min normal rate from the beginning of the
+% first dead period
+LocalDeadCell_Idx = [DeadCell_Idx ; length(KDE)];
+AliveIdx = find(diff(LocalDeadCell_Idx)>=DurDead);
+QualitySSU.DeadTime_usec(1,1) = TimePoints(min(LocalDeadCell_Idx)+1)*60*10^6+ OperantSession(1);
+for aa=1:(length(AliveIdx)-1)
+    QualitySSU.DeadTime_usec(aa,2) = TimePoints(LocalDeadCell_Idx(AliveIdx)+1)*60*10^6+ OperantSession(1);
+    QualitySSU.DeadTime_usec(aa+1,1) = TimePoints(LocalDeadCell_Idx(AliveIdx+1)+1)*60*10^6+ OperantSession(1);
+end
+%%%% Think better about this!!
+QualitySSU.DeadTime_usec(length(AliveIdx),2) = TimePoints(LocalDeadCell_Idx(AliveIdx+1)+1)*60*10^6+ OperantSession(1);
 if length(DeadCell_Idx)>=5
-    QualitySSU.DeadTime_usec = TimePoints(min(DeadCell)+1)*60*10^6+ OperantSession(1);
+    QualitySSU.DeadTime_usec = TimePoints(min(DeadCell_Idx)+1)*60*10^6+ OperantSession(1);
 else
     QualitySSU.DeadTime_usec = Inf;
 end

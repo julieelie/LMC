@@ -6,7 +6,7 @@ function cut_neuralData_behav_perfile(InputDataFile, OutputPath, BehaviorType,Fl
 % seconds preceding the vocalization, this baseline calculation assumes
 % that there is no vocalization or behavioral event between the behavioral
 % events indicated by Voc_trans_time_refined.
-% 
+%
 
 % INPUT:
 %       InputDataFile: path to a tetrode mat file, a single unit mat file or the
@@ -146,6 +146,10 @@ elseif contains(DataFile,'SS')
     % Get the subject ID
     SubjectID = DataFile(1:5);
     
+    % Find if there is any period of unstability for the neural
+    % activity
+    load(fullfile(OutputPath, sprintf('%s_%s_SSU%s-%s.mat', SubjectID, Date,NeuralInputID{1},NeuralInputID{2})),'QualitySSU');
+    
     % Loop through behavioral data files
     AudioDir = dir(fullfile(Loggers_dir, sprintf('%s*BehavExtractData.mat', Date(3:end)))); % These are all the results of vocalization localization for both operant conditioning and free session
     Nsession = length(AudioDir);
@@ -157,7 +161,7 @@ elseif contains(DataFile,'SS')
         % Select behavioral data
         [Behav_transc_time, Behav_What,Behav_Who] = sort_behavior(AllActions_Time, AllActions_ID, UActionText,BehaviorType,SubjectID);
         % extract single unit spikes
-        [Behav_NeuroSSU] = extract_timeslot_SSU(InputDataFile, Behav_transc_time);
+        [Behav_NeuroSSU] = extract_timeslot_SSU(InputDataFile, Behav_transc_time,QualitySSU.DeadTime_usec);
         OutputFile = fullfile(OutputPath, sprintf('%s_%s_%s_SSU%s-%s.mat', SubjectID, Date, ExpStartTimes{nn},NeuralInputID{1},NeuralInputID{2}));
         if exist(OutputFile, 'file')
             save(OutputFile, 'Behav_NeuroSSU','Behav_What','Behav_Who','-append');
@@ -274,24 +278,29 @@ end
 
 
 % Extracting spike sorted unit data
-    function [OutData] = extract_timeslot_SSU(InputFile, Voc_transc_time)
-        Nevent = size(Voc_transc_time,1);
+    function [OutData] = extract_timeslot_SSU(InputFile, Behav_transc_time,DeadTime_usec)
+        % Don't extract data for events that happened after the DeadTime of
+        % the unit
+        BehavIdxSSUAlive = find(sum(Behav_transc_time<(DeadTime_usec.*10^-3),2)==2);
+        Nevent = length(VocIdxSSUAlive);
+        OutData.BehavIdxSSUAlive = BehavIdxSSUAlive;
         OutData.SpikeSUBehav = cell(Nevent,1);
         
         % loading the single unit spike arrival times
         Spikes = load(InputFile, 'Spike_arrival_times');
         % loop through vocalizations and extract spike arrival times
         for vv=1:Nevent
+            ii = BehavIdxSSUAlive(vv);
             % Find the spike arrival times that are between the
             % requested times and center them to the onset of the
             % behavioral event, save in ms
-            OutData.SpikeSUBehav{vv} = Spikes.Spike_arrival_times(logical((Spikes.Spike_arrival_times>(Voc_transc_time(vv,1)*10^3)) .* (Spikes.Spike_arrival_times<(Voc_transc_time(vv,2)*10^3))))/10^3 - Voc_transc_time(vv,1);
+            OutData.SpikeSUBehav{vv} = Spikes.Spike_arrival_times(logical((Spikes.Spike_arrival_times>(Behav_transc_time(ii,1)*10^3)) .* (Spikes.Spike_arrival_times<(Behav_transc_time(ii,2)*10^3))))/10^3 - Behav_transc_time(ii,1);
         end
     end
 
 
 
-% Find the indices onset/offset in the raw logger file corresponding to requested transceiver times 
+% Find the indices onset/offset in the raw logger file corresponding to requested transceiver times
     function [IndSampOn, IndSampOff, FS] = time2indices_logger(TimeOnset, TimeOffset, RawDataLength, Timestamps_of_first_samples_usec, Indices_of_first_and_last_samples,Estimated_channelFS_Transceiver,Sampling_period_usec_Logger,NanFSInd, GoodFSInd)
         IndTSOn = find(Timestamps_of_first_samples_usec<(TimeOnset*10^3), 1, 'Last');
         if ~isempty(IndTSOn) %This event did happen after recording onset
