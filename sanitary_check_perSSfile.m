@@ -113,7 +113,7 @@ else
 end
 
 
-%% Calculate he peak to peak value for each spike in the best channel
+%% Calculate the peak to peak value for each spike in the best channel or the max
 % Find the best channel to calculate the peak2peak value
 % (channel with largest spike trace)
 P2P_all = nan(size(Cell.Spike_snippets,3),4);
@@ -130,12 +130,12 @@ Peak2Peak = squeeze(max(Cell.Spike_snippets(:,Best_c,:),[],1) - min(Cell.Spike_s
 Peak2Peak = Peak2Peak/max(Peak2Peak); % Get a value betwen 0 and 1 for the size of the spike.
 
 %% Plot the KDE along time with the zones for each session
-FIG=figure();
-yyaxis left
+Fig = figure();
+SS1=subplot(2,1,1);
 shadedErrorBar((TimePoints(2:end)-TimeStep/2)/60,KDE,KDE_error,{'k-', 'LineWidth',2})
 ylabel('Spike rate (Hz)')
 xlabel('Time (min)')
-MaxYLim = max(FIG.Children.YLim);
+MaxYLim = max(SS1.YLim);
 hold on
 patch(([OperantSession flip(OperantSession)]-OperantSession(1))/60, [0 0 MaxYLim*ones(1,2)],ones(1,4), 'FaceColor', [1 0.8 0], 'FaceAlpha', 0.3);
 hold on
@@ -152,25 +152,63 @@ hold on
 scatter(SpikeTimes/60, MaxYLim/3.*Peak2Peak + MaxYLim,1,'k')
 hold on
 
-
+%% get the spike sorting quality for that cell along time
+% Get the corresponding tetrode file
+TetrodeFile = dir(fullfile(Path2Data, sprintf('%s_%s_TT%s*Sorted*.mat',SubjectID,Date,NeuralInputID{1})));
+if ~isempty(TetrodeFile)
+    TData = load(fullfile(TetrodeFile.folder, TetrodeFile.name));
+    SS_i = find(TData.SS_U_ID == str2double(NeuralInputID{2}));
+    TimeStepQ = diff(TData.TimePoints(1:2));
+    XLimSS1 = SS1.XLim;
+    SS2=subplot(2,1,2);
+    Xtime = ((TData.TimePoints(2:end)-TimeStepQ/2).*10^-6 - OperantSession(1))/60;
+    yyaxis left
+    plot(Xtime, TData.TimeLRatio(:,SS_i), 'b-', 'LineWidth',2);
+    ylabel('LRatio')
+    hold on
+    yyaxis right
+    plot(Xtime, log10(TData.TimeIsolationDistance(:,SS_i)), 'r-', 'LineWidth',2);
+    ylabel('IsolationDistance (log10 scale)')
+    xlabel('Time (min)')
+    SS2.XLim = XLimSS1;
+    title(sprintf('Spike sorting quality cluster %d, LRatio = %.1f, IDist = %.1f', TData.SS_U_ID(SS_i), TData.LRatio(SS_i),TData.IsolationDistance(SS_i)));
+    hold off
+    
+end
 %% decide of the stability of the cell
-yyaxis right
+subplot(2,1,1)
+% yyaxis right
 DeadCell_Idx = find(KDE<=RateThreshold);
 % plot((TimePoints(2:end)-TimeStep/2)/60, KDE - 3*diff(KDE_error), 'b')
 hold on
-yyaxis left
+% yyaxis left
 plot((TimePoints(DeadCell_Idx+1)-TimeStep/2)/60, KDE(DeadCell_Idx), 'r+')
 if length(DeadCell_Idx)>=5
-    DeadTime_usec = TimePoints(min(DeadCell)+1)*60*10^6+ OperantSession(1);
+    QualitySSU.DeadTime_usec = TimePoints(min(DeadCell)+1)*60*10^6+ OperantSession(1);
+else
+    QualitySSU.DeadTime_usec = Inf;
 end
-%% get the spike sorting quality for that cell along time
 
+%% Stuff in output and save figures and output
+QualitySSU.KDE = KDE;
+QualitySSU.KDE_error = KDE_error;
+QualitySSU.TimePoints = TimePoints;
+QualitySSU.LRatioIsolationDistTimePoints =TData.TimePoints;
+QualitySSU.TimeLRatio = TData.TimeLRatio(:,SS_i);
+QualitySSU.TimeIsolationDistance = TData.TimeIsolationDistance(:,SS_i);
+QualitySSU.LRatio = TData.LRatio(SS_i);
+QualitySSU.IsolationDistance = TData.TimeIsolationDistance(SS_i);
+
+orient(Fig,'landscape')
+Fig.PaperPositionMode = 'auto';
+set(Fig,'PaperOrientation','landscape');
+print(Fig,fullfile(OutputPath,sprintf('%s_%s_SSU%s-%s_HealthCheck.pdf', SubjectID, Date,NeuralInputID{1},NeuralInputID{2})),'-dpdf','-fillpage')
 
 
 OutputFile = fullfile(OutputPath, sprintf('%s_%s_SSU%s-%s.mat', SubjectID, Date,NeuralInputID{1},NeuralInputID{2}));
 if exist(OutputFile, 'file')
-    save(OutputFile, 'Voc_NeuroSSU','-append');
+    save(OutputFile, 'QualitySSU','OperantSession','FreeBehavSession','PlayBackSession','-append');
 else
-    save(OutputFile, 'Voc_NeuroSSU');
+    save(OutputFile, 'QualitySSU','OperantSession','FreeBehavSession','PlayBackSession');
 end
 end
