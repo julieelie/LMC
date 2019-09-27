@@ -189,6 +189,9 @@ DurDead = 10; % dead period are consecutive DurDead minutes below the RateThresh
 % find consecutive periods of 10 min very low rate
 DeadCell_Idx = strfind(KDE<=RateThreshold, ones(1,DurDead)); 
 DeadCell_Idx = unique(reshape(repmat(DeadCell_Idx',1,DurDead) + repmat(0:(DurDead-1),length(DeadCell_Idx),1), length(DeadCell_Idx)*DurDead,1));
+% find consecutive periods of 10 min normal rate 
+AliveCell_Idx = strfind(KDE>RateThreshold, ones(1,DurDead)); 
+AliveCell_Idx = unique(reshape(repmat(AliveCell_Idx',1,DurDead) + repmat(0:(DurDead-1),length(AliveCell_Idx),1), length(AliveCell_Idx)*DurDead,1));
 % plot these unstable data points
 if ~isempty(TetrodeFile)
     SS1=subplot(2,1,1);
@@ -198,16 +201,29 @@ end
 hold on
 plot((TimePoints(DeadCell_Idx+1)-TimeStep/2)/60, KDE(DeadCell_Idx), 'r+')
 
-% find consecutive periods of 10 min normal rate from the beginning of the
-% first dead period
-LocalDeadCell_Idx = [DeadCell_Idx ; length(KDE)];
-AliveIdx = find(diff(LocalDeadCell_Idx)>=DurDead);
-QualitySSU.DeadTime_usec(1,1) = TimePoints(min(LocalDeadCell_Idx)+1)*60*10^6+ OperantSession(1);
-for aa=1:(length(AliveIdx)-1)
-    QualitySSU.DeadTime_usec(aa,2) = TimePoints(LocalDeadCell_Idx(AliveIdx)+1)*60*10^6+ OperantSession(1);
-    QualitySSU.DeadTime_usec(aa+1,1) = TimePoints(LocalDeadCell_Idx(AliveIdx+1)+1)*60*10^6+ OperantSession(1);
+% These are all periods of time of more than 10min were the rate was normal
+% after the first period of unstability
+AliveIdx = AliveCell_Idx(AliveCell_Idx>min(DeadCell_Idx));
+DD = find(diff(AliveIdx)>1); % These are the indices in Alive Idx that correspond to onset/offset of not alive = dead periods
+QualitySSU.DeadTime_usec(1,1) = TimePoints(min(DeadCell_Idx))*60*10^6+ OperantSession(1);
+if ~isempty(DD)
+    QualitySSU.DeadTime_usec(1,2) = AliveIdx(1);
+    for dd=1:length(DD)
+        % I'm here!!
+        QualitySSU.DeadTime_usec(dd,2) = TimePoints(min(DeadCell_Idx))*60*10^6+ OperantSession(1);
+    end
+else
+    QualitySSU.DeadTime_usec(1,2) = Inf;
 end
-%%%% Think better about this!!
+
+for aa=1:(length(AliveIdx)-1)
+    QualitySSU.DeadTime_usec(aa,2) = TimePoints(LocalDeadCell_Idx(AliveIdx(aa))+1)*60*10^6+ OperantSession(1);
+    
+    QualitySSU.DeadTime_usec(aa+1,1) = TimePoints(LocalDeadCell_Idx(AliveIdx(aa)+1)+1)*60*10^6+ OperantSession(1);
+end
+if LocalDeadCell_Idx(AliveIdx(end)+1) == length(KDE) % the last alive period extends until the end of the recording
+    QualitySSU.DeadTime_usec(aa+1,1)
+    %%%% Think better about this!!
 QualitySSU.DeadTime_usec(length(AliveIdx),2) = TimePoints(LocalDeadCell_Idx(AliveIdx+1)+1)*60*10^6+ OperantSession(1);
 if length(DeadCell_Idx)>=5
     QualitySSU.DeadTime_usec = TimePoints(min(DeadCell_Idx)+1)*60*10^6+ OperantSession(1);
