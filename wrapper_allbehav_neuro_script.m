@@ -98,6 +98,15 @@ for ss=Files2Run
 end
 fprintf(' DONE \n')
 
+%% Plot the average spike rate during various types of behaviors including vocalizations
+fprintf(' PLOTING NEURAL DATA (Av RATE) CORRESPONDING TO ALL BEHAVIORS.... ')
+% Files2Run = 1:length(ListSSU);
+Files2Run = 1:17;
+for ss=Files2Run
+    plot_avRate_perfile(ListSSU{ss}, OutputPath)
+end
+fprintf(' DONE \n')
+
 
 %% calculate the PSTH of vocalizations
 fprintf(1,' CALCULATING PSTH of NEURAL DATA CORRESPONDING TO VOCALIZATIONS\n');
@@ -260,7 +269,7 @@ for ee=1:length(ExpFolders)
         fprintf(1, '   %s\n', DateFolders(dd).name);
         LoggerFolders = dir(fullfile(DateFolders(dd).folder, DateFolders(dd).name,'Logger*'));
         for ll = 1:length(LoggerFolders)
-            SSFiles = dir(fullfile(LoggerFolders(ll).folder, LoggerFolders(ll).name, 'extracted_data', '*_TT*_SS*.mat'));
+            SSFiles = dir(fullfile(LoggerFolders(ll).folder, LoggerFolders(ll).name, 'extracted_data', '*_TT*_SS_*.mat'));
             if ~isempty(SSFiles)
                 for ssf=1:length(SSFiles)
                     NSSU = NSSU +1;

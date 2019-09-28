@@ -147,8 +147,9 @@ elseif contains(DataFile,'SS')
     SubjectID = DataFile(1:5);
     
     % Find if there is any period of unstability for the neural
-    % activity
-    load(fullfile(OutputPath, sprintf('%s_%s_SSU%s-%s.mat', SubjectID, Date,NeuralInputID{1},NeuralInputID{2})),'QualitySSU');
+    % activity %% THIS IS NOT IMPLEMENTED AS OF NOW, SHOULD BE AN INPUT OF
+    % extract_timeslot_SSU
+%     load(fullfile(OutputPath, sprintf('%s_%s_SSU%s-%s.mat', SubjectID, Date,NeuralInputID{1},NeuralInputID{2})),'QualitySSU');
     
     % Loop through behavioral data files
     AudioDir = dir(fullfile(Loggers_dir, sprintf('%s*BehavExtractData.mat', Date(3:end)))); % These are all the results of vocalization localization for both operant conditioning and free session
@@ -161,7 +162,7 @@ elseif contains(DataFile,'SS')
         % Select behavioral data
         [Behav_transc_time, Behav_What,Behav_Who] = sort_behavior(AllActions_Time, AllActions_ID, UActionText,BehaviorType,SubjectID);
         % extract single unit spikes
-        [Behav_NeuroSSU] = extract_timeslot_SSU(InputDataFile, Behav_transc_time,QualitySSU.DeadTime_usec);
+        [Behav_NeuroSSU] = extract_timeslot_SSU(InputDataFile, Behav_transc_time,Inf);
         OutputFile = fullfile(OutputPath, sprintf('%s_%s_%s_SSU%s-%s.mat', SubjectID, Date, ExpStartTimes{nn},NeuralInputID{1},NeuralInputID{2}));
         if exist(OutputFile, 'file')
             save(OutputFile, 'Behav_NeuroSSU','Behav_What','Behav_Who','-append');
@@ -282,7 +283,7 @@ end
         % Don't extract data for events that happened after the DeadTime of
         % the unit
         BehavIdxSSUAlive = find(sum(Behav_transc_time<(DeadTime_usec.*10^-3),2)==2);
-        Nevent = length(VocIdxSSUAlive);
+        Nevent = length(BehavIdxSSUAlive);
         OutData.BehavIdxSSUAlive = BehavIdxSSUAlive;
         OutData.SpikeSUBehav = cell(Nevent,1);
         

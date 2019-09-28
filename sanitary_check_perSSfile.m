@@ -45,7 +45,7 @@ FreeBehavSession = nan(1,2); % Onset/offset in transceiver time in s of the expe
 OperantSession = nan(1,2);% Onset/offset in transceiver time in s of the experiment All Voc Reward (operant conditioning)
 PlayBackSession = nan(1,2);% Onset/offset in transceiver time in s of the experiment Playback
 for ll=1:NLog
-    fprintf('%s ', All_loggers(ll).name);
+%     fprintf('%s ', All_loggers(ll).name);
     Eventfile = dir(fullfile(All_loggers(ll).folder,All_loggers(ll).name, 'extracted_data', '*_EVENTS.mat')); % load file with TTL status info
     load(fullfile(Eventfile.folder, Eventfile.name), 'event_types_and_details', 'event_timestamps_usec');
     B=find(cellfun(@(x) contains(x,'all voc reward start'),event_types_and_details));
@@ -188,58 +188,43 @@ end
 DurDead = 10; % dead period are consecutive DurDead minutes below the RateThreshold
 % find consecutive periods of 10 min very low rate
 DeadCell_Idx = strfind(KDE<=RateThreshold, ones(1,DurDead)); 
-DeadCell_Idx = unique(reshape(repmat(DeadCell_Idx',1,DurDead) + repmat(0:(DurDead-1),length(DeadCell_Idx),1), length(DeadCell_Idx)*DurDead,1));
-% find consecutive periods of 10 min normal rate 
-AliveCell_Idx = strfind(KDE>RateThreshold, ones(1,DurDead)); 
-AliveCell_Idx = unique(reshape(repmat(AliveCell_Idx',1,DurDead) + repmat(0:(DurDead-1),length(AliveCell_Idx),1), length(AliveCell_Idx)*DurDead,1));
-% plot these unstable data points
-if ~isempty(TetrodeFile)
-    SS1=subplot(2,1,1);
-else
-    SS1 = subplot(1,1,1);
-end
-hold on
-plot((TimePoints(DeadCell_Idx+1)-TimeStep/2)/60, KDE(DeadCell_Idx), 'r+')
+if ~isempty(DeadCell_Idx)
+    DeadCell_Idx = unique(reshape(repmat(DeadCell_Idx',1,DurDead) + repmat(0:(DurDead-1),length(DeadCell_Idx),1), length(DeadCell_Idx)*DurDead,1));
+    % plot these unstable data points
+    if ~isempty(TetrodeFile)
+        SS1=subplot(2,1,1);
+    else
+        SS1 = subplot(1,1,1);
+    end
+    hold on
+    plot((TimePoints(DeadCell_Idx+1)-TimeStep/2)/60, KDE(DeadCell_Idx), 'r+')
 
-% These are all periods of time of more than 10min were the rate was normal
-% after the first period of unstability
-AliveIdx = AliveCell_Idx(AliveCell_Idx>min(DeadCell_Idx));
-DD = find(diff(AliveIdx)>1); % These are the indices in Alive Idx that correspond to onset/offset of not alive = dead periods
-QualitySSU.DeadTime_usec(1,1) = TimePoints(min(DeadCell_Idx))*60*10^6+ OperantSession(1);
-if ~isempty(DD)
-    QualitySSU.DeadTime_usec(1,2) = AliveIdx(1);
-    for dd=1:length(DD)
-        % I'm here!!
-        QualitySSU.DeadTime_usec(dd,2) = TimePoints(min(DeadCell_Idx))*60*10^6+ OperantSession(1);
+
+    DD = find(diff(DeadCell_Idx)>1); % These are the indices that correspond to offset/onset of dead periods
+    QualitySSU.DeadTime_usec(1,1) = TimePoints(min(DeadCell_Idx))*60*10^6+ OperantSession(1);
+    if ~isempty(DD)
+        for dd=1:length(DD)
+            QualitySSU.DeadTime_usec(dd,2) = TimePoints(DeadCell_Idx(DD(dd)))*60*10^6+ OperantSession(1);
+            QualitySSU.DeadTime_usec(dd,1) = TimePoints(DeadCell_Idx(DD(dd)+1))*60*10^6+ OperantSession(1);
+        end
+        QualitySSU.DeadTime_usec(dd,2) = TimePoints(min(length(TimePoints), DeadCell_Idx(end)))*60*10^6+ OperantSession(1);
+    else
+        QualitySSU.DeadTime_usec(1,2) = TimePoints(min(length(TimePoints), DeadCell_Idx(end)))*60*10^6+ OperantSession(1);
     end
 else
-    QualitySSU.DeadTime_usec(1,2) = Inf;
+    QualitySSU.DeadTime_usec = [];
 end
-
-for aa=1:(length(AliveIdx)-1)
-    QualitySSU.DeadTime_usec(aa,2) = TimePoints(LocalDeadCell_Idx(AliveIdx(aa))+1)*60*10^6+ OperantSession(1);
-    
-    QualitySSU.DeadTime_usec(aa+1,1) = TimePoints(LocalDeadCell_Idx(AliveIdx(aa)+1)+1)*60*10^6+ OperantSession(1);
-end
-if LocalDeadCell_Idx(AliveIdx(end)+1) == length(KDE) % the last alive period extends until the end of the recording
-    QualitySSU.DeadTime_usec(aa+1,1)
-    %%%% Think better about this!!
-QualitySSU.DeadTime_usec(length(AliveIdx),2) = TimePoints(LocalDeadCell_Idx(AliveIdx+1)+1)*60*10^6+ OperantSession(1);
-if length(DeadCell_Idx)>=5
-    QualitySSU.DeadTime_usec = TimePoints(min(DeadCell_Idx)+1)*60*10^6+ OperantSession(1);
-else
-    QualitySSU.DeadTime_usec = Inf;
-end
-
 %% Stuff in output and save figures and output
 QualitySSU.KDE = KDE;
 QualitySSU.KDE_error = KDE_error;
 QualitySSU.TimePoints = TimePoints;
-QualitySSU.LRatioIsolationDistTimePoints =TData.TimePoints;
-QualitySSU.TimeLRatio = TData.TimeLRatio(:,SS_i);
-QualitySSU.TimeIsolationDistance = TData.TimeIsolationDistance(:,SS_i);
-QualitySSU.LRatio = TData.LRatio(SS_i);
-QualitySSU.IsolationDistance = TData.TimeIsolationDistance(SS_i);
+if ~isempty(TetrodeFile)
+    QualitySSU.LRatioIsolationDistTimePoints =TData.TimePoints;
+    QualitySSU.TimeLRatio = TData.TimeLRatio(:,SS_i);
+    QualitySSU.TimeIsolationDistance = TData.TimeIsolationDistance(:,SS_i);
+    QualitySSU.LRatio = TData.LRatio(SS_i);
+    QualitySSU.IsolationDistance = TData.TimeIsolationDistance(SS_i);
+end
 
 orient(Fig,'landscape')
 Fig.PaperPositionMode = 'auto';
@@ -253,4 +238,5 @@ if exist(OutputFile, 'file')
 else
     save(OutputFile, 'QualitySSU','OperantSession','FreeBehavSession','PlayBackSession');
 end
+close all
 end

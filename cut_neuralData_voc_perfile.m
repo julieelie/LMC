@@ -156,8 +156,8 @@ elseif contains(DataFile,'SS')
     SubjectID = DataFile(1:5);
     
     % Find if there is any period of unstability for the neural
-    % activity
-    load(fullfile(OutputPath, sprintf('%s_%s_SSU%s-%s.mat', SubjectID, Date,NeuralInputID{1},NeuralInputID{2})),'QualitySSU');
+    % activity %% NOT IMPLEMENTED AS OF NOW
+    % load(fullfile(OutputPath, sprintf('%s_%s_SSU%s-%s.mat', SubjectID, Date,NeuralInputID{1},NeuralInputID{2})),'QualitySSU');
     
     % Loop through audio data
     AudioDir = dir(fullfile(Loggers_dir, sprintf('%s*VocExtractData.mat', Date(3:end)))); % These are all the results of vocalization localization for both operant conditioning and free session
@@ -174,7 +174,7 @@ elseif contains(DataFile,'SS')
         % Find the boundaries for obtaining silence sections of 1 second before 1s of each vocalization event
         BSL_transc_time_refined = find_dead_time(Voc_transc_time_refined,BaselineDelay,BaselineDur);
         % Extract Spike data
-        [Voc_NeuroSSU] = extract_timeslot_SSU(InputDataFile, Voc_transc_time_refined, BSL_transc_time_refined, NeuroBuffer,MaxEventDur,QualitySSU.DeadTime_usec);
+        [Voc_NeuroSSU] = extract_timeslot_SSU(InputDataFile, Voc_transc_time_refined, BSL_transc_time_refined, NeuroBuffer,MaxEventDur,Inf);
         OutputFile = fullfile(OutputPath, sprintf('%s_%s_%s_SSU%s-%s.mat', SubjectID, Date, ExpStartTimes{nn},NeuralInputID{1},NeuralInputID{2}));
         if exist(OutputFile, 'file')
             save(OutputFile, 'Voc_NeuroSSU','-append');
