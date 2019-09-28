@@ -8,7 +8,7 @@ ForceAllign = 0; % In case the TTL pulses allignment was already done but you wa
 ForceVocExt1 = 0; % In case the localization on raw files of vocalizations that were manually extracted was already done but you want to do it again set to 1
 ForceVocExt2 = 0; % In case the localization on Loggers of vocalizations that were manually extracted was already done but you want to do it again set to 1
 ForceWhoID = 0; % In case the identification of bats was already done but you want to re-do it again
-ForceBehav = 1;% Force extracting onset/offset time of other behaviors
+ForceBehav = 0;% Force extracting onset/offset time of other behaviors
 close all
 
 % Get the recording date
@@ -61,6 +61,8 @@ if TranscExtract
     % Extract only those that are directories.
     All_loggers_dir = All_loggers_dir(DirFlags);
     TransceiverReset = struct(); % These are possible parameters for dealing with change of transceiver or sudden transceiver clock change. Set to empty before the first extraction
+    LoggerName = cell(length(All_loggers_dir),1);
+    BatID = cell(length(All_loggers_dir),1);
     for ll=1:length(All_loggers_dir)
         Logger_i = fullfile(Logger_dir,All_loggers_dir(ll).name);
         Ind = strfind(All_loggers_dir(ll).name, 'r');
@@ -70,8 +72,11 @@ if TranscExtract
         LogCol = NLogCol(find(cell2mat(DataInfo(NLogCol))==Logger_num));
         if isempty(LogCol) % This is an audiologger and not a neural logger
             LogCol = ALogCol(find(cell2mat(DataInfo(ALogCol))==Logger_num));
+            LoggerName{ll} = ['AL' num2str(Logger_num)];
+        else
+            LoggerName{ll} = ['NL' num2str(Logger_num)];
         end
-        BatID = DataInfo{BatIDCol(find(BatIDCol<LogCol,1,'last'))};
+        BatID{ll} = DataInfo{BatIDCol(find(BatIDCol<LogCol,1,'last'))};
         ParamFiles = dir(fullfile(Logger_i,'extracted_data','*extract_logger_data_parameters*mat'));
         if isempty(ParamFiles) || ForceExtract
             fprintf(1,'-> Extracting %s\n',All_loggers_dir(ll).name);
@@ -90,14 +95,14 @@ if TranscExtract
             % run extraction
             if Logger_num==16 && str2double(Date)<190501
                 % extract_logger_data(Logger_local, 'BatID', num2str(BatID), 'ActiveChannels', [0 1 2 3 4 5 6 7 8 9 10 12 13 14 15], 'AutoSpikeThreshFactor',5,'TransceiverReset',TransceiverReset)
-                extract_logger_data(Logger_local, 'BatID', num2str(BatID), 'ActiveChannels', [0 1 2 3 4 5 6 7 8 9 10 12 13 14 15],'TransceiverReset',TransceiverReset,'AutoSpikeThreshFactor',4)
+                extract_logger_data(Logger_local, 'BatID', num2str(BatID{ll}), 'ActiveChannels', [0 1 2 3 4 5 6 7 8 9 10 12 13 14 15],'TransceiverReset',TransceiverReset,'AutoSpikeThreshFactor',4)
             else
                 %extract_logger_data(Logger_local, 'BatID', num2str(BatID),'TransceiverReset',TransceiverReset)
-                extract_logger_data(Logger_local, 'BatID', num2str(BatID),'TransceiverReset',TransceiverReset,'AutoSpikeThreshFactor',4)
+                extract_logger_data(Logger_local, 'BatID', num2str(BatID{ll}),'TransceiverReset',TransceiverReset,'AutoSpikeThreshFactor',4)
             end
             
             % Keeps value of eventual clock reset
-            Filename=fullfile(Logger_local, 'extracted_data', sprintf('%s_20%s_EVENTS.mat', num2str(BatID),Date));
+            Filename=fullfile(Logger_local, 'extracted_data', sprintf('%s_20%s_EVENTS.mat', num2str(BatID{ll}),Date));
             NewTR = load(Filename, 'TransceiverReset');
             if ~isempty(fieldnames(NewTR.TransceiverReset))% this will be used in the next loop!
                 TransceiverReset = NewTR.TransceiverReset;
@@ -199,6 +204,8 @@ if TranscExtract
     else
         fprintf('\n*** ALREADY DONE: Identify who is calling ***\n')
     end
+    % Save the ID of the bat for each logger
+    save(fullfile(Logger_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, 200)), 'BatID','LoggerName','-append')
     
     %% extract the time onset/offset of behaviors
     fprintf('\n*** Localizing other behaviors on piezo recordings ***\n')
