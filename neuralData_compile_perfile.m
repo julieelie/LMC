@@ -30,7 +30,10 @@ NeuralInputID{2} = DataFile((Idx_(end)+1):end);
 % Get the subject ID
 SubjectID = DataFile(1:5);
 
-%% Get the logger ID for each bat
+% Loop through files to cut the vocalizations into analyzed snippets
+% classify vocalizations according to type: Chirp or Trills
+% fill in a who column
+% fill in a what column (Chirp, Trill)
 
 %% Load the other behavior actions
 % Initialize output matrix
