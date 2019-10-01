@@ -22,11 +22,17 @@ end
 
 if TranscExtract && nargin<3
     % Set the path to the recording log
-    Path2RecordingTable = '/Users/elie/Google Drive/BatmanData/RecordingLogs/recording_logs.xlsx';
+    %Path2RecordingTable = '/Users/elie/Google Drive/BatmanData/RecordingLogs/recording_logs.xlsx';
+    Path2RecordingTable = '/Users/elie/Google Drive/JuvenileRecordings/JuvenileRecordingsNWAF155_Log.xlsx';
 end
 if TranscExtract && nargin<4
     % Set the path to logger data
-    Logger_dir = fullfile(AudioDataPath(1:(strfind(AudioDataPath, 'audio')-1)), 'logger',['20' Date]);
+    if contains(Path2RecordingTable, 'BatmanData')
+        Logger_dir = fullfile(AudioDataPath(1:(strfind(AudioDataPath, 'audio')-1)), 'logger',['20' Date]);
+    elseif contains(Path2RecordingTable, 'JuvenileRecording')
+        Logger_dir = fullfile(AudioDataPath(1:(strfind(AudioDataPath, 'audio')-1)), 'audiologgers');
+    end
+        
 end
 
 % Set the path to a working directory on the computer so logger data are
@@ -49,8 +55,8 @@ VocExt_dir = dir(fullfile(AudioDataPath,sprintf('%s_%s_VocExtractTimes.mat', Dat
 if TranscExtract
     fprintf(1,'*** Extract Logger data if not already done ***\n');
     % Find the ID of the recorded bats
-    [~,~,RecTableData]=xlsread(Path2RecordingTable,1,'A1:P200','basic');
-    RowData = find((cell2mat(RecTableData(2:end,1))== str2double(Date))) +1;
+    [~,~,RecTableData]=xlsread(Path2RecordingTable,1,'A1:Q200','basic');
+    RowData = find((cell2mat(RecTableData(2:end,1))== str2double(['20' Date]))) +1;
     DataInfo = RecTableData(RowData,:);
     Header = RecTableData(1,:);
     BatIDCol = find(contains(Header, 'Bat'));
@@ -156,16 +162,17 @@ if TranscExtract
         end
     end
     
-   
-    % Get the serial numbers of the audiologgers that the two implanted
-    % bats wear
-    NLCol = find(contains(Header, 'NL'));
-    ALThroatCol = find(contains(Header, 'AL-throat'));
-    SerialNumberAL = nan(length(NLCol),1);
-    SerialNumberNL = nan(length(NLCol),1);
-    for dd=1:length(NLCol)
-        SerialNumberAL(dd) = DataInfo{ALThroatCol(find(ALThroatCol<NLCol(dd),1,'last'))};
-        SerialNumberNL(dd) = DataInfo{NLCol(dd)};
+    if contains(Path2RecordingTable, 'BatmanData')
+        % Get the serial numbers of the audiologgers that the two implanted
+        % bats wear
+        NLCol = find(contains(Header, 'NL'));
+        ALThroatCol = find(contains(Header, 'AL-throat'));
+        SerialNumberAL = nan(length(NLCol),1);
+        SerialNumberNL = nan(length(NLCol),1);
+        for dd=1:length(NLCol)
+            SerialNumberAL(dd) = DataInfo{ALThroatCol(find(ALThroatCol<NLCol(dd),1,'last'))};
+            SerialNumberNL(dd) = DataInfo{NLCol(dd)};
+        end
     end
     
     % Alligning TTL pulses between soundmexpro and Deuteron
@@ -174,8 +181,13 @@ if TranscExtract
     TTL_dir = dir(fullfile(AudioDataPath,sprintf( '%s_%s_TTLPulseTimes.mat', Date, ExpStartTime)));
     if isempty(TTL_dir) || ForceAllign
         fprintf(1,'\n*** Alligning TTL pulses for the RecOnly session ***\n');
+        if contains(Path2RecordingTable, 'BatmanData')
 %         align_soundmexAudio_2_logger(AudioDataPath, Logger_dir, ExpStartTime,'TTL_pulse_generator','Avisoft','Method','risefall', 'Session_strings', {'all voc reward stop', 'rec only stop'}, 'Logger_list', [SerialNumberAL; SerialNumberNL]);
-        align_soundmexAudio_2_logger(AudioDataPath, Logger_dir, ExpStartTime,'TTL_pulse_generator','Avisoft','Method','risefall', 'Session_strings', {'rec only start', 'rec only stop'}, 'Logger_list', [SerialNumberAL; SerialNumberNL]);
+            align_soundmexAudio_2_logger(AudioDataPath, Logger_dir, ExpStartTime,'TTL_pulse_generator','Avisoft','Method','risefall', 'Session_strings', {'rec only start', 'rec only stop'}, 'Logger_list', [SerialNumberAL; SerialNumberNL]);
+        elseif contains(Path2RecordingTable, 'JuvenileRecordings')
+            TTLFolder = '/Users/elie/Documents/zero_playback_12h';
+            align_soundmexAudio_2_logger(AudioDataPath, Logger_dir, ExpStartTime,'TTL_pulse_generator','Avisoft','Method','risefall', 'Session_strings', {'rec only start', 'rec only stop'}, 'TTLFolder',TTLFolder);
+        end
     else
         fprintf(1,'\n*** ALREADY DONE: Alligning TTL pulses for the operant session ***\n');
     end

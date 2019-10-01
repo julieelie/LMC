@@ -34,6 +34,7 @@ SubjectID = DataFile(1:5);
 % classify vocalizations according to type: Chirp or Trills
 % fill in a who column
 % fill in a what column (Chirp, Trill)
+% fill in a duration
 
 %% Load the other behavior actions
 % Initialize output matrix
@@ -48,6 +49,24 @@ for ff=1:length(DataDir)
             DataFile = dir(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_*.mat', Date(3:end), ExpStartTime)));
             load(fullfile(DataFile.folder, DataFile.name), 'IndVocStartRaw_merged', 'IndVocStopRaw_merged', 'BatID','LoggerName');
             load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date(3:end), ExpStartTime)), 'FS','Piezo_wave','Raw_wave');
+            
+            % find the logger number worn by the subject
+            ALNum = contains(LoggerName, 'AL');
+            SubjectLogs = cell2mat(BatID) == str2double(SubjectID);
+            SubjectAL = LoggerName{find(ALNum .* SubjectLogs)}(3:end);
+            
+            % find the vocalizations emitted by the vocalizer of interest
+            Fns_AL = fieldnames(Piezo_wave);
+            FocIndAudio = find(contains(Fns_AL, SubjectAL));
+            % Number of call sequences with identified vocalizations
+            VocInd = find(~cellfun('isempty',IndVocStartRaw_merged));
+            NV = length(VocInd);
+            % Count the number of vocalization cuts where the targeted animal is
+            % vocalizing vs hearing for preallocation of space
+            VocCall = 0;
+            for vv=1:NV
+                VocCall = VocCall + length(IndVocStartRaw_merged{VocInd(vv)}{FocIndAudio});
+            end
             
             
         end

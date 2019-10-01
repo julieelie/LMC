@@ -49,7 +49,10 @@ AllVocs = dir(fullfile(Voc_dir, sprintf('*%s*.wav', Date)));
 AllRaws = dir(fullfile(RawWav_dir, '*.wav'));
 [~,FS] = audioread(fullfile(AllRaws(1).folder, AllRaws(1).name));
 if Avisoft
-    [z,p,k] = butter(6,[2000 88000 ]/(FS/2),'bandpass');
+    [z,p,k] = butter(6,[2000 88000]/(FS/2),'bandpass');
+    sos_raw_band = zp2sos(z,p,k);
+else
+    [z,p,k] = butter(6,[1000 90000]/(FS/2),'bandpass');
     sos_raw_band = zp2sos(z,p,k);
 end
 
@@ -58,6 +61,8 @@ NVoc = length(AllVocs);
 Voc_filename = cell(NVoc,1);
 Voc_samp_idx = nan(NVoc,2);
 Voc_transc_time = nan(NVoc,2);
+MeanStdAmpRawFile = nan(100,2);
+MeanStdAmpRawExtract = nan(NVoc,2);
 
 %% Loop through extracts and localize them
 for vv=1:NVoc
@@ -85,6 +90,32 @@ for vv=1:NVoc
         FileIdx = str2double(AllVocs(vv).name((Idx_(end-1)+1):(Idx_(end)-1)));
     end
     
+    if isnan(MeanStdAmpRawFile(File_Idx,1)) % calculate the amplitude threshold for that file
+        % Calculate the amplitude threshold as the average amplitude on the
+        % first 30 seconds of that 10 min recording file from which that file
+        % come from
+        % Get the average running rms in a Dur_RMS min extract in the middle of
+        % the recording
+        fprintf(1, 'Calculating average RMS values on a %d min sample of silence\n',Dur_RMS);
+        SampleDur = round(Dur_RMS*60*FS);
+        StartSamp = round(length(Raw_wav)/2);
+        fprintf(1,'Calculating the amplitude threshold for file %d  ',File_Idx)
+        BadSection = 1;
+        while BadSection
+            Filt_RawVoc = filtfilt(sos_raw_band,1,Raw_wav(StartSamp + (1:SampleDur)));
+            Amp_env_Mic = running_rms(Filt_RawVoc, FS, Fhigh_power, Fs_env);
+            if any(Amp_env_voltage_low>75) % there is most likely a vocalization in this sequence look somewhere else! Threshold used to be 50 but I changed it because of TTL pulses noise
+                StartSamp = StartSamp + SampleDur +1;
+            else
+                BadSection = 0;
+            end
+        end
+        MeanStdAmpRawFile(File_Idx,1) = mean(Amp_env_Mic);
+        MeanStdAmpRawFile(File_Idx,2) = std(Amp_env_Mic);
+        fprintf('-> Done\n')
+    end
+    MeanStdAmpRawExtract(vv,1)= MeanStdAmpRawFile(File_Idx,1);
+    MeanStdAmpRawExtract(vv,2)= MeanStdAmpRawFile(File_Idx,2);
     
     % Find the localization of the extract in
     % the raw file
@@ -121,13 +152,13 @@ end
 
 %% save the calculation results
 if TranscTime && ~Avisoft
-    save(fullfile(RawWav_dir, sprintf('%s_%s_VocExtractTimes.mat', Date, ExpStartTime)), 'Voc_filename','Voc_samp_idx','Voc_transc_time')
+    save(fullfile(RawWav_dir, sprintf('%s_%s_VocExtractTimes.mat', Date, ExpStartTime)), 'Voc_filename','Voc_samp_idx','Voc_transc_time','MeanStdAmpRawExtract')
 elseif TranscTime && Avisoft
-    save(fullfile(RawWav_dir, sprintf('%s_VocExtractTimes.mat', Date)), 'Voc_filename','Voc_samp_idx','Voc_transc_time')
+    save(fullfile(RawWav_dir, sprintf('%s_VocExtractTimes.mat', Date)), 'Voc_filename','Voc_samp_idx','Voc_transc_time','MeanStdAmpRawExtract')
 elseif ~TranscTime && ~Avisoft
-    save(fullfile(RawWav_dir, sprintf('%s_%s_VocExtractTimes.mat', Date, ExpStartTime)), 'Voc_filename','Voc_samp_idx')
+    save(fullfile(RawWav_dir, sprintf('%s_%s_VocExtractTimes.mat', Date, ExpStartTime)), 'Voc_filename','Voc_samp_idx','MeanStdAmpRawExtract')
 elseif ~TranscTime && Avisoft
-    save(fullfile(RawWav_dir, sprintf('%s_VocExtractTimes.mat', Date)), 'Voc_filename','Voc_samp_idx')
+    save(fullfile(RawWav_dir, sprintf('%s_VocExtractTimes.mat', Date)), 'Voc_filename','Voc_samp_idx','MeanStdAmpRawExtract')
 end
 end
 
