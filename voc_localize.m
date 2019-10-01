@@ -22,6 +22,12 @@ function [Voc_filename,Voc_samp_idx,Voc_transc_time] = voc_localize(Voc_dir,RawW
 % in ms
 % same number of lines as Voc_filename.
 
+% Hard coded input for finding the microphone envelope noise threshold
+Dur_RMS = 0.5; % duration of the silence sample in min for the calculation of average running RMS
+Fhigh_power = 20; %Hz
+Fs_env = 1000; %Hz Sample frequency of the enveloppe
+MicThreshNoise = 15*10^-3;
+
 %% Load data and initialize output variables
 % Get input arguments
 Pnames = {'TransceiverTime', 'Avisoft'};
@@ -47,7 +53,8 @@ AllVocs = dir(fullfile(Voc_dir, sprintf('*%s*.wav', Date)));
 % If taken of avisoft we need to resample the input files, so getting ready
 % the filters
 AllRaws = dir(fullfile(RawWav_dir, '*.wav'));
-[~,FS] = audioread(fullfile(AllRaws(1).folder, AllRaws(1).name));
+RawInfo = audioinfo(fullfile(AllRaws(1).folder, AllRaws(1).name));
+FS = RawInfo.SampleRate;
 if Avisoft
     [z,p,k] = butter(6,[2000 88000]/(FS/2),'bandpass');
     sos_raw_band = zp2sos(z,p,k);
@@ -90,7 +97,7 @@ for vv=1:NVoc
         FileIdx = str2double(AllVocs(vv).name((Idx_(end-1)+1):(Idx_(end)-1)));
     end
     
-    if isnan(MeanStdAmpRawFile(File_Idx,1)) % calculate the amplitude threshold for that file
+    if isnan(MeanStdAmpRawFile(FileIdx,1)) % calculate the amplitude threshold for that file
         % Calculate the amplitude threshold as the average amplitude on the
         % first 30 seconds of that 10 min recording file from which that file
         % come from
@@ -99,23 +106,23 @@ for vv=1:NVoc
         fprintf(1, 'Calculating average RMS values on a %d min sample of silence\n',Dur_RMS);
         SampleDur = round(Dur_RMS*60*FS);
         StartSamp = round(length(Raw_wav)/2);
-        fprintf(1,'Calculating the amplitude threshold for file %d  ',File_Idx)
+        fprintf(1,'Calculating the amplitude threshold for file %d  ',FileIdx)
         BadSection = 1;
         while BadSection
-            Filt_RawVoc = filtfilt(sos_raw_band,1,Raw_wav(StartSamp + (1:SampleDur)));
+            Filt_RawVoc = filtfilt(sos_raw_band,1,Raw_wav(StartSamp + (1:round(SampleDur))));
             Amp_env_Mic = running_rms(Filt_RawVoc, FS, Fhigh_power, Fs_env);
-            if any(Amp_env_voltage_low>75) % there is most likely a vocalization in this sequence look somewhere else! Threshold used to be 50 but I changed it because of TTL pulses noise
+            if any(Amp_env_Mic>MicThreshNoise) % there is most likely a vocalization in this sequence look somewhere else!
                 StartSamp = StartSamp + SampleDur +1;
             else
                 BadSection = 0;
             end
         end
-        MeanStdAmpRawFile(File_Idx,1) = mean(Amp_env_Mic);
-        MeanStdAmpRawFile(File_Idx,2) = std(Amp_env_Mic);
+        MeanStdAmpRawFile(FileIdx,1) = mean(Amp_env_Mic);
+        MeanStdAmpRawFile(FileIdx,2) = std(Amp_env_Mic);
         fprintf('-> Done\n')
     end
-    MeanStdAmpRawExtract(vv,1)= MeanStdAmpRawFile(File_Idx,1);
-    MeanStdAmpRawExtract(vv,2)= MeanStdAmpRawFile(File_Idx,2);
+    MeanStdAmpRawExtract(vv,1)= MeanStdAmpRawFile(FileIdx,1);
+    MeanStdAmpRawExtract(vv,2)= MeanStdAmpRawFile(FileIdx,2);
     
     % Find the localization of the extract in
     % the raw file
