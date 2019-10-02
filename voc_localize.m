@@ -103,7 +103,7 @@ for vv=1:NVoc
         % come from
         % Get the average running rms in a Dur_RMS min extract in the middle of
         % the recording
-        fprintf(1, 'Calculating average RMS values on a %d min sample of silence\n',Dur_RMS);
+        fprintf(1, 'Calculating average RMS values on a %.1f min sample of silence\n',Dur_RMS);
         SampleDur = round(Dur_RMS*60*FS);
         StartSamp = round(length(Raw_wav)/2);
         fprintf(1,'Calculating the amplitude threshold for file %d  ',FileIdx)

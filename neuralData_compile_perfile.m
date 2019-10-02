@@ -126,10 +126,10 @@ for ff=1:length(DataDir)
                             DurWave_local = length(Raw_wave{VocInd(vv)});
                             WL = Raw_wave{VocInd(vv)}(max(1,IndOn):min(DurWave_local, IndOff));
                             if IndOn<1
-                                WL = [zeros(abs(IndOn),1); WL];
+                                WL = [zeros(abs(IndOn),1); WL]; %#ok<AGROW>
                             end
                             if IndOff>DurWave_local
-                                WL = [WL ; zeros(IndOff-DurWave_local,1)];
+                                WL = [WL ; zeros(IndOff-DurWave_local,1)]; %#ok<AGROW>
                             end
                             VocWave{VocCall} = WL; % contains the vocalization with the same delay before/after as the neural response
                             
@@ -140,17 +140,16 @@ for ff=1:length(DataDir)
                             DurWave_local = length(Piezo_wave.(Fns_AL{ll}){VocInd(vv)});
                             WL = Piezo_wave.(Fns_AL{ll}){VocInd(vv)}(max(1,IndOn):min(DurWave_local, IndOff));
                             if IndOn<1
-                                WL = [zeros(abs(IndOn),1); WL];
+                                WL = [zeros(abs(IndOn),1); WL]; %#ok<AGROW>
                             end
                             if IndOff>DurWave_local
-                                WL = [WL ; zeros(IndOff-DurWave_local,1)];
+                                WL = [WL ; zeros(IndOff-DurWave_local,1)]; %#ok<AGROW>
                             end
                             VocPiezoWave{VocCall} = WL; % contains the vocalization with the same delay before/after as the neural response
                             
                             % Identify the type of call VocT for a Trill,
                             % VocC for a chirp and VocU for undefined Voc
-                            
-                            What{VocCall} = 'Voc';
+                            What{VocCall} = identify_CallType(Raw_wave{VocInd(vv)}(IndVocStartRaw_merged{VocInd(vv)}{ll}(nn):IndVocStopRaw_merged{VocInd(vv)}{ll}(nn)),Piezo_wave.(Fns_AL{ll}){VocInd(vv)}(IndVocStartPiezo_merged{VocInd(vv)}{ll}(nn):IndVocStopPiezo_merged{VocInd(vv)}{ll}(nn)));
                             
                             % Finding the spikes that are during, before
                             % and after the vocalization
@@ -179,3 +178,10 @@ for ff=1:length(DataDir)
     end
 end
 Num_Slots(bb) = sum(floor(Dur_local/MaxDur)) + sum(mod(Dur_local, MaxDur)>0);
+
+%% INTERNAL FUNCTION
+function [What] = identify_CallType(MicWave, PiezoWave)
+    
+
+end
+end

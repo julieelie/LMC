@@ -16,9 +16,9 @@ function get_logger_data_voc(Audio_dir, Loggers_dir, Date, ExpStartTime, varargi
 
 % Optional argument: SerialNumber indicate the serial number of the audio
 % loggers for which you want to extract data
-pnames = {'SerialNumber'};
-dflts  = {[]};
-[SerialNumber] = internal.stats.parseArgs(pnames,dflts,varargin{:});
+pnames = {'SerialNumber', 'ReAllignment'};
+dflts  = {[],1};
+[SerialNumber, ReAllignment] = internal.stats.parseArgs(pnames,dflts,varargin{:});
 
 Buffer = 100; % Let's cut the audio extracts Buffer ms before and after the predicted time according to audio/transceiver allignment to better allign
 BandPassFilter = [1000 5000 9000];
@@ -255,14 +255,14 @@ for vv=1:Nvoc
         fprintf('The %dth logger, %s, is chosen as the loudest vocalizer\n',HRMS_Ind, Fns_AL{HRMS_Ind});
         RMS_audioLog_temp = RMS_audioLog;
         RMS_audioLog_temp(HRMS_Ind)=[];
-        if any(RMS_audioLog_temp*10 > RMS_audioLog(HRMS_Ind)) % only ask for manual input if the difference is not obvious (RMS 10 times higher than the other loggers)
+        if any(RMS_audioLog_temp*10 > RMS_audioLog(HRMS_Ind)) && ReAllignment % only ask for manual input if the difference is not obvious (RMS 10 times higher than the other loggers)
             Agree = input('Do you agree? yes (leave empty), No (any input)\n');
             if ~isempty(Agree)
                 HRMS_Ind = input('Indicate your choice ("1" first logger, "2" second logger..., "" no reallignment):\n');
             end
         end
         
-        if ~isempty(HRMS_Ind)
+        if ~isempty(HRMS_Ind) && ReAllignment
             % resample the sounds so they are at the same sample frequency of 4
             % times the low pass filter value
             Resamp_Filt_Raw_wav = resample(Filt_Raw_wav, 4*BandPassFilter(2), FS);
@@ -400,11 +400,12 @@ for vv=1:Nvoc
             fprintf(1,'No better estimate of call allignment\n')
             % calculating the portion of data to erase or add in front of the
             % vocalization on the logger recordings.
-            TimeDiff_audio = -Buffer; % this should be negative the reference being the vocalization onset -buffer
+            TimeDiff_audio = -Buffer .*10^-3; % this should be negative the reference being the vocalization onset -buffer
             OnsetAudiosamp(vv) = round(-TimeDiff_audio*Piezo_FS.(Fns_AL{ll})(vv)); % This new onset is taking into account the Buffer that was added at the beginning, suppressing it
-            OffsetAudiosamp(vv) = round(OnsetAudiosamp(vv) + length(Piezo_wave.(Fns_AL{ll}){vv}) - 2*Buffer*(10^-3)*Piezo_FS.(Fns_AL{ll})(vv) -1);
+            OffsetAudiosamp(vv) = round(OnsetAudiosamp(vv) + length(Piezo_wave.(Fns_AL{ll}){vv}) - 2*Buffer*(10^-3)*Piezo_FS.(Fns_AL{ll})(vv));
             Voc_transc_time_refined(vv,1) =VocExt.Voc_transc_time(vv,1); % Keep the same estimate of VocExt.Voc_transc_time(vv,1) in ms
             Voc_transc_time_refined(vv,2) = Voc_transc_time_refined(vv,1); % Keep the same estimate of VocExt.Voc_transc_time(vv,2) in ms
+            clf(F1)
         end
         
     end

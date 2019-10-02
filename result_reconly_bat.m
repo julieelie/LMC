@@ -7,7 +7,8 @@ ForceExtract = 0; % set to 1 to redo the extraction of loggers otherwise the cal
 ForceAllign = 0; % In case the TTL pulses allignment was already done but you want to do it again, set to 1
 ForceVocExt1 = 0; % In case the localization on raw files of vocalizations that were manually extracted was already done but you want to do it again set to 1
 ForceVocExt2 = 0; % In case the localization on Loggers of vocalizations that were manually extracted was already done but you want to do it again set to 1
-ForceWhoID = 0; % In case the identification of bats was already done but you want to re-do it again
+ReAllignment = 0; % Incase we don't have a logger on all animals, it's better not to reallign the vocal data by cross correlation between the Microphone and the loggers
+ForceWhoID = 1; % In case the identification of bats was already done but you want to re-do it again
 ForceBehav = 0;% Force extracting onset/offset time of other behaviors
 close all
 
@@ -202,7 +203,7 @@ if TranscExtract
     LogVoc_dir = dir(fullfile(Logger_dir, sprintf('%s_%s_VocExtractData.mat', Date, ExpStartTime)));
     if isempty(LogVoc_dir) || ForceVocExt1 || ForceVocExt2
         fprintf('\n*** Localizing vocalizations on piezo recordings ***\n')
-        get_logger_data_voc(AudioDataPath, Logger_dir,Date, ExpStartTime);
+        get_logger_data_voc(AudioDataPath, Logger_dir,Date, ExpStartTime, 'ReAllignment',ReAllignment);
     else
         fprintf('\n*** ALREADY DONE: Localizing vocalizations on piezo recordings ***\n')
         
@@ -212,7 +213,7 @@ if TranscExtract
     fprintf('\n*** Identify who is calling ***\n')
     WhoCall_dir = dir(fullfile(Logger_dir, sprintf('*%s_%s*whocalls*', Date, ExpStartTime)));
     if isempty(WhoCall_dir) || ForceVocExt1 || ForceWhoID || ForceVocExt2
-        who_calls(Logger_dir,Date, ExpStartTime,200,1);
+        who_calls(AudioDataPath,Logger_dir,Date, ExpStartTime,200,1);
     else
         fprintf('\n*** ALREADY DONE: Identify who is calling ***\n')
     end
