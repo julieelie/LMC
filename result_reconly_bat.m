@@ -9,6 +9,7 @@ ForceVocExt1 = 0; % In case the localization on raw files of vocalizations that 
 ForceVocExt2 = 0; % In case the localization on Loggers of vocalizations that were manually extracted was already done but you want to do it again set to 1
 ReAllignment = 0; % Incase we don't have a logger on all animals, it's better not to reallign the vocal data by cross correlation between the Microphone and the loggers
 ForceWhoID = 1; % In case the identification of bats was already done but you want to re-do it again
+ForceWhat = 1; % In case running biosound was already done but you want to re-do it
 ForceBehav = 0;% Force extracting onset/offset time of other behaviors
 close all
 
@@ -219,6 +220,15 @@ if TranscExtract
     end
     % Save the ID of the bat for each logger
     save(fullfile(Logger_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, 200)), 'BatID','LoggerName','-append')
+    
+    %% Explore what is said
+    fprintf('\n*** Identify what is said ***\n')
+    WhatCall_dir = dir(fullfile(Logger_dir, sprintf('*%s_%s*whatcalls*', Date, ExpStartTime)));
+    if isempty(WhatCall_dir) || ForceVocExt1 || ForceWhoID || ForceVocExt2 || ForceWhat
+        what_calls(Logger_dir,Date, ExpStartTime);
+    else
+        fprintf('\n*** ALREADY DONE: Identify what is said ***\n')
+    end
     
     %% extract the time onset/offset of behaviors
     fprintf('\n*** Localizing other behaviors on piezo recordings ***\n')

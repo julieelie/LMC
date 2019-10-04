@@ -36,6 +36,21 @@ SubjectID = DataFile(1:5);
 % fill in a what column (Chirp, Trill)
 % fill in a duration
 
+%% Initialize output varables
+% get the number of files and fieldnames, to create cells from the
+% following variables:
+Duration = nan(VocCall,1); % Duration of the vocalization in ms
+            DelayBefore = nan(VocCall,1); % Duration of no behavioral event before the onset in ms
+            DelayAfter = nan(VocCall,1);% Duration of no behavioral event after the offset in ms
+            VocWave = cell(VocCall,1);% Wave of the vocalization exactly extracted on Mic
+            VocPiezoWave = cell(VocCall,1);% Wave of the vocalization exactly extracted on Piezo
+            BSLDuration = nan(1,VocCall);% Duration of the baseline sequence
+            SpikesArrivalTimes_Baseline = cell(VocCall,1); % Spike arrival time of the Baseline sequence
+            SpikesArrivalTimes_Call = cell(VocCall,1);% Spike arrival time of the call event
+            Who = cell(VocCall,1);% Identity of the performing bat (self or ID of the bat)
+            What = cell(VocCall,1);% Type of Behavior
+ % At tyhe end concatenate them using [C{:}] and reshape([C{:}], NTot,1)
+
 %% Load the other behavior actions
 % Initialize output matrix
 DataDir = dir(fullfile(OutputPath, sprintf('%s_%s_*_SSU%s-%s.mat', SubjectID, Date,NeuralInputID{1},NeuralInputID{2})));
@@ -48,7 +63,7 @@ for ff=1:length(DataDir)
             ExpStartTime = DataDir(ff).name((Idx_2(2) +1):(Idx_2(3)-1));
             DataFile = dir(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_*.mat', Date(3:end), ExpStartTime)));
             load(fullfile(DataFile.folder, DataFile.name), 'IndVocStartRaw_merged', 'IndVocStopRaw_merged', 'IndVocStartPiezo_merged', 'IndVocStopPiezo_merged', 'BatID','LoggerName');
-            load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date(3:end), ExpStartTime)), 'FS','Piezo_wave','Raw_wave');
+            load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date(3:end), ExpStartTime)), 'FS','Piezo_wave','Raw_wave','Piezo_FS');
             
             % find the logger number worn by the subject
             ALNum = contains(LoggerName, 'AL');
@@ -135,8 +150,8 @@ for ff=1:length(DataDir)
                             
                             % Extract the sound of the audio-logger that
                             % correspond to the data
-                            IndOn = IndVocStartPiezo_merged{VocInd(vv)}{ll}(nn) - DelayBefore(VocCall)*FS_Piezo/1000;
-                            IndOff = IndVocStopPiezo_merged{VocInd(vv)}{ll}(nn) + DelayAfter(VocCall)*FS_Piezo/1000;
+                            IndOn = IndVocStartPiezo_merged{VocInd(vv)}{ll}(nn) - DelayBefore(VocCall)*Piezo_FS/1000;
+                            IndOff = IndVocStopPiezo_merged{VocInd(vv)}{ll}(nn) + DelayAfter(VocCall)*Piezo_FS/1000;
                             DurWave_local = length(Piezo_wave.(Fns_AL{ll}){VocInd(vv)});
                             WL = Piezo_wave.(Fns_AL{ll}){VocInd(vv)}(max(1,IndOn):min(DurWave_local, IndOff));
                             if IndOn<1
