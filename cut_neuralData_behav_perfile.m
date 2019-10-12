@@ -80,7 +80,7 @@ if contains(DataFile, 'Tetrode')
         ExpStartTimes{nn} = AudioDir(nn).name((Idx_2(1)+1) : (Idx_2(2)-1));
         load(fullfile(Loggers_dir, sprintf('%s_%s_BehavExtractData.mat', Date(3:end), ExpStartTimes{nn})), 'AllActions_Time', 'AllActions_ID','UActionText');
         % Select behavioral data
-        [Behav_transc_time, Behav_What,Behav_Who] = sort_behavior(AllActions_Time, AllActions_ID, UActionText,BehaviorType,SubjectID);
+        [Behav_transc_time, Behav_What,Behav_Who] = sort_behavior(AllActions_Time, AllActions_ID, UActionText,BehaviorType);
         % extract Tetrode data
         [Behav_NeuroT] = extract_timeslot_Tetrode(InputDataFile, Behav_transc_time, DenoiseT, Rthreshold, SubjectID, Date, NeuralInputID);
         OutputFile = fullfile(OutputPath, sprintf('%s_%s_%s_Tet%s.mat', SubjectID, Date, ExpStartTimes{nn},NeuralInputID));
@@ -112,7 +112,7 @@ elseif contains(DataFile, 'CSC')
         ExpStartTimes{nn} = AudioDir(nn).name((Idx_2(1)+1) : (Idx_2(2)-1));
         load(fullfile(Loggers_dir, sprintf('%s_%s_BehavExtractData.mat', Date(3:end), ExpStartTimes{nn})), 'AllActions_Time', 'AllActions_ID','UActionText');
         % Select behavioral data
-        [Behav_transc_time, Behav_What,Behav_Who] = sort_behavior(AllActions_Time, AllActions_ID, UActionText,BehaviorType,SubjectID);
+        [Behav_transc_time, Behav_What,Behav_Who] = sort_behavior(AllActions_Time, AllActions_ID, UActionText,BehaviorType);
         % extract the channel data
         [Behav_NeuroRaw, Behav_NeuroLFP] = extract_timeslot_RawLFP(InputDataFile, Behav_transc_time, NeuralInputID, Flags);
         if Flags(1)
@@ -152,7 +152,7 @@ elseif contains(DataFile,'SS')
 %     load(fullfile(OutputPath, sprintf('%s_%s_SSU%s-%s.mat', SubjectID, Date,NeuralInputID{1},NeuralInputID{2})),'QualitySSU');
     
     % Loop through behavioral data files
-    AudioDir = dir(fullfile(Loggers_dir, sprintf('%s*BehavExtractData.mat', Date(3:end)))); % These are all the results of vocalization localization for both operant conditioning and free session
+    AudioDir = dir(fullfile(Loggers_dir, sprintf('%s*BehavExtractData.mat', Date(3:end)))); % These are all the results of non-vocal Behavior localization for free session
     Nsession = length(AudioDir);
     ExpStartTimes = cell(Nsession,1);
     for nn=1:Nsession
@@ -160,7 +160,7 @@ elseif contains(DataFile,'SS')
         ExpStartTimes{nn} = AudioDir(nn).name((Idx_2(1)+1) : (Idx_2(2)-1));
         load(fullfile(Loggers_dir, sprintf('%s_%s_BehavExtractData.mat', Date(3:end), ExpStartTimes{nn})), 'AllActions_Time', 'AllActions_ID','UActionText');
         % Select behavioral data
-        [Behav_transc_time, Behav_What,Behav_Who] = sort_behavior(AllActions_Time, AllActions_ID, UActionText,BehaviorType,SubjectID);
+        [Behav_transc_time, Behav_What,Behav_Who] = sort_behavior(AllActions_Time, AllActions_ID, UActionText,BehaviorType);
         % extract single unit spikes
         [Behav_NeuroSSU] = extract_timeslot_SSU(InputDataFile, Behav_transc_time,Inf);
         OutputFile = fullfile(OutputPath, sprintf('%s_%s_%s_SSU%s-%s.mat', SubjectID, Date, ExpStartTimes{nn},NeuralInputID{1},NeuralInputID{2}));
@@ -176,9 +176,9 @@ end
 %% INTERNAL FUNCTIONS
 
 % Organize onset/offset time of behaviors as a 2 column matrix, indicate
-% the type of behavior (Behav_what) and whether the recorded bat is performing the
-% behavior or observing it performed (logical Behav_Who)
-    function [Behav_transc_time, Behav_What,Behav_Who] = sort_behavior(AllActions_Time, AllActions_ID, UActionText,BehaviorType,SubjectID)
+% the type of behavior (Behav_what) and the identity of the bat performing the
+% behavior
+    function [Behav_transc_time, Behav_What,Behav_Who] = sort_behavior(AllActions_Time, AllActions_ID, UActionText,BehaviorType)
         % Get each behavior number of cuts to allocate space
         Num_Slots = nan(size(BehaviorType));
         IB_Ind = nan(size(BehaviorType));
@@ -198,7 +198,7 @@ end
             if ~isnan(Num_Slots(bb))
                 Behav_transc_time(BehavCount:(BehavCount+Num_Slots(bb)-1),:) = AllActions_Time{IB_Ind(bb)};
                 Behav_What(BehavCount:(BehavCount+Num_Slots(bb)-1)) = BehaviorType(bb);
-                Behav_Who(BehavCount:(BehavCount+Num_Slots(bb)-1),:) = logical(AllActions_ID{IB_Ind(bb)} == str2double(SubjectID));
+                Behav_Who(BehavCount:(BehavCount+Num_Slots(bb)-1),:) = AllActions_ID{IB_Ind(bb)};
                 BehavCount = BehavCount + Num_Slots(bb);
             end
         end
@@ -211,6 +211,7 @@ end
         Nevent = size(Voc_transc_time,1);
         OutData.SpikeTBehav = cell(Nevent,1);
         OutData.SpikeTBehavDeNoiseInd = cell(Nevent,length(Rthreshold));
+        OutData.Duration = nan(Nevent,1);
         % Load the spike arrival times for that tetrode
         [Path,~] = fileparts(InputFile);
         Spikes = load(fullfile(Path, sprintf('%s_%s_Tetrode_spikes_time_T%s.mat',SubjectID, Date, TID)), 'Spike_arrival_times');
@@ -222,6 +223,7 @@ end
             % behavioral event
             SpikeT_local = logical((Spikes.Spike_arrival_times>(Voc_transc_time(vv,1)*10^3)) .* (Spikes.Spike_arrival_times<(Voc_transc_time(vv,2)*10^3)));
             OutData.SpikeTBehav{vv} = Spikes.Spike_arrival_times(SpikeT_local)/10^3 - Voc_transc_time(vv,1);
+            OutData.Duration(vv) = (Voc_transc_time(vv,2)*10^3)-(Voc_transc_time(vv,1)*10^3);
             if DenoiseT % get the indices of denoised spikes according to threshold(s)
                 for rr=1:length(Rthreshold)
                     OutData.SpikeTBehavDeNoiseInd{vv,rr} = sort_spike_from_noise(Snip.Snippets(:,:,SpikeT_local), Rthreshold(rr));
@@ -286,6 +288,7 @@ end
         Nevent = length(BehavIdxSSUAlive);
         OutData.BehavIdxSSUAlive = BehavIdxSSUAlive;
         OutData.SpikeSUBehav = cell(Nevent,1);
+        OutData.Duration = nan(Nevent,1);
         
         % loading the single unit spike arrival times
         Spikes = load(InputFile, 'Spike_arrival_times');
@@ -296,6 +299,7 @@ end
             % requested times and center them to the onset of the
             % behavioral event, save in ms
             OutData.SpikeSUBehav{vv} = Spikes.Spike_arrival_times(logical((Spikes.Spike_arrival_times>(Behav_transc_time(ii,1)*10^3)) .* (Spikes.Spike_arrival_times<(Behav_transc_time(ii,2)*10^3))))/10^3 - Behav_transc_time(ii,1);
+            OutData.Duration(vv) = Behav_transc_time(ii,2)*10^3 - Behav_transc_time(ii,1)*10^3; % Duration value in ms
         end
     end
 

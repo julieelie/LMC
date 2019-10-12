@@ -8,9 +8,11 @@ function get_logger_data_behav(Audio_dir, Loggers_dir, Date, ExpStartTime)
 % Third, it organizes data such as to return a cell array of onset/offset
 % times of behaviors (AllActions_Time) where each cell corresponds to one type of behavior
 % referenced in UActionText and where the first column of the N*2 matrix
-% contained in that cell corresponds to onset
-% of the behavior and second column to offset, each row being one instance
-% of the behavior. If the behavior is ponctual, then it returns only one
+% contained in that cell corresponds to onset of the behavior and second column to offset,
+% each row being one instance of the behavior. The offset is calculated as 
+% time when the key was hit - 1s to account for the delay to manually
+% detect.
+%  If the behavior is ponctual, then it returns only one
 % time value (one column vector per cell). The code also returns the ID of
 % the bat performing the behavior (AllActions_ID) for these behaviors where the iD can
 % easily be retrieved (chewing, licking, quiet, teeth cleaning)

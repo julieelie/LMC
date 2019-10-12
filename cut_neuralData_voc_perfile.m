@@ -1,4 +1,4 @@
-function cut_neuralData_voc_perfile(InputDataFile, OutputPath, Flags, DenoiseT, Rthreshold)
+function cut_neuralData_voc_perfile(InputDataFile, OutputPath, NeuroBuffer, Flags, DenoiseT, Rthreshold)
 %% This function uses the better estimation of vocalization boouts onset/offset in transceiver time (ms) calculated by get_logger_data_voc
 % (Voc_transc_time_refined) And extract the corresponding neural data in
 % the input datafile. A Buffer in ms is used to silghtly enlarged the
@@ -21,6 +21,11 @@ function cut_neuralData_voc_perfile(InputDataFile, OutputPath, Flags, DenoiseT, 
 %       not specified or left empty, the data will be saved in the folder
 %       of the inputfile
 
+%       NeuroBuffer: scalar indicating the duration of the time buffer in
+%       ms that should be added before and after the onset and offset time
+%       of vocalizations for extracting neural data. Default is the merged
+%       threshold used in the extracted vocalization data
+
 %       Flags: 2 scalar binary variable that indicate in the case of a CSC
 %       input whether the Raw data and or the LFP should be extracted
 %       Flags(1)= Raw data, Flags(2) = LFP in case a CSC
@@ -38,14 +43,16 @@ function cut_neuralData_voc_perfile(InputDataFile, OutputPath, Flags, DenoiseT, 
 %       A file containing the neural data requested saved in OutputPath.
 %       Spike arrival times are saved in ms in reference to the onset of
 %       the vocalization bouts given by Voc_transc_time_refined.
-
-if nargin<3 || isempty(Flags)
+if nargin<3
+    NeuroBuffer=[];
+end
+if nargin<4 || isempty(Flags)
     Flags = [0 1];
 end
-if nargin<4
+if nargin<5
     DenoiseT = 0; % No sort of the tetrode spike from noise
 end
-if nargin<5
+if nargin<6
     Rthreshold = [0.92 0.94 0.96 0.98];
 end
 MaxEventDur = NaN; % Set to NaN: The neural data is extracted for the whole duration of each event
@@ -83,7 +90,9 @@ if contains(DataFile, 'Tetrode')
         AudioDir2 = dir(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_*.mat', Date(3:end), ExpStartTimes{nn}))); % These are the results of vocalization identificaion and merging with Who calls for this session
         Idx_3 = strfind(AudioDir2(nn).name, '_');
         Idxmat = strfind(AudioDir2(nn).name, '.mat');
-        NeuroBuffer = str2double(AudioDir2.name((Idx_3+1):(Idxmat-1))); % This is the merged threshold used in the extracted vocalization data in ms we want to use the same value as the neural buffer
+        if ~isempty(NeuroBuffer)
+            NeuroBuffer = str2double(AudioDir2.name((Idx_3+1):(Idxmat-1))); % This is the merged threshold used in the extracted vocalization data in ms we want to use the same value as the neural buffer
+        end
         % Find the boundaries for obtaining silence sections of 1 second before 1s of each vocalization event
         BSL_transc_time_refined = find_dead_time(Voc_transc_time_refined,BaselineDelay,BaselineDur);
         % extract Tetrode data
@@ -119,7 +128,9 @@ elseif contains(DataFile, 'CSC')
         AudioDir2 = dir(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_*.mat', Date(3:end), ExpStartTimes{nn}))); % These are the results of vocalization identificaion and merging with Who calls for this session
         Idx_3 = strfind(AudioDir2(nn).name, '_');
         Idxmat = strfind(AudioDir2(nn).name, '.mat');
-        NeuroBuffer = str2double(AudioDir2.name((Idx_3+1):(Idxmat-1))); % This is the merged threshold used in the extracted vocalization data in ms we want to use the same value as the neural buffer
+        if ~isempty(NeuroBuffer)
+            NeuroBuffer = str2double(AudioDir2.name((Idx_3+1):(Idxmat-1))); % This is the merged threshold used in the extracted vocalization data in ms we want to use the same value as the neural buffer
+        end
         % Find the boundaries for obtaining silence sections of 1 second before 1s of each vocalization event
         BSL_transc_time_refined = find_dead_time(Voc_transc_time_refined,BaselineDelay,BaselineDur);
         
@@ -170,11 +181,14 @@ elseif contains(DataFile,'SS')
         AudioDir2 = dir(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_*.mat', Date(3:end), ExpStartTimes{nn}))); % These are the results of vocalization identificaion and merging with Who calls for this session
         Idx_3 = strfind(AudioDir2.name, '_');
         Idxmat = strfind(AudioDir2.name, '.mat');
-        NeuroBuffer = str2double(AudioDir2.name((Idx_3(end)+1):(Idxmat-1))); % This is the merged threshold used in the extracted vocalization data in ms we want to use the same value as the neural buffer
+        if ~isempty(NeuroBuffer)
+            NeuroBuffer = str2double(AudioDir2.name((Idx_3(end)+1):(Idxmat-1))); % This is the merged threshold used in the extracted vocalization data in ms we want to use the same value as the neural buffer
+        end
         % Find the boundaries for obtaining silence sections of 1 second before 1s of each vocalization event
         BSL_transc_time_refined = find_dead_time(Voc_transc_time_refined,BaselineDelay,BaselineDur);
         % Extract Spike data
         [Voc_NeuroSSU] = extract_timeslot_SSU(InputDataFile, Voc_transc_time_refined, BSL_transc_time_refined, NeuroBuffer,MaxEventDur,Inf);
+        Voc_NeuroSSU.BSL_transc_time_refined = BSL_transc_time_refined;
         OutputFile = fullfile(OutputPath, sprintf('%s_%s_%s_SSU%s-%s.mat', SubjectID, Date, ExpStartTimes{nn},NeuralInputID{1},NeuralInputID{2}));
         if exist(OutputFile, 'file')
             save(OutputFile, 'Voc_NeuroSSU','-append');

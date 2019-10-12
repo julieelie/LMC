@@ -84,9 +84,12 @@ fprintf(' DONE \n')
 %% Extract the neural data corresponding to the bouts of vocalizations identified
 % by voc_localize and voc_localize_operant (run by result_operant_bat.m) for each cell
 fprintf(' EXTRACTING NEURAL DATA CORRESPONDING TO VOCALIZATIONS.... ')
+NeuralBuffer = 5000; %duration of the time buffer in
+%       ms that should be added before and after the onset and offset time
+%       of vocalizations for extracting neural data.
 % Files2Run = 1:length(ListSSU);
 for ss=Files2Run
-    cut_neuralData_voc_perfile(ListSSU{ss}, OutputPath)
+    cut_neuralData_voc_perfile(ListSSU{ss}, OutputPath,NeuralBuffer)
 end
 fprintf(' DONE \n')
 %% Extract the neural data corresponding to the behaviors identified during the free session
@@ -100,7 +103,6 @@ end
 fprintf(' DONE \n')
 
 %% Organizing the data as a single file for all behaviors
-MaxDur = 500; % Duration in ms to split the data for all other behaviors than vocalizations
 fprintf(' COMPILING NEURAL DATA .... ')
 % Files2Run = 1:length(ListSSU);
 Files2Run = 1:17;
@@ -109,24 +111,43 @@ for ss=Files2Run
 end
 fprintf(' DONE \n')
 
+%% Calculating the average spike rate during various types of behaviors including vocalizations
+fprintf(' CALCULATING SPIKE RATE CORRESPONDING TO ALL BEHAVIORS.... ')
+% Files2Run = 1:length(ListSSU);
+Files2Run = 1:17;
+for ss=Files2Run
+    cal_spikerate_perfile(ListSSU{ss})
+end
+fprintf(' DONE \n')
+
 %% Plot the average spike rate during various types of behaviors including vocalizations
 fprintf(' PLOTING NEURAL DATA (Av RATE) CORRESPONDING TO ALL BEHAVIORS.... ')
 % Files2Run = 1:length(ListSSU);
 Files2Run = 1:17;
 for ss=Files2Run
-    plot_avRate_perfile(ListSSU{ss}, OutputPath)
+    plot_av_spikerate_perfile(ListSSU{ss}, OutputPath)
 end
 fprintf(' DONE \n')
 
-
-%% calculate the PSTH of vocalizations
-fprintf(1,' CALCULATING PSTH of NEURAL DATA CORRESPONDING TO VOCALIZATIONS\n');
+%% Plot rasters for vocalizations
+fprintf(1,' RASTER PLOTS of NEURAL DATA CORRESPONDING TO VOCALIZATIONS\n');
 % Files2Run = 1:length(ListSSU);
 Files2Run = 1:17;
 for ss=Files2Run
-    psth_voc_cal(ListSSU{ss}, OutputPath)
+    plot_rastervoc_perfile(ListSSU{ss}, OutputPath)
 end
-    
+
+%% calculate the KDE SPIKE RATE of vocalizations
+fprintf(1,' CALCULATING KDE OF THE TIME-VARYING SPIKE RATE CORRESPONDING TO VOCALIZATIONS\n');
+% Files2Run = 1:length(ListSSU);
+Files2Run = 1:17;
+for ss=Files2Run
+    cal_kderatevoc_perfile(ListSSU{ss}, OutputPath)
+end
+
+
+
+
     %% Get the path to audio data for operant conditioning experiment
     [AudioDataPath, DataFile ,~]=fileparts(Path2ParamFile);
     Date = DataFile(6:11);
