@@ -53,6 +53,8 @@ for pp=1:length(ListOfPaths)
     % Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190213/HoHa_190213_1101_VocTrigger_param.txt';
 %     Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190214/HoHa_190214_1130_VocTrigger_param.txt';
     Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC/LMC_CoEd/audio/20190604/CoEd_190604_1200_VocTrigger_param.txt'; % Needs to point to a reconly param files
+    Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC/LMC_CoEd/audio/20190610/CoEd_190610_0953_VocTrigger_param.txt';
+    Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC/LMC_CoEd/audio/20190607/CoEd_190607_0827_VocTrigger_param.txt';
 
     
      result_operant_bat(Path2ParamFile)
@@ -61,6 +63,8 @@ end
 
 %% RUN audio data and other behavior extraction for the reconly sessions
 Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC/LMC_CoEd/audio/20190604/CoEd_190604_1636_RecOnly_param.txt'; % Needs to point to a reconly param files
+Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC/LMC_CoEd/audio/20190610/CoEd_190610_1442_RecOnly_param.txt';
+Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC/LMC_CoEd/audio/20190607/CoEd_190607_1301_RecOnly_param.txt';
 result_reconly_bat(Path2ParamFile)
 
 %% Generate the list of paths to gather the data
