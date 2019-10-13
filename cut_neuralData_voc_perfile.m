@@ -90,7 +90,7 @@ if contains(DataFile, 'Tetrode')
         AudioDir2 = dir(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_*.mat', Date(3:end), ExpStartTimes{nn}))); % These are the results of vocalization identificaion and merging with Who calls for this session
         Idx_3 = strfind(AudioDir2(nn).name, '_');
         Idxmat = strfind(AudioDir2(nn).name, '.mat');
-        if ~isempty(NeuroBuffer)
+        if isempty(NeuroBuffer)
             NeuroBuffer = str2double(AudioDir2.name((Idx_3+1):(Idxmat-1))); % This is the merged threshold used in the extracted vocalization data in ms we want to use the same value as the neural buffer
         end
         % Find the boundaries for obtaining silence sections of 1 second before 1s of each vocalization event
@@ -128,7 +128,7 @@ elseif contains(DataFile, 'CSC')
         AudioDir2 = dir(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_*.mat', Date(3:end), ExpStartTimes{nn}))); % These are the results of vocalization identificaion and merging with Who calls for this session
         Idx_3 = strfind(AudioDir2(nn).name, '_');
         Idxmat = strfind(AudioDir2(nn).name, '.mat');
-        if ~isempty(NeuroBuffer)
+        if isempty(NeuroBuffer)
             NeuroBuffer = str2double(AudioDir2.name((Idx_3+1):(Idxmat-1))); % This is the merged threshold used in the extracted vocalization data in ms we want to use the same value as the neural buffer
         end
         % Find the boundaries for obtaining silence sections of 1 second before 1s of each vocalization event
@@ -181,7 +181,7 @@ elseif contains(DataFile,'SS')
         AudioDir2 = dir(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_*.mat', Date(3:end), ExpStartTimes{nn}))); % These are the results of vocalization identificaion and merging with Who calls for this session
         Idx_3 = strfind(AudioDir2.name, '_');
         Idxmat = strfind(AudioDir2.name, '.mat');
-        if ~isempty(NeuroBuffer)
+        if isempty(NeuroBuffer)
             NeuroBuffer = str2double(AudioDir2.name((Idx_3(end)+1):(Idxmat-1))); % This is the merged threshold used in the extracted vocalization data in ms we want to use the same value as the neural buffer
         end
         % Find the boundaries for obtaining silence sections of 1 second before 1s of each vocalization event

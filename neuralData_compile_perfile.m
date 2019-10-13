@@ -58,19 +58,20 @@ for ff=1:length(DataDir)
         end
     end
 end
-Duration = cell(NExpe,1); % Duration of the behavioral event in ms
-DelayBefore = cell(NExpe,1); % Duration of no behavioral event before the onset in ms
-DelayAfter = cell(NExpe,1);% Duration of no behavioral event after the offset in ms
-VocWave = cell(NExpe,1);% Wave of the vocalization exactly extracted on Mic
-VocPiezoWave = cell(NExpe,1);% Wave of the vocalization exactly extracted on Piezo
-BioSound = cell(NExpe,1);%
-BSLDuration = cell(NExpe,1);% Duration of the baseline sequence
-SpikesArrivalTimes_Baseline = cell(NExpe,1); % Spike arrival time of the Baseline sequence
-SpikesArrivalTimes_Behav = cell(NExpe,1);% Spike arrival time of the behavioral event
-Who = cell(NExpe,1);% Identity of the performing bat (self or ID of the bat)
-What = cell(NExpe,1);% Type of Behavior
-ExpType = cell(NExpe,1);
-NEvents = nan(NExpe,1);
+Duration = cell(1,NExpe); % Duration of the behavioral event in ms
+DelayBefore = cell(1,NExpe); % Duration of no behavioral event before the onset in ms
+DelayAfter = cell(1,NExpe);% Duration of no behavioral event after the offset in ms
+VocWave = cell(1,NExpe);% Wave of the vocalization exactly extracted on Mic
+VocPiezoWave = cell(1,NExpe);% Wave of the vocalization exactly extracted on Piezo
+VocRank = cell(1,NExpe); % Rank of the call in the vocalization sequence
+BioSound = cell(1,NExpe);%
+BSLDuration = cell(1,NExpe);% Duration of the baseline sequence
+SpikesArrivalTimes_Baseline = cell(1,NExpe); % Spike arrival time of the Baseline sequence
+SpikesArrivalTimes_Behav = cell(1,NExpe);% Spike arrival time of the behavioral event
+Who = cell(1,NExpe);% Identity of the performing bat (self or ID of the bat)
+What = cell(1,NExpe);% Type of Behavior
+ExpType = cell(1,NExpe);
+NEvents = nan(1,NExpe);
 ExpStartTime_Old = Inf;
  % At the end concatenate them using [C{:}] and reshape([C{:}], NTot,1)
 
@@ -114,18 +115,19 @@ for ff=1:length(DataDir)
             NEvents(NExpe) = VocCall;
             
             % Now loop through calls and gather data
-            Duration{NExpe} = nan(VocCall,1); % Duration of the vocalization in ms
-            DelayBefore{NExpe} = nan(VocCall,1); % Duration of no behavioral event before the onset in ms
-            DelayAfter{NExpe} = nan(VocCall,1);% Duration of no behavioral event after the offset in ms
-            VocWave{NExpe} = cell(VocCall,1);% Wave of the vocalization exactly extracted on Mic
-            VocPiezoWave{NExpe} = cell(VocCall,1);% Wave of the vocalization exactly extracted on Piezo
-            BioSound{NExpe} = cell(VocCall,2);
+            Duration{NExpe} = nan(1,VocCall); % Duration of the vocalization in ms
+            DelayBefore{NExpe} = nan(1,VocCall); % Duration of no behavioral event before the onset in ms
+            DelayAfter{NExpe} = nan(1,VocCall);% Duration of no behavioral event after the offset in ms
+            VocWave{NExpe} = cell(1,VocCall);% Wave of the vocalization exactly extracted on Mic
+            VocPiezoWave{NExpe} = cell(1,VocCall);% Wave of the vocalization exactly extracted on Piezo
+            VocRank{NExpe} = cell(1,VocCall);% Rank of the vocal element in the sequence of vocalization as first last or middle
+            BioSound{NExpe} = cell(2,VocCall);
             BSLDuration{NExpe} = nan(1,VocCall);% Duration of the baseline sequence
-            SpikesArrivalTimes_Baseline{NExpe} = cell(VocCall,1); % Spike arrival time of the Baseline sequence
-            SpikesArrivalTimes_Behav{NExpe} = cell(VocCall,1);% Spike arrival time of the call event
-            Who{NExpe} = cell(VocCall,1);% Identity of the performing bat (self or ID of the bat)
-            What{NExpe} = cell(VocCall,1);% Type of Behavior
-            ExpType{NExpe} = cell(VocCall,1); % Type of experiment (P=Play-Back, O=Operant conditioning, F=Free interactions)
+            SpikesArrivalTimes_Baseline{NExpe} = cell(1,VocCall); % Spike arrival time of the Baseline sequence
+            SpikesArrivalTimes_Behav{NExpe} = cell(1,VocCall);% Spike arrival time of the call event
+            Who{NExpe} = cell(1,VocCall);% Identity of the performing bat (self or ID of the bat)
+            What{NExpe} = cell(1,VocCall);% Type of Behavior
+            ExpType{NExpe} = cell(1,VocCall); % Type of experiment (P=Play-Back, O=Operant conditioning, F=Free interactions)
             
             VocCall = 0;
             Ncall = nan(NV,1);
@@ -139,7 +141,14 @@ for ff=1:length(DataDir)
                         AllStops = cell2mat(IndVocStopRaw_merged{VocInd(vv)});
                         for nn=1:Ncall(vv)
                             VocCall = VocCall+1; % Increment the counter of vocalization events
-                            
+                            % Save the vocalization Rank as first or last
+                            if nn==1
+                                VocRank{NExpe}{VocCall} = 'first';
+                            elseif nn==Ncall(vv)
+                                VocRank{NExpe}{VocCall} = 'last';
+                            else
+                                VocRank{NExpe}{VocCall} = 'middle';
+                            end
                             % Save the tye of experiment
                             if str2double(ExpStartTime_Old) < str2double(ExpStartTime_new) % I always do operant before the free session
                                 ExpType{NExpe}{VocCall} = 'F';
@@ -172,7 +181,7 @@ for ff=1:length(DataDir)
                                 DelayAfter{NExpe}(VocCall) = Delay;
                             end
                             % Duration of the baseline sequence
-%                             BSLDuration{NExpe}(VocCall) = BSL_transc_time_refined(VocInd(vv),2)-BSL_transc_time_refined(VocInd(vv),1);
+                            BSLDuration{NExpe}(VocCall) = Neuro.Voc_NeuroSSU.BSL_transc_time_refined(VocInd(vv),2)-Neuro.Voc_NeuroSSU.BSL_transc_time_refined(VocInd(vv),1);
                             
                             % Extract the sound of the microphone that
                             % correspond to the data
@@ -205,8 +214,8 @@ for ff=1:length(DataDir)
                             VocPiezoWave{NExpe}{VocCall} = WL; % contains the vocalization with the same delay before/after as the neural response
                             
                             % Get the biosound parameters
-                            BioSound{NExpe}{VocCall,1} = BioSoundCalls{VocCall,1};
-                            BioSound{NExpe}{VocCall,2} = BioSoundCalls{VocCall,2};
+                            BioSound{NExpe}{1,VocCall} = BioSoundCalls{VocCall,1};
+                            BioSound{NExpe}{2,VocCall} = BioSoundCalls{VocCall,2};
                             
                             % Identify the type of call VocTr for a Trill,
                             % VocBa for a bark and VocUn for undefined Voc
@@ -239,27 +248,34 @@ for ff=1:length(DataDir)
             NExpe = NExpe + 1; % Increment the counter of experiments
             
             % Keep track of the number of behavioral event for each file
-            NBehav = length(Neuro.Behav_NeuroSSU);
+            NBehav = length(Neuro.Behav_NeuroSSU.SpikeSUBehav);
             NEvents(NExpe) = NBehav;
             
             % Now loop through behaviors and gather data
-            Duration{NExpe} = Neuro.Behav_NeuroSSU.Duration; % Duration of the behavior in ms
-            DelayBefore{NExpe} = nan(NBehav,1); % Duration of no behavioral event before the onset in ms
-            DelayAfter{NExpe} = nan(NBehav,1);% Duration of no behavioral event after the offset in ms
-            SpikesArrivalTimes_Behav{NExpe} = Neuro.Behav_NeuroSSU.SpikeSUBehav;% Spike arrival time of the behavioral event
-            Who{NExpe} = cell(NBehav,1);% Identity of the performing bat (self or ID of the bat)
-            What{NExpe} = Neuro.Behav_What(Neuro.Behav_NeuroSSU.BehavIdxSSUAlive);% Type of Behavior
-            ExpType{NExpe} = cell(NBehav,1); % Type of experiment (P=Play-Back, O=Operant conditioning, F=Free interactions)
-            ExpType{NExpe}{:} = deal('F');
+            Duration{NExpe} = Neuro.Behav_NeuroSSU.Duration'; % Duration of the behavior in ms
+            DelayBefore{NExpe} = nan(1,NBehav); % Duration of no behavioral event before the onset in ms
+            DelayAfter{NExpe} = nan(1,NBehav);% Duration of no behavioral event after the offset in ms
+            SpikesArrivalTimes_Behav{NExpe} = Neuro.Behav_NeuroSSU.SpikeSUBehav';% Spike arrival time of the behavioral event
+            Who{NExpe} = cell(1,NBehav);% Identity of the performing bat (self or ID of the bat)
+            What{NExpe} = Neuro.Behav_What(Neuro.Behav_NeuroSSU.BehavIdxSSUAlive)';% Type of Behavior
+            ExpType{NExpe} = cell(1,NBehav); % Type of experiment (P=Play-Back, O=Operant conditioning, F=Free interactions)
+            VocWave{NExpe} = cell(1,NBehav);% This stays empty
+            VocPiezoWave{NExpe} = cell(1,NBehav);% This stays empty
+            VocRank{NExpe} = cell(1,NBehav);% This stays empty
+            BioSound{NExpe} = cell(2,NBehav);% This stays empty
+            BSLDuration{NExpe} = nan(1,NBehav);% This stays empty
+            SpikesArrivalTimes_Baseline{NExpe} = cell(1,NBehav); % This stays empty
             
             for bb=1:NBehav
                 % Identify if the vocalizing bat was the one
                 % from which the neural data come from
-                if Neuro.Behav_Who{Neuro.Behav_NeuroSSU.BehavIdxSSUAlive(bb)} == str2double(SubjectID)
+                if Neuro.Behav_Who(Neuro.Behav_NeuroSSU.BehavIdxSSUAlive(bb)) == str2double(SubjectID)
                     Who{NExpe}{bb} = 'self';
                 else
-                    Who{NExpe}{bb} = num2str(Neuro.Behav_Who);
+                    Who{NExpe}{bb} = num2str(Neuro.Behav_Who(Neuro.Behav_NeuroSSU.BehavIdxSSUAlive(bb)));
                 end
+                ExpType{NExpe}{bb} = 'F';
+                VocRank{NExpe}{bb} = ' ';% This has to be filled with some strings to sort later, cannot just be left empty
             end 
         end
         ExpStartTime_Old = ExpStartTime_new;
@@ -272,6 +288,7 @@ DelayBefore = reshape([DelayBefore{:}],sum(NEvents),1); % Duration of no behavio
 DelayAfter = reshape([DelayAfter{:}],sum(NEvents),1); % Duration of no behavioral event after the offset in ms
 VocWave = reshape([VocWave{:}],sum(NEvents),1); % Wave of the vocalization exactly extracted on Mic
 VocPiezoWave = reshape([VocPiezoWave{:}],sum(NEvents),1); % Wave of the vocalization exactly extracted on Piezo
+VocRank = reshape([VocRank{:}], sum(NEvents),1);% Rank of the vocal element in the sequence of vocalization
 BioSound = reshape([BioSound{:}],sum(NEvents),2); %
 BSLDuration = reshape([BSLDuration{:}],sum(NEvents),1); % Duration of the baseline sequence
 SpikesArrivalTimes_Baseline = reshape([SpikesArrivalTimes_Baseline{:}],sum(NEvents),1);  % Spike arrival time of the Baseline sequence
@@ -280,6 +297,6 @@ Who = reshape([Who{:}],sum(NEvents),1); % Identity of the performing bat (self o
 What = reshape([What{:}],sum(NEvents),1); % Type of Behavior
 ExpType = reshape([ExpType{:}],sum(NEvents),1); 
 
-save(OutputDataFile, 'Duration','DelayBefore','DelayAfter', 'VocWave', 'VocPiezoWave', 'BioSound','BSLDuration', 'SpikesArrivalTimes_Baseline','SpikesArrivalTimes_Behav','Who','What','ExpType')
+save(OutputDataFile, 'Duration','DelayBefore','DelayAfter', 'VocWave', 'VocPiezoWave', 'VocRank', 'BioSound','BSLDuration', 'SpikesArrivalTimes_Baseline','SpikesArrivalTimes_Behav','Who','What','ExpType')
 
 end
