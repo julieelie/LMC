@@ -14,18 +14,17 @@ function neuralData_compile_perfile(InputDataFile, OutputPath)
 % Get the paths
 [Path2Data, DataFile]=fileparts(InputDataFile);
 PathParts = regexp(Path2Data, '/', 'split');
-% Loggers_dir = ['/' fullfile(PathParts{1:end-2})];
-Loggers_dir = '/Users/elie/Documents/ManipBats/LMC/20190607';
+Loggers_dir = ['/' fullfile(PathParts{1:end-2})];
 if nargin<2 || isempty(OutputPath)
     OutputPath = Loggers_dir;
 end
 
-% Output
-OutputDataFile = fullfile(Path2Data, [DataFile(1:end-3) '_FullDataSet.mat']);
-
 % Get the date of the recording
 Idx_ = strfind(DataFile, '_');
 Date = DataFile((Idx_(1)+1) : (Idx_(2)-1));
+
+% on my MAC
+% Loggers_dir = ['/' fullfile(PathParts{1:end-1},Date)];
 
 % Get the tetrode ID
 NeuralInputID{1} = DataFile(strfind(DataFile, 'TT')+2);
@@ -34,6 +33,9 @@ NeuralInputID{2} = DataFile((Idx_(end)+1):end);
 
 % Get the subject ID
 SubjectID = DataFile(1:5);
+
+% Output
+OutputDataFile = fullfile(OutputPath, sprintf('%s_%s_%s_SSU%s-%s.mat', SubjectID, Date,NeuralInputID{1},NeuralInputID{2}));
 
 % Loop through files to cut the vocalizations into analyzed snippets
 % classify vocalizations according to type: Chirp or Trills
@@ -96,7 +98,7 @@ for ff=1:length(DataDir)
             % find the logger number worn by the subject
             ALNum = contains(LoggerName, 'AL');
             SubjectLogs = cell2mat(BatID) == str2double(SubjectID);
-            SubjectAL = LoggerName{find(ALNum .* SubjectLogs)}(3:end);
+            SubjectAL = LoggerName{find(ALNum .* SubjectLogs)}(3:end); %#ok<FNDSB>
             
             % find the vocalizations emitted by the vocalizer of interest
             Fns_AL = fieldnames(Piezo_wave);
@@ -297,6 +299,9 @@ Who = reshape([Who{:}],sum(NEvents),1); % Identity of the performing bat (self o
 What = reshape([What{:}],sum(NEvents),1); % Type of Behavior
 ExpType = reshape([ExpType{:}],sum(NEvents),1); 
 
-save(OutputDataFile, 'Duration','DelayBefore','DelayAfter', 'VocWave', 'VocPiezoWave', 'VocRank', 'BioSound','BSLDuration', 'SpikesArrivalTimes_Baseline','SpikesArrivalTimes_Behav','Who','What','ExpType')
-
+if exist(OutputDataFile, 'file')
+    save(OutputDataFile, 'Duration','DelayBefore','DelayAfter', 'VocWave', 'VocPiezoWave', 'VocRank', 'BioSound','BSLDuration', 'SpikesArrivalTimes_Baseline','SpikesArrivalTimes_Behav','Who','What','ExpType','-append');
+else
+    save(OutputDataFile, 'Duration','DelayBefore','DelayAfter', 'VocWave', 'VocPiezoWave', 'VocRank', 'BioSound','BSLDuration', 'SpikesArrivalTimes_Baseline','SpikesArrivalTimes_Behav','Who','What','ExpType');
+end
 end
