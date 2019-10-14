@@ -145,6 +145,7 @@ fprintf(1,' RASTER PLOTS of NEURAL DATA CORRESPONDING TO VOCALIZATIONS\n');
 Files2Run = 1:29;
 for ss=Files2Run
     plot_rastervoc_perfile(ListSSU{ss}, OutputPath)
+    close all
 end
 
 %% calculate the KDE SPIKE RATE of vocalizations

@@ -36,9 +36,9 @@ IndVocHDF = intersect(IndVocHD, IndVocF);
 if ~isempty(IndVocPD) && ~isempty(IndVocPDO) && ~isempty(IndVocPDF)
     Fig1 = figure();
     Color = [0 0.1 0].*contains(Data.What, 'Tr') + repmat([1 0.8 0.8], length(Data.What),1);
-    timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPD,Color)
-    suplabel(sprintf('CALLS FROM SUBJECT\n%s on %s Raster Tetrode %s SU %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{2}),'t')
-    print(Fig1,fullfile(OutputPath,sprintf('%s_RasterVocSelf_%d.pdf', FileNameBase, Delay(1))),'-dpdf','-fillpage')
+    timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPD,Color);
+    suplabel(sprintf('CALLS FROM SUBJECT O and F   %s on %s Raster Tetrode %s SU %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{2}),'t');
+    print(Fig1,fullfile(OutputPath,sprintf('%s_RasterVocSelf_%d.pdf', FileNameBase, Delay(1))),'-dpdf','-fillpage');
 end
 
 %% Time Raster plot alligned to vocalization perception onset/offset
@@ -46,7 +46,7 @@ if ~isempty(IndVocHD) && ~isempty(IndVocHDO) && ~isempty(IndVocHDF)
     Fig2 = figure();
     Color = [0 0.1 0].*contains(Data.What, 'Tr') + repmat([0.8 0.8 1], length(Data.What),1);
     timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocHD,Color)
-    suplabel(sprintf('CALLS FROM OTHERS\n%s on %s Raster Tetrode %s SU %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{2}),'t')
+    suplabel(sprintf('CALLS FROM OTHERS O and F    %s on %s Raster Tetrode %s SU %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{2}),'t');
     print(Fig2,fullfile(OutputPath,sprintf('%s_RasterVocOthers_%d.pdf', FileNameBase, Delay(1))),'-dpdf','-fillpage')
 end
 
@@ -55,7 +55,7 @@ if ~isempty(IndVocPDO)
     Fig6 = figure();
     Color = [0 0.1 0].*contains(Data.What, 'Tr') + repmat([1 0.8 0.8], length(Data.What),1);
     timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPDO,Color)
-    suplabel(sprintf('CALLS FROM SUBJECT OPERANT\n%s on %s Raster Tetrode %s SU %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{2}),'t')
+    suplabel(sprintf('CALLS FROM SUBJECT OPERANT   %s on %s Raster Tetrode %s SU %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{2}),'t');
     print(Fig6,fullfile(OutputPath,sprintf('%s_RasterVocSelfOp_%d.pdf', FileNameBase, Delay(1))),'-dpdf','-fillpage')
 end
 
@@ -64,7 +64,7 @@ if ~isempty(IndVocHDO)
     Fig7 = figure();
     Color = [0 0.1 0].*contains(Data.What, 'Tr') + repmat([0.8 0.8 1], length(Data.What),1);
     timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocHDO,Color)
-    suplabel(sprintf('CALLS FROM OTHERS OPERANT\n%s on %s Raster Tetrode %s SU %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{2}),'t')
+    suplabel(sprintf('CALLS FROM OTHERS OPERANT    %s on %s Raster Tetrode %s SU %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{2}),'t');
     print(Fig7,fullfile(OutputPath,sprintf('%s_RasterVocOthersOp_%d.pdf', FileNameBase, Delay(1))),'-dpdf','-fillpage')
 end
 
@@ -73,7 +73,7 @@ if ~isempty(IndVocPDF)
     Fig8 = figure();
     Color = [0 0.1 0].*contains(Data.What, 'Tr') + repmat([1 0.8 0.8], length(Data.What),1);
     timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPDF,Color)
-    suplabel(sprintf('CALLS FROM SUBJECT FREE SESSION\n%s on %s Raster Tetrode %s SU %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{2}),'t')
+    suplabel(sprintf('CALLS FROM SUBJECT FREE SESSION    %s on %s Raster Tetrode %s SU %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{2}),'t');
     print(Fig8,fullfile(OutputPath,sprintf('%s_RasterVocSelfFr_%d.pdf', FileNameBase, Delay(1))),'-dpdf','-fillpage')
 end
 
@@ -82,7 +82,7 @@ if ~isempty(IndVocHDF)
     Fig9 = figure();
     Color = [0 0.1 0].*contains(Data.What, 'Tr') + repmat([0.8 0.8 1], length(Data.What),1);
     timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocHDF,Color)
-    suplabel(sprintf('CALLS FROM OTHERS FREE SESSION\n%s on %s Raster Tetrode %s SU %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{2}),'t')
+    suplabel(sprintf('CALLS FROM OTHERS FREE SESSION    %s on %s Raster Tetrode %s SU %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{2}),'t');
     print(Fig9,fullfile(OutputPath,sprintf('%s_RasterVocOthersFr_%d.pdf', FileNameBase, Delay(1))),'-dpdf','-fillpage')
 end
 
@@ -184,7 +184,7 @@ print(Fig5,fullfile(OutputPath,sprintf('%s_DynRasterVocProd_Ba.pdf', FileNameBas
             end
             hold on
         end
-        XLIM = [-Delay(1) mean(Duration(Indices))+Delay(2)];
+        XLIM = [-Delay(1) max(Duration(Indices))+Delay(2)];
         xlabel('Time centered at vocalization onset (ms)')
         ylim([0 length(Indices)+1])
         xlim(XLIM)
@@ -209,7 +209,7 @@ print(Fig5,fullfile(OutputPath,sprintf('%s_DynRasterVocProd_Ba.pdf', FileNameBas
             end
             hold on
         end
-        XLIM = [-Delay(1)-mean(Duration(Indices)) Delay(2)];
+        XLIM = [-Delay(1)-max(Duration(Indices)) Delay(2)];
         xlabel('Time centered at vocalization offset (ms)')
         ylim([0 length(Indices)+1])
         xlim(XLIM)

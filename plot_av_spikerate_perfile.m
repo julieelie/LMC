@@ -31,7 +31,7 @@ errorbar(1,mean(SpikeRate.SelfCall_rate(Ind,1)),std(SpikeRate.SelfCall_rate(Ind,
 hold on
 scatter(ones(sum(Ind),1),SpikeRate.SelfCall_rate(Ind,1),ScatterMarkerSz,'k','o','filled')
 hold on
-errorbar(2,mean(SpikeRate.SelfCall_rate(Ind,2)),std(SpikeRate.SelfCall_rate(Ind,2))/sum(Ind)^0.5, 'dr','MarkerSize',MeanMarkerSize,'MarkerFaceColor','r')
+errorbar(2,mean(SpikeRate.SelfCall_rate(Ind,2)),std(SpikeRate.SelfCall_rate(Ind,2))/sum(Ind)^0.5, 'dc','MarkerSize',MeanMarkerSize,'MarkerFaceColor','c')
 hold on
 scatter(2.*ones(sum(Ind),1),SpikeRate.SelfCall_rate(Ind,2),ScatterMarkerSz,'k','o','filled')
 hold on
@@ -43,7 +43,7 @@ errorbar(3,mean(SpikeRate.SelfCall_rate(Ind,1)),std(SpikeRate.SelfCall_rate(Ind,
 hold on
 scatter(3.*ones(sum(Ind),1),SpikeRate.SelfCall_rate(Ind,1),ScatterMarkerSz,'k','o','filled')
 hold on
-errorbar(4,mean(SpikeRate.SelfCall_rate(Ind,2)),std(SpikeRate.SelfCall_rate(Ind,2))/sum(Ind)^0.5, 'dr','MarkerSize',MeanMarkerSize,'MarkerFaceColor','r')
+errorbar(4,mean(SpikeRate.SelfCall_rate(Ind,2)),std(SpikeRate.SelfCall_rate(Ind,2))/sum(Ind)^0.5, 'dc','MarkerSize',MeanMarkerSize,'MarkerFaceColor','c')
 hold on
 scatter(4.*ones(sum(Ind),1),SpikeRate.SelfCall_rate(Ind,2),ScatterMarkerSz,'k','o','filled')
 hold on
@@ -52,11 +52,11 @@ hold on
 if ~isempty(SpikeRate.OthersCall_exptype)
     Ind = contains(SpikeRate.OthersCall_exptype, 'O');
     Nevents(5:6) = sum(Ind).*ones(2,1);
-    errorbar(5,mean(SpikeRate.OthersCall_rate(Ind,1)),std(SpikeRate.OthersCall_rate(Ind,1))/sum(Ind)^0.5, 'dr','MarkerSize',MeanMarkerSize,'MarkerFaceColor','r')
+    errorbar(5,mean(SpikeRate.OthersCall_rate(Ind,1)),std(SpikeRate.OthersCall_rate(Ind,1))/sum(Ind)^0.5, 'sr','MarkerSize',MeanMarkerSize,'MarkerFaceColor','r')
     hold on
     scatter(5.*ones(sum(Ind),1),SpikeRate.OthersCall_rate(Ind,1),ScatterMarkerSz,'k','o','filled')
     hold on
-    errorbar(6,mean(SpikeRate.OthersCall_rate(Ind,2)),std(SpikeRate.OthersCall_rate(Ind,2))/sum(Ind)^0.5, 'dr','MarkerSize',MeanMarkerSize,'MarkerFaceColor','r')
+    errorbar(6,mean(SpikeRate.OthersCall_rate(Ind,2)),std(SpikeRate.OthersCall_rate(Ind,2))/sum(Ind)^0.5, 'sc','MarkerSize',MeanMarkerSize,'MarkerFaceColor','c')
     hold on
     scatter(6.*ones(sum(Ind),1),SpikeRate.OthersCall_rate(Ind,2),ScatterMarkerSz,'k','o','filled')
     hold on
@@ -65,16 +65,16 @@ if ~isempty(SpikeRate.OthersCall_exptype)
     % Plot the spike rate in Hz of others calls Free session
     Ind = contains(SpikeRate.OthersCall_exptype, 'F');
     Nevents(7:8) = sum(Ind).*ones(2,1);
-    errorbar(7,mean(SpikeRate.OthersCall_rate(Ind,1)),std(SpikeRate.OthersCall_rate(Ind,1))/sum(Ind)^0.5, 'dr','MarkerSize',MeanMarkerSize,'MarkerFaceColor','r')
+    errorbar(7,mean(SpikeRate.OthersCall_rate(Ind,1)),std(SpikeRate.OthersCall_rate(Ind,1))/sum(Ind)^0.5, 'sr','MarkerSize',MeanMarkerSize,'MarkerFaceColor','r')
     hold on
     scatter(7.*ones(sum(Ind),1),SpikeRate.OthersCall_rate(Ind,1),ScatterMarkerSz,'k','o','filled')
     hold on
-    errorbar(8,mean(SpikeRate.OthersCall_rate(Ind,2)),std(SpikeRate.OthersCall_rate(Ind,2))/sum(Ind)^0.5, 'dr','MarkerSize',MeanMarkerSize,'MarkerFaceColor','r')
+    errorbar(8,mean(SpikeRate.OthersCall_rate(Ind,2)),std(SpikeRate.OthersCall_rate(Ind,2))/sum(Ind)^0.5, 'sc','MarkerSize',MeanMarkerSize,'MarkerFaceColor','c')
     hold on
     scatter(8.*ones(sum(Ind),1),SpikeRate.OthersCall_rate(Ind,2),ScatterMarkerSz,'k','o','filled')
     hold on
 end
-LegendVoc = {'SVocO' 'bSVocO' 'SVocF' 'bSVocF' 'OVocO' 'bOVocO' 'OVocF' 'bOVocF'};
+LegendVoc = {'Self-Voc-Operant' 'bSelf-Voc-Operant' 'Self-Voc-Free' 'bSelf-Voc-Free' 'Others-Voc-Operant' 'bOthers-Voc-Operant' 'Others-Voc-Free' 'bOthers-Voc-Free'};
 % Indicate the number of events
 text(1,-0.5,sprintf('%d',Nevents(1)))
 text(2,-0.5,sprintf('%d',Nevents(2)))
@@ -93,16 +93,16 @@ for bb=1:length(SpikeRate.BehavType)
         scatter((bb+8).*ones(size(SpikeRate.SelfNVBehav_rate{bb},1),1),SpikeRate.SelfNVBehav_rate{bb},ScatterMarkerSz,'k','o','filled')
         hold on
         if contains(SpikeRate.BehavType{bb}, 'teeth')
-            LegendSNVB{bb} = sprintf('S%s','nailbiting');
+            LegendSNVB{bb} = sprintf('Self-%s','nailbiting');
         else
-            LegendSNVB{bb} = sprintf('S%s',SpikeRate.BehavType{bb});
+            LegendSNVB{bb} = sprintf('Self-%s',SpikeRate.BehavType{bb});
         end
         text(bb+8,-0.5,sprintf('%d',size(SpikeRate.SelfNVBehav_rate{bb},1)))
     else
         if contains(SpikeRate.BehavType{bb}, 'teeth')
-            LegendSNVB{bb} = sprintf('S%s','nailbiting');
+            LegendSNVB{bb} = sprintf('Self-%s','nailbiting');
         else
-            LegendSNVB{bb} = sprintf('S%s',SpikeRate.BehavType{bb});
+            LegendSNVB{bb} = sprintf('Self-%s',SpikeRate.BehavType{bb});
         end
         text(bb+8,-0.5,'0')
     end
@@ -111,21 +111,21 @@ end
 LegendONVB = cell(1,length(SpikeRate.BehavType));
 for bb=1:length(SpikeRate.BehavType)
     if ~isnan(SpikeRate.OthersNVBehav_rate{bb})
-        errorbar(bb+8+length(SpikeRate.BehavType),mean(SpikeRate.OthersNVBehav_rate{bb}),std(SpikeRate.SelfNVBehav_rate{bb})/size(SpikeRate.SelfNVBehav_rate{bb},1)^0.5, 'dr','MarkerSize',MeanMarkerSize,'MarkerFaceColor','r')
+        errorbar(bb+8+length(SpikeRate.BehavType),mean(SpikeRate.OthersNVBehav_rate{bb}),std(SpikeRate.SelfNVBehav_rate{bb})/size(SpikeRate.SelfNVBehav_rate{bb},1)^0.5, 'sr','MarkerSize',MeanMarkerSize,'MarkerFaceColor','r')
         hold on
         scatter((bb+8+length(SpikeRate.BehavType)).*ones(size(SpikeRate.OthersNVBehav_rate{bb},1),1),SpikeRate.OthersNVBehav_rate{bb},ScatterMarkerSz,'k','o','filled')
         hold on
         if contains(SpikeRate.BehavType{bb}, 'teeth')
-            LegendONVB{bb} = sprintf('O%s','nailbiting');
+            LegendONVB{bb} = sprintf('Others-%s','nailbiting');
         else
-            LegendONVB{bb} = sprintf('O%s',SpikeRate.BehavType{bb});
+            LegendONVB{bb} = sprintf('Others-%s',SpikeRate.BehavType{bb});
         end
         text(bb+8+length(SpikeRate.BehavType),-0.5,sprintf('%d',size(SpikeRate.OthersNVBehav_rate{bb},1)))
     else
         if contains(SpikeRate.BehavType{bb}, 'teeth')
-            LegendONVB{bb} = sprintf('O%s','nailbiting');
+            LegendONVB{bb} = sprintf('Others-%s','nailbiting');
         else
-            LegendONVB{bb} = sprintf('O%s',SpikeRate.BehavType{bb});
+            LegendONVB{bb} = sprintf('Others-%s',SpikeRate.BehavType{bb});
         end
         text(bb+8+length(SpikeRate.BehavType),-0.5,'0')
     end
@@ -142,6 +142,11 @@ orient(Fig,'landscape')
 Fig.PaperPositionMode = 'auto';
 set(Fig,'PaperOrientation','landscape');
 Fig.Units = 'inches';
-
+Fig.Children.YLim(1)=-1;
+Fig.Children.YLim(2) = max(1,Fig.Children.YLim(2));
+FigPosition = Fig.Position;
+Fig.Position = [FigPosition(1:2) 10 4];
+xtickangle(20)
 print(Fig,fullfile(OutputPath,sprintf('%s_%s_SSU%s-%s_MeanRateScatter.pdf', SubjectID, Date,NeuralInputID{1},NeuralInputID{2})),'-dpdf','-fillpage')
+close all
 end
