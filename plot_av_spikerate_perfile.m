@@ -15,7 +15,7 @@ NeuralInputID{2} = DataFile((Idx_(end)+1):end);
 SubjectID = DataFile(1:5);
 
 % Input
-FullDataSetFile = fullfile(OutputPath, sprintf('%s_%s_%s_SSU%s-%s.mat', SubjectID, Date,NeuralInputID{1},NeuralInputID{2}));
+FullDataSetFile = fullfile(OutputPath, sprintf('%s_%s_SSU%s-%s.mat', SubjectID, Date,NeuralInputID{1},NeuralInputID{2}));
 load(FullDataSetFile, 'SpikeRate');
 
 
@@ -128,5 +128,5 @@ xlim(gca,[0 8+2*length(SpikeRate.BehavType)+1])
 orient(Fig,'landscape')
 Fig.PaperPositionMode = 'auto';
 set(Fig,'PaperOrientation','landscape');
-print(Fig,fullfile(OutputPath,sprintf('%s_%s_%s_SSU%s-%s_MeanRateScatter.pdf', SubjectID, Date,NeuralInputID{1},NeuralInputID{2})),'-dpdf','-fillpage')
+print(Fig,fullfile(OutputPath,sprintf('%s_%s_SSU%s-%s_MeanRateScatter.pdf', SubjectID, Date,NeuralInputID{1},NeuralInputID{2})),'-dpdf','-fillpage')
 end

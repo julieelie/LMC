@@ -79,7 +79,7 @@ OutputPath = fullfile(BasePath, 'ResultsFiles');
 % of spike sorting.
 fprintf('NEURONS SANITARY CHECK.... ')
 % Files2Run = 1:length(ListSSU);
-Files2Run = 1:17;
+Files2Run = 1:29;
 for ss=Files2Run
     sanitary_check_perSSfile(ListSSU{ss}, OutputPath)
 end
@@ -93,6 +93,7 @@ NeuralBuffer = 5000; %duration of the time buffer in
 %       of vocalizations for extracting neural data.
 % Files2Run = 1:length(ListSSU);
 for ss=Files2Run
+    fprintf(1,'File %d/%d\n',ss,length(Files2Run))
     cut_neuralData_voc_perfile(ListSSU{ss}, OutputPath,NeuralBuffer)
 end
 fprintf(' DONE \n')
@@ -101,8 +102,9 @@ fprintf(' DONE \n')
 % by get_logger_data_behav (run by result_reconly_bat.m) for each cell
 fprintf(' EXTRACTING NEURAL DATA CORRESPONDING TO OTHER BEHAVIORS.... ')
 % Files2Run = 1:length(ListSSU);
-Files2Run = 1:17;
+Files2Run = 1:29;
 for ss=Files2Run
+    fprintf(1,'File %d/%d\n',ss,length(Files2Run))
     cut_neuralData_behav_perfile(ListSSU{ss}, OutputPath)
 end
 fprintf(' DONE \n')
@@ -112,6 +114,7 @@ fprintf(' COMPILING NEURAL DATA .... ')
 % Files2Run = 1:length(ListSSU);
 Files2Run = 1:29;
 for ss=Files2Run
+    fprintf(1,'File %d/%d\n',ss,length(Files2Run))
     neuralData_compile_perfile(ListSSU{ss}, OutputPath)
 end
 fprintf(' DONE \n')
@@ -119,8 +122,9 @@ fprintf(' DONE \n')
 %% Calculating the average spike rate during various types of behaviors including vocalizations
 fprintf(' CALCULATING SPIKE RATE CORRESPONDING TO ALL BEHAVIORS.... ')
 % Files2Run = 1:length(ListSSU);
-Files2Run = 1:17;
+Files2Run = 1:29;
 for ss=Files2Run
+    fprintf(1,'File %d/%d\n',ss,length(Files2Run))
     cal_spikerate_perfile(ListSSU{ss},OutputPath)
 end
 fprintf(' DONE \n')
@@ -128,7 +132,7 @@ fprintf(' DONE \n')
 %% Plot the average spike rate during various types of behaviors including vocalizations
 fprintf(' PLOTING NEURAL DATA (Av RATE) CORRESPONDING TO ALL BEHAVIORS.... ')
 % Files2Run = 1:length(ListSSU);
-Files2Run = 1:17;
+Files2Run = 1:29;
 for ss=Files2Run
     plot_av_spikerate_perfile(ListSSU{ss}, OutputPath)
 end
@@ -137,7 +141,7 @@ fprintf(' DONE \n')
 %% Plot rasters for vocalizations
 fprintf(1,' RASTER PLOTS of NEURAL DATA CORRESPONDING TO VOCALIZATIONS\n');
 % Files2Run = 1:length(ListSSU);
-Files2Run = 1:17;
+Files2Run = 1:29;
 for ss=Files2Run
     plot_rastervoc_perfile(ListSSU{ss}, OutputPath)
 end

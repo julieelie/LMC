@@ -15,7 +15,7 @@ NeuralInputID{2} = DataFile((Idx_(end)+1):end);
 SubjectID = DataFile(1:5);
 
 % Output
-FullDataSetFile = fullfile(OutputPath, sprintf('%s_%s_%s_SSU%s-%s.mat', SubjectID, Date,NeuralInputID{1},NeuralInputID{2}));
+FullDataSetFile = fullfile(OutputPath, sprintf('%s_%s_SSU%s-%s.mat', SubjectID, Date,NeuralInputID{1},NeuralInputID{2}));
 Data=load(FullDataSetFile);
 
 %% Data pointers

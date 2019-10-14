@@ -35,7 +35,7 @@ NeuralInputID{2} = DataFile((Idx_(end)+1):end);
 SubjectID = DataFile(1:5);
 
 % Output
-OutputDataFile = fullfile(OutputPath, sprintf('%s_%s_%s_SSU%s-%s.mat', SubjectID, Date,NeuralInputID{1},NeuralInputID{2}));
+OutputDataFile = fullfile(OutputPath, sprintf('%s_%s_SSU%s-%s.mat', SubjectID, Date,NeuralInputID{1},NeuralInputID{2}));
 
 % Loop through files to cut the vocalizations into analyzed snippets
 % classify vocalizations according to type: Chirp or Trills
@@ -162,7 +162,7 @@ for ff=1:length(DataDir)
                             if ll == FocIndAudio
                                 Who{NExpe}{VocCall} = 'self';
                             else
-                                AL_local = Fns_AL(ll);
+                                AL_local = Fns_AL{ll};
                                 ALNum = contains(LoggerName, ['AL' AL_local(7:end)]);
                                 Who{NExpe}{VocCall} = num2str(BatID{ALNum});
                             end
