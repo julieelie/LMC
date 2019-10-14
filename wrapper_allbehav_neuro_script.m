@@ -134,6 +134,7 @@ fprintf(' PLOTING NEURAL DATA (Av RATE) CORRESPONDING TO ALL BEHAVIORS.... ')
 % Files2Run = 1:length(ListSSU);
 Files2Run = 1:29;
 for ss=Files2Run
+    fprintf(1,'File %d/%d\n',ss,length(Files2Run))
     plot_av_spikerate_perfile(ListSSU{ss}, OutputPath)
 end
 fprintf(' DONE \n')

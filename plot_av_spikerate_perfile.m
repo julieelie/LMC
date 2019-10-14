@@ -92,7 +92,7 @@ for bb=1:length(SpikeRate.BehavType)
         if contains(SpikeRate.BehavType{bb}, 'teeth')
             LegendSNVB{bb} = sprintf('S-%s(0)','nailbiting');
         else
-            LegendSNVB{bb} = sprintf('S-%s(0)');
+            LegendSNVB{bb} = sprintf('S-%s(0)',SpikeRate.BehavType{bb});
         end
     end
 end
