@@ -74,7 +74,16 @@ if ~isempty(SpikeRate.OthersCall_exptype)
     scatter(8.*ones(sum(Ind),1),SpikeRate.OthersCall_rate(Ind,2),ScatterMarkerSz,'k','o','filled')
     hold on
 end
-LegendVoc = {sprintf('S-Voc-O(%d)',Nevents(1)) sprintf('BS-Voc-O(%d)',Nevents(2)) sprintf('S-Voc-F(%d)',Nevents(3)) sprintf('BS-Voc-F(%d)',Nevents(4)) sprintf('O-Voc-O(%d)',Nevents(5)) sprintf('BO-Voc-O(%d)',Nevents(6)) sprintf('O-Voc-F(%d)',Nevents(7)) sprintf('BO-Voc-F(%d)',Nevents(8))};
+LegendVoc = {'SVocO' 'bSVocO' 'SVocF' 'bSVocF' 'OVocO' 'bOVocO' 'OVocF' 'bOVocF'};
+% Indicate the number of events
+text(1,-0.5,sprintf('%d',Nevents(1)))
+text(2,-0.5,sprintf('%d',Nevents(2)))
+text(3,-0.5,sprintf('%d',Nevents(3)))
+text(4,-0.5,sprintf('%d',Nevents(4)))
+text(5,-0.5,sprintf('%d',Nevents(5)))
+text(6,-0.5,sprintf('%d',Nevents(6)))
+text(7,-0.5,sprintf('%d',Nevents(7)))
+text(8,-0.5,sprintf('%d',Nevents(8)))
 
 LegendSNVB = cell(1,length(SpikeRate.BehavType));
 for bb=1:length(SpikeRate.BehavType)
@@ -84,16 +93,18 @@ for bb=1:length(SpikeRate.BehavType)
         scatter((bb+8).*ones(size(SpikeRate.SelfNVBehav_rate{bb},1),1),SpikeRate.SelfNVBehav_rate{bb},ScatterMarkerSz,'k','o','filled')
         hold on
         if contains(SpikeRate.BehavType{bb}, 'teeth')
-            LegendSNVB{bb} = sprintf('S-%s(%d)','nailbiting',size(SpikeRate.SelfNVBehav_rate{bb},1));
+            LegendSNVB{bb} = sprintf('S%s','nailbiting');
         else
-            LegendSNVB{bb} = sprintf('S-%s(%d)',SpikeRate.BehavType{bb},size(SpikeRate.SelfNVBehav_rate{bb},1));
+            LegendSNVB{bb} = sprintf('S%s',SpikeRate.BehavType{bb});
         end
+        text(bb+8,-0.5,sprintf('%d',size(SpikeRate.SelfNVBehav_rate{bb},1)))
     else
         if contains(SpikeRate.BehavType{bb}, 'teeth')
-            LegendSNVB{bb} = sprintf('S-%s(0)','nailbiting');
+            LegendSNVB{bb} = sprintf('S%s','nailbiting');
         else
-            LegendSNVB{bb} = sprintf('S-%s(0)',SpikeRate.BehavType{bb});
+            LegendSNVB{bb} = sprintf('S%s',SpikeRate.BehavType{bb});
         end
+        text(bb+8,-0.5,'0')
     end
 end
 
@@ -105,16 +116,18 @@ for bb=1:length(SpikeRate.BehavType)
         scatter((bb+8+length(SpikeRate.BehavType)).*ones(size(SpikeRate.OthersNVBehav_rate{bb},1),1),SpikeRate.OthersNVBehav_rate{bb},ScatterMarkerSz,'k','o','filled')
         hold on
         if contains(SpikeRate.BehavType{bb}, 'teeth')
-            LegendONVB{bb} = sprintf('O-%s(%d)','nailbiting',size(SpikeRate.SelfNVBehav_rate{bb},1));
+            LegendONVB{bb} = sprintf('O%s','nailbiting');
         else
-            LegendONVB{bb} = sprintf('O-%s(%d)',SpikeRate.BehavType{bb},size(SpikeRate.SelfNVBehav_rate{bb},1));
+            LegendONVB{bb} = sprintf('O%s',SpikeRate.BehavType{bb});
         end
+        text(bb+8+length(SpikeRate.BehavType),-0.5,sprintf('%d',size(SpikeRate.OthersNVBehav_rate{bb},1)))
     else
         if contains(SpikeRate.BehavType{bb}, 'teeth')
-            LegendONVB{bb} = sprintf('O-%s(0)','nailbiting');
+            LegendONVB{bb} = sprintf('O%s','nailbiting');
         else
-            LegendONVB{bb} = sprintf('O-%s(0)',SpikeRate.BehavType{bb});
+            LegendONVB{bb} = sprintf('O%s',SpikeRate.BehavType{bb});
         end
+        text(bb+8+length(SpikeRate.BehavType),-0.5,'0')
     end
         
 end
@@ -128,5 +141,7 @@ xlim(gca,[0 8+2*length(SpikeRate.BehavType)+1])
 orient(Fig,'landscape')
 Fig.PaperPositionMode = 'auto';
 set(Fig,'PaperOrientation','landscape');
+Fig.Units = 'inches';
+
 print(Fig,fullfile(OutputPath,sprintf('%s_%s_SSU%s-%s_MeanRateScatter.pdf', SubjectID, Date,NeuralInputID{1},NeuralInputID{2})),'-dpdf','-fillpage')
 end
