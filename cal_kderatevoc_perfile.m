@@ -1,4 +1,4 @@
-function cal_kderatevoc_perfile(InputDataFile)
+function cal_kderatevoc_perfile(InputDataFile,OutputPath, Delay)
 %%
 if nargin<3
     Delay=[3000 200];% in ms
@@ -46,11 +46,11 @@ if ~isempty(IndVocPD) && ~isempty(IndVocPDO) && ~isempty(IndVocPDF)
     [KDE.SelfVocAll] = kderate(Data.SpikesArrivalTimes_Behav(IndVocPD),Data.Duration(IndVocPD),Delay,Bin_ms);
     IndTrPD = intersect(IndTr, IndVocPD);
     if length(IndTrPD)>MinNumCall
-        [KDE.SelfVocTrAll] = kderate(Data.SpikesArrivalTimes_Behav(IndTrPD),Data.Duration(IndTrPD),Delay,Bin_ms);
+        [KDE.SelfTrAll] = kderate(Data.SpikesArrivalTimes_Behav(IndTrPD),Data.Duration(IndTrPD),Delay,Bin_ms);
     end
     IndBaPD = intersect(IndBa, IndVocPD);
     if length(IndBaPD)>MicNumCall
-        [KDE.SelfVocBaAll] = kderate(Data.SpikesArrivalTimes_Behav(IndBaPD),Data.Duration(IndBaPD),Delay,Bin_ms);
+        [KDE.SelfBaAll] = kderate(Data.SpikesArrivalTimes_Behav(IndBaPD),Data.Duration(IndBaPD),Delay,Bin_ms);
     end
 end
 
@@ -59,11 +59,11 @@ if ~isempty(IndVocHD) && ~isempty(IndVocHDO) && ~isempty(IndVocHDF)
     [KDE.OthersVocAll] = kderate(Data.SpikesArrivalTimes_Behav(IndVocHD),Data.Duration(IndVocHD),Delay,Bin_ms);
     IndTrHD = intersect(IndTr, IndVocHD);
     if length(IndTrHD)>MinNumCall
-        [KDE.OthersVocTrAll] = kderate(Data.SpikesArrivalTimes_Behav(IndTrHD),Data.Duration(IndTrHD),Delay,Bin_ms);
+        [KDE.OthersTrAll] = kderate(Data.SpikesArrivalTimes_Behav(IndTrHD),Data.Duration(IndTrHD),Delay,Bin_ms);
     end
     IndBaHD = intersect(IndBa, IndVocHD);
     if length(IndBaHD)>MinNumCall
-        [KDE.OthersVocBaAll] = kderate(Data.SpikesArrivalTimes_Behav(IndBaHD),Data.Duration(IndBaHD),Delay,Bin_ms);
+        [KDE.OthersBaAll] = kderate(Data.SpikesArrivalTimes_Behav(IndBaHD),Data.Duration(IndBaHD),Delay,Bin_ms);
     end
 end
 
@@ -72,11 +72,11 @@ if ~isempty(IndVocPDO)
     [KDE.SelfVocOp] = kderate(Data.SpikesArrivalTimes_Behav(IndVocPDO),Data.Duration(IndVocPDO),Delay,Bin_ms);
     IndTrPDO = intersect(IndTr, IndVocPDO);
     if length(IndTrPDO)>MinNumCall
-        [KDE.SelfVocTrOp] = kderate(Data.SpikesArrivalTimes_Behav(IndTrPDO),Data.Duration(IndTrPDO),Delay,Bin_ms);
+        [KDE.SelfTrOp] = kderate(Data.SpikesArrivalTimes_Behav(IndTrPDO),Data.Duration(IndTrPDO),Delay,Bin_ms);
     end
     IndBaPDO = intersect(IndBa, IndVocPDO);
     if length(IndBaPDO)>MinNumCall
-        [KDE.SelfVocBaOp] = kderate(Data.SpikesArrivalTimes_Behav(IndBaPDO),Data.Duration(IndBaPDO),Delay,Bin_ms);
+        [KDE.SelfBaOp] = kderate(Data.SpikesArrivalTimes_Behav(IndBaPDO),Data.Duration(IndBaPDO),Delay,Bin_ms);
     end
 end
 
@@ -85,11 +85,11 @@ if ~isempty(IndVocHDO)
     [KDE.OthersVocOp] = kderate(Data.SpikesArrivalTimes_Behav(IndVocHDO),Data.Duration(IndVocHDO),Delay,Bin_ms);
     IndTrHDO = intersect(IndTr, IndVocHDO);
     if length(IndTrHDO)>MinNumCall
-        [KDE.OthersVocTrOp] = kderate(Data.SpikesArrivalTimes_Behav(IndTrHDO),Data.Duration(IndTrHDO),Delay,Bin_ms);
+        [KDE.OthersTrOp] = kderate(Data.SpikesArrivalTimes_Behav(IndTrHDO),Data.Duration(IndTrHDO),Delay,Bin_ms);
     end
     IndBaHDO = intersect(IndBa, IndVocHDO);
     if length(IndBaPDO)>MinNumCall
-        [KDE.OthersVocBaOp] = kderate(Data.SpikesArrivalTimes_Behav(IndBaHDO),Data.Duration(IndBaHDO),Delay,Bin_ms);
+        [KDE.OthersBaOp] = kderate(Data.SpikesArrivalTimes_Behav(IndBaHDO),Data.Duration(IndBaHDO),Delay,Bin_ms);
     end
 end
 
@@ -98,11 +98,11 @@ if ~isempty(IndVocPDF)
     [KDE.SelfVocFr] = kderate(Data.SpikesArrivalTimes_Behav(IndVocPDF),Data.Duration(IndVocPDF),Delay,Bin_ms);
     IndTrPDF = intersect(IndTr, IndVocPDF);
     if length(IndTrPDF)>MinNumCall
-        [KDE.SelfVocTrFr] = kderate(Data.SpikesArrivalTimes_Behav(IndTrPDF),Data.Duration(IndTrPDF),Delay,Bin_ms);
+        [KDE.SelfTrFr] = kderate(Data.SpikesArrivalTimes_Behav(IndTrPDF),Data.Duration(IndTrPDF),Delay,Bin_ms);
     end
     IndBaPDF = intersect(IndBa, IndVocPDF);
     if length(IndBaPDF)>MinNumCall
-        [KDE.SelfVocBaFr] = kderate(Data.SpikesArrivalTimes_Behav(IndBaPDF),Data.Duration(IndBaPDF),Delay,Bin_ms);
+        [KDE.SelfBaFr] = kderate(Data.SpikesArrivalTimes_Behav(IndBaPDF),Data.Duration(IndBaPDF),Delay,Bin_ms);
     end
 end
 
@@ -111,11 +111,11 @@ if ~isempty(IndVocHDF)
     [KDE.OthersVocFr] = kderate(Data.SpikesArrivalTimes_Behav(IndVocHDF),Data.Duration(IndVocHDF),Delay,Bin_ms);
     IndTrHDF = intersect(IndTr, IndVocHDF);
     if length(IndTrHDF)>MinNumCall
-        [KDE.OthersVocTrFr] = kderate(Data.SpikesArrivalTimes_Behav(IndTrHDF),Data.Duration(IndTrHDF),Delay,Bin_ms);
+        [KDE.OthersTrFr] = kderate(Data.SpikesArrivalTimes_Behav(IndTrHDF),Data.Duration(IndTrHDF),Delay,Bin_ms);
     end
     IndBaHDF = intersect(IndBa, IndVocHDF);
     if length(IndBaPDO)>MinNumCall
-        [KDE.OthersVocBaFr] = kderate(Data.SpikesArrivalTimes_Behav(IndBaHDF),Data.Duration(IndBaHDF),Delay,Bin_ms);
+        [KDE.OthersBaFr] = kderate(Data.SpikesArrivalTimes_Behav(IndBaHDF),Data.Duration(IndBaHDF),Delay,Bin_ms);
     end
 end
 

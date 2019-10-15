@@ -116,7 +116,7 @@ if any(sum(Ind_SAT))
             plotCallDynamic(Data.BioSound{IndVocP(vv),1}, Data.BioSound{IndVocP(vv),2},SAT(Ind_SAT(vv)),0);
         end
     end
-
+    suplabel(sprintf('CALLS FROM SUBJECT O and F   %s on %s Raster Tetrode %s SU %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{2}),'t');
     print(Fig3,fullfile(OutputPath,sprintf('%s_DynRasterVocProd_all.pdf', FileNameBase)),'-dpdf','-fillpage')
 end
 %% Dynamic raster plot Trills
@@ -147,7 +147,7 @@ if ~isempty(IndVocPTr)
                 plotCallDynamic(Data.BioSound{IndVocPTr(vv),1}, Data.BioSound{IndVocPTr(vv),2},SAT(Ind_SAT(vv)),0);
             end
         end
-
+        suplabel(sprintf('TRILLS FROM SUBJECT O and F   %s on %s Raster Tetrode %s SU %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{2}),'t');
         print(Fig4,fullfile(OutputPath,sprintf('%s_DynRasterVocProd_Tr.pdf', FileNameBase)),'-dpdf','-fillpage')
     end
 end
@@ -179,7 +179,7 @@ if ~isempty(IndVocPBa)
                 plotCallDynamic(Data.BioSound{IndVocPBa(vv),1}, Data.BioSound{IndVocPBa(vv),2},SAT(Ind_SAT(vv)),0);
             end
         end
-        
+        suplabel(sprintf('BARKS FROM SUBJECT O and F   %s on %s Raster Tetrode %s SU %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{2}),'t');
         print(Fig5,fullfile(OutputPath,sprintf('%s_DynRasterVocProd_Ba.pdf', FileNameBase)),'-dpdf','-fillpage')
     end
 end
