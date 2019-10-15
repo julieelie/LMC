@@ -256,6 +256,7 @@ for aa=1:NAction
 %           plot((AllActions_Time{aa}(e_count,:)-RefTime)*10^-3, aa*ones(2,1), '-', 'Color', ColorCode(aa,:), 'LineWidth',2);
         end
         AllActions_Time{aa} = AllActions_Time{aa}(1:e_count,:);
+        AllActions_ID{aa} = AllActions_ID{aa}(1:e_count);
     end
 end
 

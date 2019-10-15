@@ -55,21 +55,69 @@ for ll=1:NLog
     F = find(cellfun(@(x) contains(x,'playback start'),event_types_and_details));
     G = find(cellfun(@(x) contains(x,'playback stop'),event_types_and_details));
     if ~isempty(B)
+        if length(B)>1
+            fprintf(1,'There are %d all-voc-reward-start\n', length(B))
+            for ii=1:length(B)
+                1e-6*event_timestamps_usec(B(ii))
+            end
+            Ii = input('Which one do you want to choose?\n');
+            B = B(Ii);
+        end
         OperantSession(1) = 1e-6*event_timestamps_usec(B);
     end
     if ~isempty(C)
+        if length(C)>1
+            fprintf(1,'There are %d all-voc-reward-stop\n', length(C))
+            for ii=1:length(C)
+                1e-6*event_timestamps_usec(C(ii))
+            end
+            Ii = input('Which one do you want to choose?\n');
+            C = C(Ii);
+        end
         OperantSession(2) = 1e-6*event_timestamps_usec(C);
     end
     if ~isempty(D)
+        if length(D)>1
+            fprintf(1,'There are %d rec-only-start\n', length(D))
+            for ii=1:length(D)
+                1e-6*event_timestamps_usec(D(ii))
+            end
+            Ii = input('Which one do you want to choose?\n');
+            D = D(Ii);
+        end
         FreeBehavSession(1) = 1e-6*event_timestamps_usec(D);
     end
     if ~isempty(E)
+        if length(E)>1
+            fprintf(1,'There are %d rec-only-stop\n', length(E))
+            for ii=1:length(E)
+                1e-6*event_timestamps_usec(E(ii))
+            end
+            Ii = input('Which one do you want to choose?\n');
+            E = E(Ii);
+        end
         FreeBehavSession(2) = 1e-6*event_timestamps_usec(E);
     end
     if ~isempty(F)
+        if length(F)>1
+            fprintf(1,'There are %d playback-start\n', length(F))
+            for ii=1:length(F)
+                1e-6*event_timestamps_usec(F(ii))
+            end
+            Ii = input('Which one do you want to choose?\n');
+            F = F(Ii);
+        end
         PlayBackSession(1) = 1e-6*event_timestamps_usec(F);
     end
     if ~isempty(G)
+        if length(G)>1
+            fprintf(1,'There are %d playback-stop\n', length(G))
+            for ii=1:length(G)
+                1e-6*event_timestamps_usec(G(ii))
+            end
+            Ii = input('Which one do you want to choose?\n');
+            G = G(Ii);
+        end
         PlayBackSession(2) = 1e-6*event_timestamps_usec(G);
     end
 end

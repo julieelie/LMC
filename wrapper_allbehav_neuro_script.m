@@ -79,7 +79,7 @@ OutputPath = fullfile(BasePath, 'ResultsFiles');
 % of spike sorting.
 fprintf('NEURONS SANITARY CHECK.... ')
 % Files2Run = 1:length(ListSSU);
-Files2Run = 1:29;
+Files2Run = 87:108;
 for ss=Files2Run
     sanitary_check_perSSfile(ListSSU{ss}, OutputPath)
 end
@@ -102,7 +102,7 @@ fprintf(' DONE \n')
 % by get_logger_data_behav (run by result_reconly_bat.m) for each cell
 fprintf(' EXTRACTING NEURAL DATA CORRESPONDING TO OTHER BEHAVIORS.... ')
 % Files2Run = 1:length(ListSSU);
-Files2Run = 1:29;
+
 for ss=Files2Run
     fprintf(1,'File %d/%d\n',ss,length(Files2Run))
     cut_neuralData_behav_perfile(ListSSU{ss}, OutputPath)
@@ -115,7 +115,7 @@ fprintf(' COMPILING NEURAL DATA .... ')
 id = 'MATLAB:Python:UnsupportedLoad';
 warning('off',id)
 % Files2Run = 1:length(ListSSU);
-Files2Run = 1:17;
+
 for ss=Files2Run
     fprintf(1,'File %d/%d\n',ss,length(Files2Run))
     neuralData_compile_perfile(ListSSU{ss}, OutputPath)
