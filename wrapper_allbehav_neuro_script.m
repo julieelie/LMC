@@ -79,7 +79,7 @@ OutputPath = fullfile(BasePath, 'ResultsFiles');
 % of spike sorting.
 fprintf('NEURONS SANITARY CHECK.... ')
 % Files2Run = 1:length(ListSSU);
-Files2Run = 87:108;
+Files2Run = [1:29 87:108];
 for ss=Files2Run
     sanitary_check_perSSfile(ListSSU{ss}, OutputPath)
 end
