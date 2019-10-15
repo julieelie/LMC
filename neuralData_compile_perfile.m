@@ -285,19 +285,19 @@ for ff=1:length(DataDir)
 end
 
 % Save Data as a single structure
-Duration = reshape([Duration{:}],sum(NEvents),1); % Duration of the behavioral event in ms
-DelayBefore = reshape([DelayBefore{:}],sum(NEvents),1); % Duration of no behavioral event before the onset in ms
-DelayAfter = reshape([DelayAfter{:}],sum(NEvents),1); % Duration of no behavioral event after the offset in ms
-VocWave = reshape([VocWave{:}],sum(NEvents),1); % Wave of the vocalization exactly extracted on Mic
-VocPiezoWave = reshape([VocPiezoWave{:}],sum(NEvents),1); % Wave of the vocalization exactly extracted on Piezo
-VocRank = reshape([VocRank{:}], sum(NEvents),1);% Rank of the vocal element in the sequence of vocalization
-BioSound = reshape([BioSound{:}],sum(NEvents),2); %
-BSLDuration = reshape([BSLDuration{:}],sum(NEvents),1); % Duration of the baseline sequence
-SpikesArrivalTimes_Baseline = reshape([SpikesArrivalTimes_Baseline{:}],sum(NEvents),1);  % Spike arrival time of the Baseline sequence
-SpikesArrivalTimes_Behav = reshape([SpikesArrivalTimes_Behav{:}],sum(NEvents),1); % Spike arrival time of the behavioral event
-Who = reshape([Who{:}],sum(NEvents),1); % Identity of the performing bat (self or ID of the bat)
-What = reshape([What{:}],sum(NEvents),1); % Type of Behavior
-ExpType = reshape([ExpType{:}],sum(NEvents),1); 
+Duration = reshape([Duration{:}],1,sum(NEvents))'; % Duration of the behavioral event in ms
+DelayBefore = reshape([DelayBefore{:}],1,sum(NEvents))'; % Duration of no behavioral event before the onset in ms
+DelayAfter = reshape([DelayAfter{:}],1,sum(NEvents))'; % Duration of no behavioral event after the offset in ms
+VocWave = reshape([VocWave{:}],1,sum(NEvents))'; % Wave of the vocalization exactly extracted on Mic
+VocPiezoWave = reshape([VocPiezoWave{:}],1,sum(NEvents))'; % Wave of the vocalization exactly extracted on Piezo
+VocRank = reshape([VocRank{:}], 1,sum(NEvents))';% Rank of the vocal element in the sequence of vocalization
+BioSound = reshape([BioSound{:}],2,sum(NEvents))'; %
+BSLDuration = reshape([BSLDuration{:}],1,sum(NEvents))'; % Duration of the baseline sequence
+SpikesArrivalTimes_Baseline = reshape([SpikesArrivalTimes_Baseline{:}],1,sum(NEvents))';  % Spike arrival time of the Baseline sequence
+SpikesArrivalTimes_Behav = reshape([SpikesArrivalTimes_Behav{:}],1,sum(NEvents))'; % Spike arrival time of the behavioral event
+Who = reshape([Who{:}],1,sum(NEvents))'; % Identity of the performing bat (self or ID of the bat)
+What = reshape([What{:}],1,sum(NEvents))'; % Type of Behavior
+ExpType = reshape([ExpType{:}],1,sum(NEvents))'; 
 
 if exist(OutputDataFile, 'file')
     save(OutputDataFile, 'Duration','DelayBefore','DelayAfter', 'VocWave', 'VocPiezoWave', 'VocRank', 'BioSound','BSLDuration', 'SpikesArrivalTimes_Baseline','SpikesArrivalTimes_Behav','Who','What','ExpType','-append');

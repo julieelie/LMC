@@ -8,7 +8,7 @@ ForceAllign = 0; % In case the TTL pulses allignment was already done but you wa
 ForceVocExt1 = 0; % In case the localization on raw files of vocalizations that were manually extracted was already done but you want to do it again set to 1
 ForceVocExt2 = 0; % In case the localization on Loggers of vocalizations that were manually extracted was already done but you want to do it again set to 1
 ReAllignment = 0; % Incase we don't have a logger on all animals, it's better not to reallign the vocal data by cross correlation between the Microphone and the loggers
-ForceWhoID = 1; % In case the identification of bats was already done but you want to re-do it again
+ForceWhoID = 0; % In case the identification of bats was already done but you want to re-do it again
 ForceWhat = 1; % In case running biosound was already done but you want to re-do it
 ForceBehav = 0;% Force extracting onset/offset time of other behaviors
 close all
@@ -24,8 +24,11 @@ end
 
 if TranscExtract && nargin<3
     % Set the path to the recording log
-    %Path2RecordingTable = '/Users/elie/Google Drive/BatmanData/RecordingLogs/recording_logs.xlsx';
-    Path2RecordingTable = '/Users/elie/Google Drive/JuvenileRecordings/JuvenileRecordingsNWAF155_Log.xlsx';
+    if contains(Path2ParamFile, 'LMC')
+        Path2RecordingTable = '/Users/elie/Google Drive/BatmanData/RecordingLogs/recording_logs.xlsx';
+    elseif contains(Path2ParamFile, 'Juvenile')
+        Path2RecordingTable = '/Users/elie/Google Drive/JuvenileRecordings/JuvenileRecordingsNWAF155_Log.xlsx';
+    end
 end
 if TranscExtract && nargin<4
     % Set the path to logger data
@@ -57,8 +60,13 @@ VocExt_dir = dir(fullfile(AudioDataPath,sprintf('%s_%s_VocExtractTimes.mat', Dat
 if TranscExtract
     fprintf(1,'*** Extract Logger data if not already done ***\n');
     % Find the ID of the recorded bats
-    [~,~,RecTableData]=xlsread(Path2RecordingTable,1,'A1:Q200','basic');
-    RowData = find((cell2mat(RecTableData(2:end,1))== str2double(['20' Date]))) +1;
+    if contains(Path2ParamFile, 'LMC')
+        [~,~,RecTableData]=xlsread(Path2RecordingTable,1,'A1:P200','basic');
+        RowData = find((cell2mat(RecTableData(2:end,1))== str2double(Date))) +1;
+    elseif contains(Path2ParamFile, 'Juvenile')
+        [~,~,RecTableData]=xlsread(Path2RecordingTable,1,'A1:Q200','basic');
+        RowData = find((cell2mat(RecTableData(2:end,1))== str2double(['20' Date]))) +1;
+    end
     DataInfo = RecTableData(RowData,:);
     Header = RecTableData(1,:);
     BatIDCol = find(contains(Header, 'Bat'));

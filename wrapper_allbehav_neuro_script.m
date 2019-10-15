@@ -111,18 +111,21 @@ fprintf(' DONE \n')
 % Data for each unit and each experimental session are saved as or apppended to sprintf('%s_%s_%s_SSU%s-%s.mat', SubjectID, Date, ExpStartTime,TetrodeID,SSID)
 %% Organizing the data as a single file for all behaviors
 fprintf(' COMPILING NEURAL DATA .... ')
+% turn off warnings for python saving issues
+id = 'MATLAB:Python:UnsupportedLoad';
+warning('off',id)
 % Files2Run = 1:length(ListSSU);
-Files2Run = 1:29;
+Files2Run = 1:17;
 for ss=Files2Run
     fprintf(1,'File %d/%d\n',ss,length(Files2Run))
     neuralData_compile_perfile(ListSSU{ss}, OutputPath)
 end
+warning('on',id)
 fprintf(' DONE \n')
 % Data for each unit and all experimental session are appended to: sprintf('%s_%s_SSU%s-%s.mat', SubjectID, Date,TetrodeID,SSID) 
 %% Calculating the average spike rate during various types of behaviors including vocalizations
 fprintf(' CALCULATING SPIKE RATE CORRESPONDING TO ALL BEHAVIORS.... ')
 % Files2Run = 1:length(ListSSU);
-Files2Run = 1:29;
 for ss=Files2Run
     fprintf(1,'File %d/%d\n',ss,length(Files2Run))
     cal_spikerate_perfile(ListSSU{ss},OutputPath)
@@ -132,7 +135,6 @@ fprintf(' DONE \n')
 %% Plot the average spike rate during various types of behaviors including vocalizations
 fprintf(' PLOTING NEURAL DATA (Av RATE) CORRESPONDING TO ALL BEHAVIORS.... ')
 % Files2Run = 1:length(ListSSU);
-Files2Run = 1:29;
 for ss=Files2Run
     fprintf(1,'File %d/%d\n',ss,length(Files2Run))
     plot_av_spikerate_perfile(ListSSU{ss}, OutputPath)
@@ -142,7 +144,6 @@ fprintf(' DONE \n')
 %% Plot rasters for vocalizations
 fprintf(1,' RASTER PLOTS of NEURAL DATA CORRESPONDING TO VOCALIZATIONS\n');
 % Files2Run = 1:length(ListSSU);
-Files2Run = 1:29;
 for ss=Files2Run
     plot_rastervoc_perfile(ListSSU{ss}, OutputPath)
     close all

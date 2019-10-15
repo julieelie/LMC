@@ -1,6 +1,9 @@
-function plot_rastervoc_perfile(InputDataFile, OutputPath)
+function plot_rastervoc_perfile(InputDataFile, OutputPath,Delay)
 %%
-Delay=[3000 200];
+if nargin<3
+    Delay=[3000 200];
+end
+
 [~, DataFile]=fileparts(InputDataFile);
 % Input
 % Get the date of the recording
