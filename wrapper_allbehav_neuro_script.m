@@ -148,7 +148,7 @@ for ss=Files2Run
     plot_rastervoc_perfile(ListSSU{ss}, OutputPath)
     close all
 end
-
+fprintf(' DONE \n')
 %% calculate the KDE SPIKE RATE of vocalizations
 fprintf(1,' CALCULATING KDE OF THE TIME-VARYING SPIKE RATE CORRESPONDING TO VOCALIZATIONS\n');
 % Files2Run = 1:length(ListSSU);
