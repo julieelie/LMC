@@ -90,81 +90,98 @@ if ~isempty(IndVocHDF)
 end
 
 %% Dynamic raster plot All Calls
-
+% count the number of spike during vocalization, if no spike no plot
+Ind_SAT = nan(length(IndVocP),1);
 for vv=1:length(IndVocP)
-    fprintf(1,'Voc %d/%d\n',vv, length(IndVocP))
-    Fig3=figure(10);
-    if vv==1
-        Legend=1;
-    else
-        Legend=0;
-    end
-    hold on
-    plotCallDynamic(Data.BioSound{IndVocP(vv),1}, Data.BioSound{IndVocP(vv),2},[],Legend)
-end
-for vv=1:length(IndVocP)
-    fprintf(1,'Voc %d/%d\n',vv, length(IndVocP))
-    Fig3=figure(10);
     SAT = Data.SpikesArrivalTimes_Behav{IndVocP(vv)};
-    Ind_SAT = logical((SAT>0).*(SAT<=Data.Duration(IndVocP(vv))));
-    if any(Ind_SAT)
-        plotCallDynamic(Data.BioSound{IndVocP(vv),1}, Data.BioSound{IndVocP(vv),2},SAT(Ind_SAT),0);
-    end
+    Ind_SAT(vv) = logical((SAT>0).*(SAT<=Data.Duration(IndVocP(vv))));
 end
-
-print(Fig3,fullfile(OutputPath,sprintf('%s_DynRasterVocProd_all.pdf', FileNameBase)),'-dpdf','-fillpage')
-
-%% Dynamic raster plot Trills
-IndVocPTr = find(contains(Data.What, 'Tr') .*contains(Data.Who, 'self'));
-if ~isempty(IndVocPTr)
-    for vv=1:length(IndVocPTr)
-        fprintf(1,'Voc %d/%d\n',vv, length(IndVocPTr))
-        Fig4=figure(11);
+if any(sum(Ind_SAT))
+    for vv=1:length(IndVocP)
+        fprintf(1,'Voc %d/%d\n',vv, length(IndVocP))
+        Fig3=figure(10);
         if vv==1
             Legend=1;
         else
             Legend=0;
         end
         hold on
-        plotCallDynamic(Data.BioSound{IndVocPTr(vv),1}, Data.BioSound{IndVocPTr(vv),2},[],Legend)
+        plotCallDynamic(Data.BioSound{IndVocP(vv),1}, Data.BioSound{IndVocP(vv),2},[],Legend)
     end
-    for vv=1:length(IndVocPTr)
-        fprintf(1,'Voc %d/%d\n',vv, length(IndVocPTr))
-        Fig4=figure(11);
-        SAT = Data.SpikesArrivalTimes_Behav{IndVocPTr(vv)};
-        Ind_SAT = logical((SAT>0).*(SAT<=Data.Duration(IndVocPTr(vv))));
-        if any(Ind_SAT)
-            plotCallDynamic(Data.BioSound{IndVocPTr(vv),1}, Data.BioSound{IndVocPTr(vv),2},SAT(Ind_SAT),0);
+    for vv=1:length(IndVocP)
+        fprintf(1,'Voc %d/%d\n',vv, length(IndVocP))
+        Fig3=figure(10);
+        SAT = Data.SpikesArrivalTimes_Behav{IndVocP(vv)};
+        if any(Ind_SAT(vv))
+            plotCallDynamic(Data.BioSound{IndVocP(vv),1}, Data.BioSound{IndVocP(vv),2},SAT(Ind_SAT(vv)),0);
         end
     end
 
-    print(Fig4,fullfile(OutputPath,sprintf('%s_DynRasterVocProd_Tr.pdf', FileNameBase)),'-dpdf','-fillpage')
+    print(Fig3,fullfile(OutputPath,sprintf('%s_DynRasterVocProd_all.pdf', FileNameBase)),'-dpdf','-fillpage')
+end
+%% Dynamic raster plot Trills
+IndVocPTr = find(contains(Data.What, 'Tr') .*contains(Data.Who, 'self'));
+if ~isempty(IndVocPTr)
+    Ind_SAT = nan(length(IndVocPTr),1);
+    for vv=1:length(IndVocPTr)
+        SAT = Data.SpikesArrivalTimes_Behav{IndVocPTr(vv)};
+        Ind_SAT(vv) = logical((SAT>0).*(SAT<=Data.Duration(IndVocPTr(vv))));
+    end
+    if any(sum(Ind_SAT))
+        for vv=1:length(IndVocPTr)
+            fprintf(1,'Voc %d/%d\n',vv, length(IndVocPTr))
+            Fig4=figure(11);
+            if vv==1
+                Legend=1;
+            else
+                Legend=0;
+            end
+            hold on
+            plotCallDynamic(Data.BioSound{IndVocPTr(vv),1}, Data.BioSound{IndVocPTr(vv),2},[],Legend)
+        end
+        for vv=1:length(IndVocPTr)
+            fprintf(1,'Voc %d/%d\n',vv, length(IndVocPTr))
+            Fig4=figure(11);
+            SAT = Data.SpikesArrivalTimes_Behav{IndVocPTr(vv)};
+            if any(Ind_SAT(vv))
+                plotCallDynamic(Data.BioSound{IndVocPTr(vv),1}, Data.BioSound{IndVocPTr(vv),2},SAT(Ind_SAT(vv)),0);
+            end
+        end
+
+        print(Fig4,fullfile(OutputPath,sprintf('%s_DynRasterVocProd_Tr.pdf', FileNameBase)),'-dpdf','-fillpage')
+    end
 end
 %% Dynamic raster plot Barks
 IndVocPBa = find(contains(Data.What, 'Ba').*contains(Data.Who, 'self'));
 if ~isempty(IndVocPBa)
+    Ind_SAT = nan(length(IndVocPBa),1);
     for vv=1:length(IndVocPBa)
-        fprintf(1,'Voc %d/%d\n',vv, length(IndVocPBa))
-        Fig5=figure(12);
-        if vv==1
-            Legend=1;
-        else
-            Legend=0;
-        end
-        hold on
-        plotCallDynamic(Data.BioSound{IndVocPBa(vv),1}, Data.BioSound{IndVocPBa(vv),2},[],Legend)
-    end
-    for vv=1:length(IndVocPBa)
-        fprintf(1,'Voc %d/%d\n',vv, length(IndVocPBa))
-        Fig5=figure(12);
         SAT = Data.SpikesArrivalTimes_Behav{IndVocPBa(vv)};
-        Ind_SAT = logical((SAT>0).*(SAT<=Data.Duration(IndVocPBa(vv))));
-        if any(Ind_SAT)
-            plotCallDynamic(Data.BioSound{IndVocPBa(vv),1}, Data.BioSound{IndVocPBa(vv),2},SAT(Ind_SAT),0);
-        end
+        Ind_SAT(vv) = logical((SAT>0).*(SAT<=Data.Duration(IndVocPBa(vv))));
     end
-
-    print(Fig5,fullfile(OutputPath,sprintf('%s_DynRasterVocProd_Ba.pdf', FileNameBase)),'-dpdf','-fillpage')
+    if any(sum(Ind_SAT))
+        for vv=1:length(IndVocPBa)
+            fprintf(1,'Voc %d/%d\n',vv, length(IndVocPBa))
+            Fig5=figure(12);
+            if vv==1
+                Legend=1;
+            else
+                Legend=0;
+            end
+            hold on
+            plotCallDynamic(Data.BioSound{IndVocPBa(vv),1}, Data.BioSound{IndVocPBa(vv),2},[],Legend)
+        end
+        for vv=1:length(IndVocPBa)
+            fprintf(1,'Voc %d/%d\n',vv, length(IndVocPBa))
+            Fig5=figure(12);
+            SAT = Data.SpikesArrivalTimes_Behav{IndVocPBa(vv)};
+            if any(Ind_SAT(vv))
+                plotCallDynamic(Data.BioSound{IndVocPBa(vv),1}, Data.BioSound{IndVocPBa(vv),2},SAT(Ind_SAT(vv)),0);
+            end
+        end
+        
+        print(Fig5,fullfile(OutputPath,sprintf('%s_DynRasterVocProd_Ba.pdf', FileNameBase)),'-dpdf','-fillpage')
+    end
 end
 %% INTERNAL FUNCTION
     function timeraster(SpikesArrivalTimes,Duration,Delay,Indices, Color)
