@@ -1,4 +1,4 @@
-function neuralData_compile_perfile(InputDataFile, OutputPath)
+function neuralData_compile_perfile(InputDataFile, OutputPath, NeuralBuffer)
 
 % INPUT:
 %       InputDataFile: path to a single unit mat file.
@@ -225,8 +225,8 @@ for ff=1:length(DataDir)
 %                             What{NExpe}{VocCall} = identify_CallType(Raw_wave{VocInd(vv)}(IndVocStartRaw_merged{VocInd(vv)}{ll}(nn):IndVocStopRaw_merged{VocInd(vv)}{ll}(nn)),Piezo_wave.(Fns_AL{ll}){VocInd(vv)}(IndVocStartPiezo_merged{VocInd(vv)}{ll}(nn):IndVocStopPiezo_merged{VocInd(vv)}{ll}(nn)));
                             
                             % Finding the spikes that are during, before
-                            % and after the vocalization
-                            IndSU01 = logical((Neuro.Voc_NeuroSSU.SpikeSUVoc{vv}>(IndVocStartRaw_merged{VocInd(vv)}{ll}(nn)/FS*1000 - DelayBefore{NExpe}(VocCall))) .* (Neuro.Voc_NeuroSSU.SpikeSUVoc{vv}<(IndVocStopRaw_merged{VocInd(vv)}{ll}(nn)/FS*1000 + DelayAfter{NExpe}(VocCall))));
+                            % NeuroBuffer ms and after NeuroBuffer ms the vocalization 
+                            IndSU01 = logical((Neuro.Voc_NeuroSSU.SpikeSUVoc{vv}>(IndVocStartRaw_merged{VocInd(vv)}{ll}(nn)/FS*1000 - NeuralBuffer)) .* (Neuro.Voc_NeuroSSU.SpikeSUVoc{vv}<(IndVocStopRaw_merged{VocInd(vv)}{ll}(nn)/FS*1000 + NeuralBuffer)));
                             % saving the spike arrival times in ms after
                             % centering them to the vocalization onset
                             SpikesArrivalTimes_Behav{NExpe}{VocCall} = (Neuro.Voc_NeuroSSU.SpikeSUVoc{VocInd(vv)}(IndSU01) - IndVocStartRaw_merged{VocInd(VocInd(vv))}{ll}(nn)/FS*1000)';

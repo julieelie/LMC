@@ -94,7 +94,7 @@ end
 Ind_SAT = nan(length(IndVocP),1);
 for vv=1:length(IndVocP)
     SAT = Data.SpikesArrivalTimes_Behav{IndVocP(vv)};
-    Ind_SAT(vv) = logical((SAT>0).*(SAT<=Data.Duration(IndVocP(vv))));
+    Ind_SAT(vv) = sum((SAT>0).*(SAT<=Data.Duration(IndVocP(vv))));
 end
 if any(sum(Ind_SAT))
     for vv=1:length(IndVocP)
@@ -125,7 +125,7 @@ if ~isempty(IndVocPTr)
     Ind_SAT = nan(length(IndVocPTr),1);
     for vv=1:length(IndVocPTr)
         SAT = Data.SpikesArrivalTimes_Behav{IndVocPTr(vv)};
-        Ind_SAT(vv) = logical((SAT>0).*(SAT<=Data.Duration(IndVocPTr(vv))));
+        Ind_SAT(vv) = sum((SAT>0).*(SAT<=Data.Duration(IndVocPTr(vv))));
     end
     if any(sum(Ind_SAT))
         for vv=1:length(IndVocPTr)
@@ -157,7 +157,7 @@ if ~isempty(IndVocPBa)
     Ind_SAT = nan(length(IndVocPBa),1);
     for vv=1:length(IndVocPBa)
         SAT = Data.SpikesArrivalTimes_Behav{IndVocPBa(vv)};
-        Ind_SAT(vv) = logical((SAT>0).*(SAT<=Data.Duration(IndVocPBa(vv))));
+        Ind_SAT(vv) = sum((SAT>0).*(SAT<=Data.Duration(IndVocPBa(vv))));
     end
     if any(sum(Ind_SAT))
         for vv=1:length(IndVocPBa)

@@ -118,7 +118,7 @@ warning('off',id)
 
 for ss=Files2Run
     fprintf(1,'File %d/%d\n',ss,length(Files2Run))
-    neuralData_compile_perfile(ListSSU{ss}, OutputPath)
+    neuralData_compile_perfile(ListSSU{ss}, OutputPath, NeuralBuffer)
 end
 warning('on',id)
 fprintf(' DONE \n')
