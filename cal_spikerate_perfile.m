@@ -22,6 +22,7 @@ Data=load(FullDataSetFile);
 % Indices of vocalization renditions produced by subject ('self') or not
 IndVocS = find(contains(Data.What, 'Voc').*contains(Data.Who, 'self'));
 IndVocO = find(contains(Data.What, 'Voc').*~contains(Data.Who, 'self'));
+IndVoc = find(contains(Data.What, 'Voc'));
 
 % Indices of non-vocal behavior
 IndNVBehav = ~contains(Data.What, 'Voc');
@@ -65,17 +66,27 @@ else
     OthersCall_exptype = {};
 end
 
-% Calculate the spike rate in Hz of self non-vocal behaviors
+% Calculate the spike rate in Hz of self non-vocal behaviors cut into the
+% same duartion chuncks as vocalizations (for fair comparisons 
 SelfNVBehav_rate = cell(length(BehavType),1);
 for bb=1:length(BehavType)
     IndNVBehavS = find(contains(Data.What, BehavType{bb}).*contains(Data.Who, 'self'));
     if ~isempty(IndNVBehavS)
-        SelfNVBehav_rate{bb} = nan(length(IndNVBehavS),1);
-        for oo=1:length(IndNVBehavS)
-            SAT = Data.SpikesArrivalTimes_Behav{IndNVBehavS(oo)};
-            NumSpikes = sum((SAT>=0).*(SAT<(Data.Duration(IndNVBehavS(oo)))));
-            SelfNVBehav_rate{bb}(oo) = NumSpikes./Data.Duration(IndNVBehavS(oo)).*10^3;
+        SelfNVBehav_rate{bb} = nan(length(IndVoc),1);
+        [DurVoc,~] = sort(Data.Duration(IndVoc),'descend');
+        DurNVB = Data.Duration(IndNVBehavS);
+        UsedTime = zeros(length(IndNVBehavS),1);
+        for oo=1:length(IndVoc)
+            [GoodIdx,DurNVB,UsedTime] = recurDur(DurNVB, DurVoc(oo),UsedTime);
+            if ~isempty(GoodIdx)
+                SAT = Data.SpikesArrivalTimes_Behav{IndNVBehavS(GoodIdx)};
+                NumSpikes = sum((SAT>=(UsedTime(GoodIdx)-DurVoc(oo))).*(SAT<(UsedTime(GoodIdx)+DurVoc(oo))));
+                SelfNVBehav_rate{bb}(oo) = NumSpikes./DurVoc(oo).*10^3;
+            else % Could not find an extract of non-vocal behavior long enough to extract data
+                SelfNVBehav_rate{bb}(oo) = NaN;
+            end
         end
+        
     else
         SelfNVBehav_rate{bb} = NaN;
     end
@@ -84,13 +95,21 @@ end
 % Calculate the spike rate in Hz of others non-vocal behaviors
 OthersNVBehav_rate = cell(length(BehavType),1);
 for bb=1:length(BehavType)
-    IndNVBehavS = find(contains(Data.What, BehavType{bb}).*~contains(Data.Who, 'self'));
-    if ~isempty(IndNVBehavS)
-        OthersNVBehav_rate{bb} = nan(length(IndNVBehavS),1);
-        for oo=1:length(IndNVBehavS)
-            SAT = Data.SpikesArrivalTimes_Behav{IndNVBehavS(oo)};
-            NumSpikes = sum((SAT>=0).*(SAT<(Data.Duration(IndNVBehavS(oo)))));
-            OthersNVBehav_rate{bb}(oo) = NumSpikes./Data.Duration(IndNVBehavS(oo)).*10^3;
+    IndNVBehavO = find(contains(Data.What, BehavType{bb}).*~contains(Data.Who, 'self'));
+    if ~isempty(IndNVBehavO)
+        OthersNVBehav_rate{bb} = nan(length(IndVoc),1);
+        [DurVoc,~] = sort(Data.Duration(IndVoc),'descend');
+        DurNVB = Data.Duration(IndNVBehavO);
+        UsedTime = zeros(length(IndNVBehavO),1);
+        for oo=1:length(IndVoc)
+            [GoodIdx,DurNVB,UsedTime] = recurDur(DurNVB, DurVoc(oo),UsedTime);
+            if ~isempty(GoodIdx)
+                SAT = Data.SpikesArrivalTimes_Behav{IndNVBehavO(GoodIdx)};
+                NumSpikes = sum((SAT>=(UsedTime(GoodIdx)-DurVoc(oo))).*(SAT<(UsedTime(GoodIdx)+DurVoc(oo))));
+                OthersNVBehav_rate{bb}(oo) = NumSpikes./DurVoc(oo).*10^3;
+            else % Could not find an extract of non-vocal behavior long enough to extract data
+                OthersNVBehav_rate{bb}(oo) = NaN;
+            end
         end
     else
        OthersNVBehav_rate{bb}= NaN;
@@ -106,5 +125,19 @@ SpikeRate.SelfNVBehav_rate = SelfNVBehav_rate;
 SpikeRate.OthersNVBehav_rate = OthersNVBehav_rate;
 SpikeRate.BehavType = BehavType;
 save(FullDataSetFile, 'SpikeRate', '-append')
+
+%% INTERNAL FUNCTION
+function [GoodIdx,DurNVB,UsedTime] = recurDur(DurNVB, DurVoci,UsedTime)
+DiffDur = DurNVB-DurVoci;
+DiffDurPos = find(DiffDur>=0);
+if ~isempty(DiffDurPos)
+    [~,Imin]=min(DiffDur(DiffDurPos));
+    GoodIdx = DiffDurPos(Imin);
+    UsedTime(GoodIdx) = UsedTime(GoodIdx)+DurVoci;
+    DurNVB(DiffDurPos(Imin)) = DurNVB(DiffDurPos(Imin)) - DurVoci;
+else
+    GoodIdx = [];
+end
+end
 
 end
