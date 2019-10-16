@@ -137,7 +137,7 @@ save(FullDataSetFile, 'KDE', '-append')
         end
         % calculated KDE
         AllSpikes_local = cell2mat(SpikesArrivalTimes);
-        [Kde,T,Error] = kde_wrapper(AllSpikes_local,t,Response_samprate,sum(~isnan(PSTH_local)));
-        OUT = [Kde;T;Error];
+        [Kde,T,Error] = kde_wrapper(AllSpikes_local,t,Response_samprate,Weight); % Calculate the kde in spike /ms
+        OUT = [Kde*10^3;T;Error*10^3];% save the kde in Hz (spike /s) and timeline in ms
     end
 end
