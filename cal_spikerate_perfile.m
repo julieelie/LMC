@@ -76,11 +76,12 @@ for bb=1:length(BehavType)
         [DurVoc,~] = sort(Data.Duration(IndVoc),'descend');
         DurNVB = Data.Duration(IndNVBehavS);
         UsedTime = zeros(length(IndNVBehavS),1);
+        UsedIdx = [];
         for oo=1:length(IndVoc)
-            [GoodIdx,DurNVB,UsedTime] = recurDur(DurNVB, DurVoc(oo),UsedTime);
+            [GoodIdx,DurNVB,UsedTime,UsedIdx] = recurDur(DurNVB, DurVoc(oo),UsedTime,UsedIdx);
             if ~isempty(GoodIdx)
                 SAT = Data.SpikesArrivalTimes_Behav{IndNVBehavS(GoodIdx)};
-                NumSpikes = sum((SAT>=(UsedTime(GoodIdx)-DurVoc(oo))).*(SAT<(UsedTime(GoodIdx)+DurVoc(oo))));
+                NumSpikes = sum((SAT>=(UsedTime(GoodIdx)-DurVoc(oo))).*(SAT<UsedTime(GoodIdx)));
                 SelfNVBehav_rate{bb}(oo) = NumSpikes./DurVoc(oo).*10^3;
             else % Could not find an extract of non-vocal behavior long enough to extract data
                 SelfNVBehav_rate{bb}(oo) = NaN;
@@ -101,11 +102,12 @@ for bb=1:length(BehavType)
         [DurVoc,~] = sort(Data.Duration(IndVoc),'descend');
         DurNVB = Data.Duration(IndNVBehavO);
         UsedTime = zeros(length(IndNVBehavO),1);
+        UsedIdx = [];
         for oo=1:length(IndVoc)
-            [GoodIdx,DurNVB,UsedTime] = recurDur(DurNVB, DurVoc(oo),UsedTime);
+            [GoodIdx,DurNVB,UsedTime,UsedIdx] = recurDur(DurNVB, DurVoc(oo),UsedTime, UsedIdx);
             if ~isempty(GoodIdx)
                 SAT = Data.SpikesArrivalTimes_Behav{IndNVBehavO(GoodIdx)};
-                NumSpikes = sum((SAT>=(UsedTime(GoodIdx)-DurVoc(oo))).*(SAT<(UsedTime(GoodIdx)+DurVoc(oo))));
+                NumSpikes = sum((SAT>=(UsedTime(GoodIdx)-DurVoc(oo))).*(SAT<UsedTime(GoodIdx)));
                 OthersNVBehav_rate{bb}(oo) = NumSpikes./DurVoc(oo).*10^3;
             else % Could not find an extract of non-vocal behavior long enough to extract data
                 OthersNVBehav_rate{bb}(oo) = NaN;
@@ -127,14 +129,20 @@ SpikeRate.BehavType = BehavType;
 save(FullDataSetFile, 'SpikeRate', '-append')
 
 %% INTERNAL FUNCTION
-function [GoodIdx,DurNVB,UsedTime] = recurDur(DurNVB, DurVoci,UsedTime)
+function [GoodIdx,DurNVB,UsedTime,UsedIdx] = recurDur(DurNVB, DurVoci,UsedTime,UsedIdx)
 DiffDur = DurNVB-DurVoci;
 DiffDurPos = find(DiffDur>=0);
+if ~isempty(setdiff(DiffDurPos,UsedIdx)) % Trying to get to use maximally all the data
+    DiffDurPos = setdiff(DiffDurPos,UsedIdx);
+else
+    UsedIdx = [];% reset we already used them all
+end
 if ~isempty(DiffDurPos)
     [~,Imin]=min(DiffDur(DiffDurPos));
     GoodIdx = DiffDurPos(Imin);
     UsedTime(GoodIdx) = UsedTime(GoodIdx)+DurVoci;
     DurNVB(DiffDurPos(Imin)) = DurNVB(DiffDurPos(Imin)) - DurVoci;
+    UsedIdx = [UsedIdx GoodIdx];
 else
     GoodIdx = [];
 end
