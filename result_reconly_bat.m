@@ -8,9 +8,9 @@ ForceAllign = 0; % In case the TTL pulses allignment was already done but you wa
 ForceVocExt1 = 0; % In case the localization on raw files of vocalizations that were manually extracted was already done but you want to do it again set to 1
 ForceVocExt2 = 0; % In case the localization on Loggers of vocalizations that were manually extracted was already done but you want to do it again set to 1
 ReAllignment = 0; % Incase we don't have a logger on all animals, it's better not to reallign the vocal data by cross correlation between the Microphone and the loggers
-ForceWhoID = 0; % In case the identification of bats was already done but you want to re-do it again
+ForceWhoID = 1; % In case the identification of bats was already done but you want to re-do it again
 ForceWhat = 0; % In case running biosound was already done but you want to re-do it
-ForceBehav = 1;% Force extracting onset/offset time of other behaviors
+ForceBehav = 0;% Force extracting onset/offset time of other behaviors
 close all
 
 % Get the recording date
