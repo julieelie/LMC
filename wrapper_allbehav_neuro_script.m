@@ -79,7 +79,8 @@ OutputPath = fullfile(BasePath, 'ResultsFiles');
 % of spike sorting.
 fprintf('NEURONS SANITARY CHECK.... ')
 % Files2Run = 1:length(ListSSU);
-Files2Run = [1:29 87:108];
+% Files2Run = [1:29 87:108];
+Files2Run = 33:55;
 for ss=Files2Run
     sanitary_check_perSSfile(ListSSU{ss}, OutputPath)
 end
@@ -313,7 +314,7 @@ for ee=1:length(ExpFolders)
         fprintf(1, '   %s\n', DateFolders(dd).name);
         LoggerFolders = dir(fullfile(DateFolders(dd).folder, DateFolders(dd).name,'Logger*'));
         for ll = 1:length(LoggerFolders)
-            SSFiles = dir(fullfile(LoggerFolders(ll).folder, LoggerFolders(ll).name, 'extracted_data', '*_TT*_SS_*.mat'));
+            SSFiles = dir(fullfile(LoggerFolders(ll).folder, LoggerFolders(ll).name, 'extracted_data', '*_TT*_SS*.mat'));
             if ~isempty(SSFiles)
                 for ssf=1:length(SSFiles)
                     NSSU = NSSU +1;

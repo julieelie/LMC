@@ -28,12 +28,17 @@ Date = DataFile((Idx_(1)+1) : (Idx_(2)-1));
 NeuralInputID{1} = DataFile(strfind(DataFile, 'TT')+2);
 % Get the SS ID
 NeuralInputID{2} = DataFile((Idx_(end)+1):end);
+% Get the SS quality
+NeuralInputID{3} = DataFile(strfind(DataFile, 'SS')+2);
 
 % Get the subject ID
 SubjectID = DataFile(1:5);
 
 % Get the corresponding tetrode file
 TetrodeFile = dir(fullfile(Path2Data, sprintf('%s_%s_TT%s*Sorted*.mat',SubjectID,Date,NeuralInputID{1})));
+if isempty(TetrodeFile)
+    TetrodeFile = dir(fullfile(Path2Data, sprintf('%s_%s_TTAll_SSorted.mat',SubjectID,Date)));
+end
 
 %% Get the time in transceiver time of each session in s
 All_loggers = dir(fullfile(Loggers_dir, '*ogger*'));
@@ -207,13 +212,13 @@ hold on
 % scatter(SpikeTimes/60, MaxYLim/5.*rand(size(SpikeTimes)) + MaxYLim,1,'k')
 scatter(SpikeTimes/60, MaxYLim/3.*Peak2Peak + MaxYLim,1,'k')
 hold on
-title(sprintf('%s on %s TT%s SS%s', SubjectID, Date, NeuralInputID{1},NeuralInputID{2}))
+title(sprintf('%s on %s TT%s%s SS%s', SubjectID, Date, NeuralInputID{3},NeuralInputID{1},NeuralInputID{2}))
 
 %% get the spike sorting quality for that cell along time
 
 if ~isempty(TetrodeFile)
     TData = load(fullfile(TetrodeFile.folder, TetrodeFile.name));
-    SS_i = find(TData.SS_U_ID == str2double(NeuralInputID{2}));
+    SS_i = find(TData.UnitClusters == str2double(NeuralInputID{2}));
     TimeStepQ = diff(TData.TimePoints(1:2));
     XLimSS1 = SS1.XLim;
     SS2=subplot(2,1,2);
@@ -227,7 +232,7 @@ if ~isempty(TetrodeFile)
     ylabel('IsolationDistance (log10 scale)')
     xlabel('Time (min)')
     SS2.XLim = XLimSS1;
-    title(sprintf('cluster %d, LRatio = %.1f, IDist = %.1f', TData.SS_U_ID(SS_i), TData.LRatio(SS_i),TData.IsolationDistance(SS_i)));
+    title(sprintf('cluster %d, LRatio = %.1f, IDist = %.1f', TData.UnitClusters(SS_i), TData.LRatio(SS_i),TData.IsolationDistance(SS_i)));
     hold off
     
 end
@@ -277,10 +282,10 @@ end
 orient(Fig,'landscape')
 Fig.PaperPositionMode = 'auto';
 set(Fig,'PaperOrientation','landscape');
-print(Fig,fullfile(OutputPath,sprintf('%s_%s_SSU%s-%s_HealthCheck.pdf', SubjectID, Date,NeuralInputID{1},NeuralInputID{2})),'-dpdf','-fillpage')
+print(Fig,fullfile(OutputPath,sprintf('%s_%s_SS%s%s-%s_HealthCheck.pdf', SubjectID, Date,NeuralInputID{3},NeuralInputID{1},NeuralInputID{2})),'-dpdf','-fillpage')
 
 
-OutputFile = fullfile(OutputPath, sprintf('%s_%s_SSU%s-%s.mat', SubjectID, Date,NeuralInputID{1},NeuralInputID{2}));
+OutputFile = fullfile(OutputPath, sprintf('%s_%s_SS%s%s-%s.mat', SubjectID, Date,NeuralInputID{3},NeuralInputID{1},NeuralInputID{2}));
 if exist(OutputFile, 'file')
     save(OutputFile, 'QualitySSU','OperantSession','FreeBehavSession','PlayBackSession','-append');
 else
