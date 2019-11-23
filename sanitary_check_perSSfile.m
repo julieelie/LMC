@@ -185,12 +185,16 @@ end
 Peak2Peak = squeeze(max(Cell.Spike_snippets(:,Best_c,:),[],1) - min(Cell.Spike_snippets(:,Best_c,:),[],1));
 Peak2Peak = Peak2Peak/max(Peak2Peak); % Get a value betwen 0 and 1 for the size of the spike.
 
+%% Calculate the ISI and percentage of violations of the refractory period
+ISI = diff(sort(Cell.Spike_arrival_times))*(10^-6);% ISI in ms
+ISIViolation = sum(ISI<1)/length(ISI)*100;
+
 %% Plot the KDE along time with the zones for each session
 Fig = figure();
 if ~isempty(TetrodeFile)
-    SS1=subplot(2,1,1);
+    SS1=subplot(3,1,1);
 else
-    SS1 = subplot(1,1,1);
+    SS1 = subplot(2,1,1);
 end
         
 shadedErrorBar((TimePoints(2:end)-TimeStep/2)/60,KDE,KDE_error,{'k-', 'LineWidth',2})
@@ -214,6 +218,17 @@ scatter(SpikeTimes/60, MaxYLim/3.*Peak2Peak + MaxYLim,1,'k')
 hold on
 title(sprintf('%s on %s TT%s%s SS%s', SubjectID, Date, NeuralInputID{3},NeuralInputID{1},NeuralInputID{2}))
 
+%% Plot the ISI
+if ~isempty(TetrodeFile)
+    SS3 = subplot(3,1,3);
+else
+    SS3 = subplot(2,1,2);
+end
+histogram(ISI, 0:0.5:50, 'FaceColor', 'k','EdgeColor','k')
+xlabel('Time (ms)')
+text(0.5,SS3.YLim(2),sprintf('Violation=.2%f%%',ISIViolation))
+
+
 %% get the spike sorting quality for that cell along time
 
 if ~isempty(TetrodeFile)
@@ -221,7 +236,7 @@ if ~isempty(TetrodeFile)
     SS_i = find(TData.UnitClusters == str2double(NeuralInputID{2}));
     TimeStepQ = diff(TData.TimePoints(1:2));
     XLimSS1 = SS1.XLim;
-    SS2=subplot(2,1,2);
+    SS2=subplot(3,1,2);
     Xtime = ((TData.TimePoints(2:end)-TimeStepQ/2).*10^-6 - OperantSession(1))/60;
     yyaxis left
     plot(Xtime, TData.TimeLRatio(:,SS_i), 'b-', 'LineWidth',2);
@@ -237,6 +252,9 @@ if ~isempty(TetrodeFile)
     
 end
 
+
+
+
 %% decide of the stability of the cell
 DurDead = 10; % dead period are consecutive DurDead minutes below the RateThreshold
 % find consecutive periods of 10 min very low rate
@@ -245,9 +263,9 @@ if ~isempty(DeadCell_Idx)
     DeadCell_Idx = unique(reshape(repmat(DeadCell_Idx',1,DurDead) + repmat(0:(DurDead-1),length(DeadCell_Idx),1), length(DeadCell_Idx)*DurDead,1));
     % plot these unstable data points
     if ~isempty(TetrodeFile)
-        SS1=subplot(2,1,1);
+        SS1=subplot(3,1,1);
     else
-        SS1 = subplot(1,1,1);
+        SS1 = subplot(2,1,1);
     end
     hold on
     plot((TimePoints(DeadCell_Idx+1)-TimeStep/2)/60, KDE(DeadCell_Idx), 'r+')
