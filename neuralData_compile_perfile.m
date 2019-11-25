@@ -15,7 +15,7 @@ function neuralData_compile_perfile(InputDataFile, OutputPath, NeuralBuffer)
 % Hard coded parameters for ploting of the spectrum in biosound
 F_high_Raw = 50000;
 F_high_Piezo = 10000;
-Debug_Fig=1;
+Debug_Fig=0;
 
 % Get the paths
 [Path2Data, DataFile]=fileparts(InputDataFile);

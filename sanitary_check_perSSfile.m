@@ -300,10 +300,10 @@ end
 orient(Fig,'landscape')
 Fig.PaperPositionMode = 'auto';
 set(Fig,'PaperOrientation','landscape');
-print(Fig,fullfile(OutputPath,sprintf('%s_%s_SS%s%s-%s_HealthCheck.pdf', SubjectID, Date,NeuralInputID{3},NeuralInputID{1},NeuralInputID{2})),'-dpdf','-fillpage')
+print(Fig,fullfile(OutputPath,sprintf('%s_%s_SS%s_%s-%s_HealthCheck.pdf', SubjectID, Date,NeuralInputID{3},NeuralInputID{1},NeuralInputID{2})),'-dpdf','-fillpage')
 
 
-OutputFile = fullfile(OutputPath, sprintf('%s_%s_SS%s%s-%s.mat', SubjectID, Date,NeuralInputID{3},NeuralInputID{1},NeuralInputID{2}));
+OutputFile = fullfile(OutputPath, sprintf('%s_%s_SS%s_%s-%s.mat', SubjectID, Date,NeuralInputID{3},NeuralInputID{1},NeuralInputID{2}));
 if exist(OutputFile, 'file')
     save(OutputFile, 'QualitySSU','OperantSession','FreeBehavSession','PlayBackSession','-append');
 else
