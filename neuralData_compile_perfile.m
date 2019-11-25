@@ -11,6 +11,12 @@ function neuralData_compile_perfile(InputDataFile, OutputPath, NeuralBuffer)
 % OUTPUT
 % Struct with all the data
 
+
+% Hard coded parameters for ploting of the spectrum in biosound
+F_high_Raw = 50000;
+F_high_Piezo = 10000;
+Debug_Fig=1;
+
 % Get the paths
 [Path2Data, DataFile]=fileparts(InputDataFile);
 PathParts = regexp(Path2Data, '/', 'split');
@@ -30,12 +36,14 @@ Date = DataFile((Idx_(1)+1) : (Idx_(2)-1));
 NeuralInputID{1} = DataFile(strfind(DataFile, 'TT')+2);
 % Get the SS ID
 NeuralInputID{2} = DataFile((Idx_(end)+1):end);
+% Get the SS quality
+NeuralInputID{3} = DataFile(strfind(DataFile, '_SS')+3);
 
 % Get the subject ID
 SubjectID = DataFile(1:5);
 
 % Output
-OutputDataFile = fullfile(OutputPath, sprintf('%s_%s_SSU%s-%s.mat', SubjectID, Date,NeuralInputID{1},NeuralInputID{2}));
+OutputDataFile = fullfile(OutputPath, sprintf('%s_%s_SS%s_%s-%s.mat', SubjectID, Date,NeuralInputID{3},NeuralInputID{1},NeuralInputID{2}));
 
 % Loop through files to cut the vocalizations into analyzed snippets
 % classify vocalizations according to type: Chirp or Trills
@@ -48,7 +56,7 @@ OutputDataFile = fullfile(OutputPath, sprintf('%s_%s_SSU%s-%s.mat', SubjectID, D
 % following variables:
 NExpe = 0;
 % Initialize output matrix
-DataDir = dir(fullfile(OutputPath, sprintf('%s_%s_*_SSU%s-%s.mat', SubjectID, Date,NeuralInputID{1},NeuralInputID{2})));
+DataDir = dir(fullfile(OutputPath, sprintf('%s_%s_*_SS%s_%s-%s.mat', SubjectID, Date,NeuralInputID{3},NeuralInputID{1},NeuralInputID{2})));
 for ff=1:length(DataDir)
     Neuro = load(fullfile(DataDir(ff).folder, DataDir(ff).name));
     FieldNames = fieldnames(Neuro);
@@ -61,8 +69,8 @@ for ff=1:length(DataDir)
     end
 end
 Duration = cell(1,NExpe); % Duration of the behavioral event in ms
-DelayBefore = cell(1,NExpe); % Duration of no behavioral event before the onset in ms
-DelayAfter = cell(1,NExpe);% Duration of no behavioral event after the offset in ms
+DelayBefore = cell(1,NExpe); % Duration of no behavioral event before the onset in ms if no event after, Delay ms is considered as the safest estimate of the silence time after
+DelayAfter = cell(1,NExpe);% Duration of no behavioral event after the offset in ms if no event after, Delay ms is considered as the safest estimate of the silence time after
 VocWave = cell(1,NExpe);% Wave of the vocalization exactly extracted on Mic
 VocPiezoWave = cell(1,NExpe);% Wave of the vocalization exactly extracted on Piezo
 VocRank = cell(1,NExpe); % Rank of the call in the vocalization sequence
@@ -72,14 +80,14 @@ SpikesArrivalTimes_Baseline = cell(1,NExpe); % Spike arrival time of the Baselin
 SpikesArrivalTimes_Behav = cell(1,NExpe);% Spike arrival time of the behavioral event
 Who = cell(1,NExpe);% Identity of the performing bat (self or ID of the bat)
 What = cell(1,NExpe);% Type of Behavior
-ExpType = cell(1,NExpe);
-NEvents = nan(1,NExpe);
+ExpType = cell(1,NExpe);% Type of experiment (P=Play-Back, O=Operant conditioning, F=Free interactions)
+NEvents = nan(1,NExpe);%number of behavioral event for each experiment
 ExpStartTime_Old = Inf;
  % At the end concatenate them using [C{:}] and reshape([C{:}], NTot,1)
 
 %% Load all behavior actions
 NExpe = 0; % reinitialize the counter of experiments
-DataDir = dir(fullfile(OutputPath, sprintf('%s_%s_*_SSU%s-%s.mat', SubjectID, Date,NeuralInputID{1},NeuralInputID{2})));
+DataDir = dir(fullfile(OutputPath, sprintf('%s_%s_*_SS%s_%s-%s.mat', SubjectID, Date,NeuralInputID{3},NeuralInputID{1},NeuralInputID{2})));
 for ff=1:length(DataDir)
     Neuro = load(fullfile(DataDir(ff).folder, DataDir(ff).name));
     FieldNames = fieldnames(Neuro);
@@ -123,7 +131,7 @@ for ff=1:length(DataDir)
             VocWave{NExpe} = cell(1,VocCall);% Wave of the vocalization exactly extracted on Mic
             VocPiezoWave{NExpe} = cell(1,VocCall);% Wave of the vocalization exactly extracted on Piezo
             VocRank{NExpe} = cell(1,VocCall);% Rank of the vocal element in the sequence of vocalization as first last or middle
-            BioSound{NExpe} = cell(2,VocCall);
+            BioSound{NExpe} = cell(2,VocCall);% Biosound of the microphone on row1, biosound of the piezo on line 2
             BSLDuration{NExpe} = nan(1,VocCall);% Duration of the baseline sequence
             SpikesArrivalTimes_Baseline{NExpe} = cell(1,VocCall); % Spike arrival time of the Baseline sequence
             SpikesArrivalTimes_Behav{NExpe} = cell(1,VocCall);% Spike arrival time of the call event
@@ -166,7 +174,7 @@ for ff=1:length(DataDir)
                                 ALNum = contains(LoggerName, ['AL' AL_local(7:end)]);
                                 Who{NExpe}{VocCall} = num2str(BatID{ALNum});
                             end
-                            % Get the duration of the vocalization, the
+                            % Get the duration of the vocalization in ms, the
                             % time preceding it since the last event and
                             % the time following until the next event
                             Duration{NExpe}(VocCall) = (IndVocStopRaw_merged{VocInd(vv)}{ll}(nn) -IndVocStartRaw_merged{VocInd(vv)}{ll}(nn))/FS*1000;
@@ -232,13 +240,25 @@ for ff=1:length(DataDir)
                             SpikesArrivalTimes_Behav{NExpe}{VocCall} = (Neuro.Voc_NeuroSSU.SpikeSUVoc{VocInd(vv)}(IndSU01) - IndVocStartRaw_merged{VocInd(VocInd(vv))}{ll}(nn)/FS*1000)';
                             % Finding the spikes that correspond to the
                             % call sequence baseline
-%                             if ~isnan(BSLDuration{NExpe}(VocCall)) % if isnan: No baseline period could be taken before the onset of the vocalization
-%                                 if nn==1 % all calls cut within the sequence have the same baseline, only calcuating if first call
-%                                     SpikesArrivalTimes_Baseline{NExpe}{VocCall} = Neuro.Voc_NeuroSSU.SpikeSUBSL{VocInd(vv)};
-%                                 else
-%                                     SpikesArrivalTimes_Baseline{NExpe}{VocCall} = SpikesArrivalTimes_Baseline{NExpe}{VocCall-1};
-%                                 end
-%                             end
+                            if ~isnan(BSLDuration{NExpe}(VocCall)) % if isnan: No baseline period could be taken before the onset of the vocalization
+                                if nn==1 % all calls cut within the sequence have the same baseline, only calcuating if first call
+                                    SpikesArrivalTimes_Baseline{NExpe}{VocCall} = Neuro.Voc_NeuroSSU.SpikeSUBSL{VocInd(vv)};
+                                else
+                                    SpikesArrivalTimes_Baseline{NExpe}{VocCall} = SpikesArrivalTimes_Baseline{NExpe}{VocCall-1};
+                                end
+                            end
+
+                            % Debug figure if requested
+                            if Debug_Fig
+                                if VocCall==1
+                                    FIG1 = figure();
+                                else
+                                    clf(FIG1)
+                                end
+                                SpikesInd  = logical((SpikesArrivalTimes_Behav{NExpe}{VocCall}> -DelayBefore{NExpe}(VocCall)) .*  (SpikesArrivalTimes_Behav{NExpe}{VocCall}< (DelayAfter{NExpe}(VocCall))+ Duration{NExpe}(VocCall)));
+                                plotBiosoundAndSpikes(BioSound{NExpe}{2,VocCall}, F_high_Piezo, DelayBefore{NExpe}(VocCall), DelayAfter{NExpe}(VocCall),Duration{NExpe}(VocCall), SpikesArrivalTimes_Behav{NExpe}{VocCall}(SpikesInd),0)
+                                pause()
+                            end
                         end
                         
                         
@@ -277,7 +297,7 @@ for ff=1:length(DataDir)
                     Who{NExpe}{bb} = num2str(Neuro.Behav_Who(Neuro.Behav_NeuroSSU.BehavIdxSSUAlive(bb)));
                 end
                 ExpType{NExpe}{bb} = 'F';
-                VocRank{NExpe}{bb} = ' ';% This has to be filled with some strings to sort later, cannot just be left empty
+                VocRank{NExpe}{bb} = ' ';% This has to be filled with some strings (here space) to sort later, cannot just be left empty
             end 
         end
         ExpStartTime_Old = ExpStartTime_new;
@@ -304,4 +324,92 @@ if exist(OutputDataFile, 'file')
 else
     save(OutputDataFile, 'Duration','DelayBefore','DelayAfter', 'VocWave', 'VocPiezoWave', 'VocRank', 'BioSound','BSLDuration', 'SpikesArrivalTimes_Baseline','SpikesArrivalTimes_Behav','Who','What','ExpType');
 end
+
+%% Local function
+
+
+function plotBiosoundAndSpikes(BiosoundObj, F_high, DelayBefore, DelayAfter,Duration, SpikeArrivalTimes, FormantPlot)
+        if nargin<7
+            FormantPlot=1;
+        end
+        % Plot the results of biosound calculations
+        ss1=subplot(2,1,1);
+        ColorCode = get(groot,'DefaultAxesColorOrder');
+        DBNOISE =12;
+        f_low = 0;
+        logB = - 20*log10(abs(double(BiosoundObj.spectro)));
+        maxB = max(max(logB));
+        minB = maxB-DBNOISE;
+        
+        imagesc(double(BiosoundObj.to)*1000,double(BiosoundObj.fo),logB);          % to is in seconds
+        axis xy;
+        caxis('manual');
+        caxis([minB maxB]);
+        cmap = spec_cmap();
+        colormap(cmap);
+        %         colorbar()
+        
+        v_axis = axis;
+        v_axis(3)=f_low;
+        v_axis(4)=F_high;
+        v_axis(1) = -DelayBefore;
+        v_axis(2) = Duration+DelayAfter;
+        axis(v_axis);
+        xlabel('Time (ms)'), ylabel('Frequency');
+        
+        % plot the spikes
+        for ss=1:length(SpikeArrivalTimes)
+            hold on
+            plot(SpikeArrivalTimes(ss).*ones(2,1), [F_high-500 F_high-1500], '-k', 'LineWidth',2)
+            hold on
+        end
+        hold off
+        
+        % Plot the fundamental and formants if they were calculated
+        %     if double(BiosoundFi.sal)>MinSaliency
+        Legend = {'F0' 'Formant1' 'Formant2' 'Formant3'};
+        IndLegend = [];
+        if ~isempty(double(BiosoundObj.f0))
+            hold on
+            plot(double(BiosoundObj.to)*1000,double(BiosoundObj.f0),'r-','LineWidth',2)
+            IndLegend = [1 IndLegend];
+        end
+        if FormantPlot
+            hold on
+            plot(double(BiosoundObj.to)*1000,double(BiosoundObj.F1),'Color',ColorCode(4,:),'LineWidth',2)
+            hold on
+            plot(double(BiosoundObj.to)*1000,double(BiosoundObj.F2),'Color',ColorCode(2,:),'LineWidth',2)
+            hold on
+            if any(~isnan(double(BiosoundObj.F3)))
+                plot(double(BiosoundObj.to)*1000,double(BiosoundObj.F3),'Color',ColorCode(3,:),'LineWidth',2)
+                IndLegend = [IndLegend 2:4];
+            else
+                IndLegend = [IndLegend 2:3];
+            end
+        end
+        legend(Legend(IndLegend))
+        hold off
+        
+        ss2=subplot(2,1,2);
+        yyaxis left
+        plot((1:length(double(BiosoundObj.sound)))/BiosoundObj.samprate*1000,double(BiosoundObj.sound), 'k-','LineWidth',2)
+        hold on
+        YLIM = get(ss2,'YLim');
+        YLIM = max(abs(YLIM)).*[-1 1];
+        set(ss2, 'YLim', YLIM)
+        ylabel('Amplitude')
+        SoundAmp = double(py.array.array('d', py.numpy.nditer(BiosoundObj.amp)));
+        yyaxis right
+        plot(double(BiosoundObj.tAmp)*1000,double(SoundAmp), 'r-', 'LineWidth',2)
+        YLIM = get(ss2,'YLim');
+        YLIM = max(abs(YLIM)).*[-1 1];
+        set(ss2, 'YLim', YLIM)
+        set(ss2, 'XLim', v_axis(1:2))
+        xlabel('Time (ms)')
+        ylabel('Enveloppe')
+        title(sprintf('AmpPeriodicity = %.3f AmpPF = %.1f Hz',BiosoundObj.AmpPeriodP, BiosoundObj.AmpPeriodF))
+        hold off
+        
+        
+    end
 end

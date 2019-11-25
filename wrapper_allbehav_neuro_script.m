@@ -65,6 +65,7 @@ end
 Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC/LMC_CoEd/audio/20190604/CoEd_190604_1636_RecOnly_param.txt'; % Needs to point to a reconly param files
 Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC/LMC_CoEd/audio/20190610/CoEd_190610_1442_RecOnly_param.txt';
 Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC/LMC_CoEd/audio/20190607/CoEd_190607_1301_RecOnly_param.txt';
+Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC/LMC_CoEd/audio/20190702/CoEd_190702_1425_RecOnly_param.txt';
 result_reconly_bat(Path2ParamFile)
 
 %% Generate the list of paths to gather the data
@@ -85,7 +86,7 @@ for ss=Files2Run
     sanitary_check_perSSfile(ListSSU{ss}, OutputPath)
 end
 fprintf(' DONE \n')
-% Data for each unit are saved under: sprintf('%s_%s_SSU%s-%s.mat', SubjectID, Date,TetrodeID,SSID)    
+% Data for each unit are saved under: sprintf('%s_%s_SS%s_%s-%s.mat', SubjectID, Date,SSQ,TetrodeID,SSID)    
 %% Extract the neural data corresponding to the bouts of vocalizations identified
 % by voc_localize and voc_localize_operant (run by result_operant_bat.m) for each cell
 fprintf(' EXTRACTING NEURAL DATA CORRESPONDING TO VOCALIZATIONS.... ')
@@ -98,7 +99,7 @@ for ss=Files2Run
     cut_neuralData_voc_perfile(ListSSU{ss}, OutputPath,NeuralBuffer)
 end
 fprintf(' DONE \n')
-% Data for each unit and each experimental session are saved as sprintf('%s_%s_%s_SSU%s-%s.mat', SubjectID, Date, ExpStartTime,TetrodeID,SSID)
+% Data for each unit and each experimental session are saved as sprintf('%s_%s_%s_SS%s_%s-%s.mat', SubjectID, Date, ExpStartTime,SSQ,TetrodeID,SSID)
 %% Extract the neural data corresponding to the behaviors identified during the free session
 % by get_logger_data_behav (run by result_reconly_bat.m) for each cell
 fprintf(' EXTRACTING NEURAL DATA CORRESPONDING TO OTHER BEHAVIORS.... ')
@@ -109,7 +110,7 @@ for ss=Files2Run
     cut_neuralData_behav_perfile(ListSSU{ss}, OutputPath)
 end
 fprintf(' DONE \n')
-% Data for each unit and each experimental session are saved as or apppended to sprintf('%s_%s_%s_SSU%s-%s.mat', SubjectID, Date, ExpStartTime,TetrodeID,SSID)
+% Data for each unit and each experimental session are saved as or apppended to sprintf('%s_%s_%s_SS%s_%s-%s.mat', SubjectID, Date, ExpStartTime,SSQ, TetrodeID,SSID)
 %% Organizing the data as a single file for all behaviors
 fprintf(' COMPILING NEURAL DATA .... ')
 % turn off warnings for python saving issues
@@ -123,7 +124,7 @@ for ss=Files2Run
 end
 warning('on',id)
 fprintf(' DONE \n')
-% Data for each unit and all experimental session are appended to: sprintf('%s_%s_SSU%s-%s.mat', SubjectID, Date,TetrodeID,SSID) 
+% Data for each unit and all experimental session are appended to: sprintf('%s_%s_SS%s_%s-%s.mat', SubjectID, Date,SSQ,TetrodeID,SSID) 
 %% Calculating the average spike rate during various types of behaviors including vocalizations
 fprintf(' CALCULATING SPIKE RATE CORRESPONDING TO ALL BEHAVIORS.... ')
 % Files2Run = 1:length(ListSSU);

@@ -199,7 +199,7 @@ if TranscExtract
             align_soundmexAudio_2_logger(AudioDataPath, Logger_dir, ExpStartTime,'TTL_pulse_generator','Avisoft','Method','risefall', 'Session_strings', {'rec only start', 'rec only stop'}, 'TTLFolder',TTLFolder);
         end
     else
-        fprintf(1,'\n*** ALREADY DONE: Alligning TTL pulses for the operant session ***\n');
+        fprintf(1,'\n*** ALREADY DONE: Alligning TTL pulses for the free session ***\n');
     end
     if isempty(VocExt_dir) || ForceVocExt1
         fprintf(1,'\n*** Localizing and extracting vocalizations that were manually extracted ***\n');
@@ -222,7 +222,7 @@ if TranscExtract
     fprintf('\n*** Identify who is calling ***\n')
     WhoCall_dir = dir(fullfile(Logger_dir, sprintf('*%s_%s*whocalls*', Date, ExpStartTime)));
     if isempty(WhoCall_dir) || ForceVocExt1 || ForceWhoID || ForceVocExt2
-        who_calls(AudioDataPath,Logger_dir,Date, ExpStartTime,200,1);
+        who_calls(AudioDataPath,Logger_dir,Date, ExpStartTime,200,1,1,0);
     else
         fprintf('\n*** ALREADY DONE: Identify who is calling ***\n')
     end

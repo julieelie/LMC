@@ -186,7 +186,7 @@ Peak2Peak = squeeze(max(Cell.Spike_snippets(:,Best_c,:),[],1) - min(Cell.Spike_s
 Peak2Peak = Peak2Peak/max(Peak2Peak); % Get a value betwen 0 and 1 for the size of the spike.
 
 %% Calculate the ISI and percentage of violations of the refractory period
-ISI = diff(sort(Cell.Spike_arrival_times))*(10^-6);% ISI in ms
+ISI = diff(sort(Cell.Spike_arrival_times))*(10^-3);% ISI in ms
 ISIViolation = sum(ISI<1)/length(ISI)*100;
 
 %% Plot the KDE along time with the zones for each session
@@ -226,8 +226,8 @@ else
 end
 histogram(ISI, 0:0.5:50, 'FaceColor', 'k','EdgeColor','k')
 xlabel('Time (ms)')
-text(0.5,SS3.YLim(2),sprintf('Violation=.2%f%%',ISIViolation))
-
+text(45,0.9*SS3.YLim(2),sprintf('Violation=%.2f%%',ISIViolation))
+title('ISI')
 
 %% get the spike sorting quality for that cell along time
 

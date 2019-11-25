@@ -142,6 +142,8 @@ elseif contains(DataFile,'SS')
     NeuralInputID{1} = DataFile(strfind(DataFile, 'TT')+2);
     % Get the SS ID
     NeuralInputID{2} = DataFile((Idx_(end)+1):end);
+    % Get the SpikeSortingQ
+    NeuralInputID{3} = DataFile(strfind(DataFile, '_SS')+3);
     
     % Get the subject ID
     SubjectID = DataFile(1:5);
@@ -163,7 +165,7 @@ elseif contains(DataFile,'SS')
         [Behav_transc_time, Behav_What,Behav_Who] = sort_behavior(AllActions_Time, AllActions_ID, UActionText,BehaviorType);
         % extract single unit spikes
         [Behav_NeuroSSU] = extract_timeslot_SSU(InputDataFile, Behav_transc_time,Inf);
-        OutputFile = fullfile(OutputPath, sprintf('%s_%s_%s_SSU%s-%s.mat', SubjectID, Date, ExpStartTimes{nn},NeuralInputID{1},NeuralInputID{2}));
+        OutputFile = fullfile(OutputPath, sprintf('%s_%s_%s_SS%s_%s-%s.mat', SubjectID, Date, ExpStartTimes{nn},NeuralInputID{3},NeuralInputID{1},NeuralInputID{2}));
         if exist(OutputFile, 'file')
             save(OutputFile, 'Behav_NeuroSSU','Behav_What','Behav_Who','-append');
         else
