@@ -10,12 +10,14 @@ Date = DataFile((Idx_(1)+1) : (Idx_(2)-1));
 NeuralInputID{1} = DataFile(strfind(DataFile, 'TT')+2);
 % Get the SS ID
 NeuralInputID{2} = DataFile((Idx_(end)+1):end);
+% Get the SS quality
+NeuralInputID{3} = DataFile(strfind(DataFile, '_SS')+3);
 
 % Get the subject ID
 SubjectID = DataFile(1:5);
 
 % Output
-FullDataSetFile = fullfile(OutputPath, sprintf('%s_%s_SSU%s-%s.mat', SubjectID, Date,NeuralInputID{1},NeuralInputID{2}));
+FullDataSetFile = fullfile(OutputPath, sprintf('%s_%s_SS%s_%s-%s.mat', SubjectID, Date,NeuralInputID{3},NeuralInputID{1},NeuralInputID{2}));
 Data=load(FullDataSetFile);
 
 %% Data pointers

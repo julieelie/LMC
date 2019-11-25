@@ -133,7 +133,7 @@ for ss=Files2Run
     cal_spikerate_perfile(ListSSU{ss},OutputPath)
 end
 fprintf(' DONE \n')
-% Data for each unit and all experimental session are appended to: sprintf('%s_%s_SSU%s-%s.mat', SubjectID, Date,TetrodeID,SSID) 
+% Data for each unit and all experimental session are appended to: sprintf('%s_%s_SS%s_%s-%s.mat', SubjectID, Date,SSQ,TetrodeID,SSID) 
 %% Plot the average spike rate during various types of behaviors including vocalizations
 fprintf(' PLOTING NEURAL DATA (Av RATE) CORRESPONDING TO ALL BEHAVIORS.... ')
 % Files2Run = 1:length(ListSSU);
@@ -142,7 +142,7 @@ for ss=Files2Run
     plot_av_spikerate_perfile(ListSSU{ss}, OutputPath)
 end
 fprintf(' DONE \n')
-% The plot is saved under OutputPath as sprintf('%s_%s_%s_SSU%s-%s_MeanRateScatter.pdf', SubjectID, TetrodeID,SSID))
+% The plot is saved under OutputPath as sprintf('%s_%s_%s_SS%s_%s-%s_MeanRateScatter.pdf', SubjectID, SSQ,TetrodeID,SSID))
 %% Plot rasters for vocalizations
 fprintf(1,' RASTER PLOTS of NEURAL DATA CORRESPONDING TO VOCALIZATIONS\n');
 % Files2Run = 1:length(ListSSU);

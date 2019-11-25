@@ -10,12 +10,14 @@ Date = DataFile((Idx_(1)+1) : (Idx_(2)-1));
 NeuralInputID{1} = DataFile(strfind(DataFile, 'TT')+2);
 % Get the SS ID
 NeuralInputID{2} = DataFile((Idx_(end)+1):end);
+% Get the SS Quality
+NeuralInputID{3} = DataFile(strfind(DataFile, '_SS')+3);
 
 % Get the subject ID
 SubjectID = DataFile(1:5);
 
 % Input
-FullDataSetFile = fullfile(OutputPath, sprintf('%s_%s_SSU%s-%s.mat', SubjectID, Date,NeuralInputID{1},NeuralInputID{2}));
+FullDataSetFile = fullfile(OutputPath, sprintf('%s_%s_SS%s_%s-%s.mat', SubjectID, Date,NeuralInputID{3},NeuralInputID{1},NeuralInputID{2}));
 load(FullDataSetFile, 'SpikeRate');
 
 
@@ -147,6 +149,6 @@ Fig.Children.YLim(2) = max(1,Fig.Children.YLim(2));
 FigPosition = Fig.Position;
 Fig.Position = [FigPosition(1:2) 10 4];
 xtickangle(20)
-print(Fig,fullfile(OutputPath,sprintf('%s_%s_SSU%s-%s_MeanRateScatter.pdf', SubjectID, Date,NeuralInputID{1},NeuralInputID{2})),'-dpdf','-fillpage')
+print(Fig,fullfile(OutputPath,sprintf('%s_%s_SS%s_%s-%s_MeanRateScatter.pdf', SubjectID, Date,NeuralInputID{3},NeuralInputID{1},NeuralInputID{2})),'-dpdf','-fillpage')
 close all
 end
