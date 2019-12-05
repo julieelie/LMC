@@ -185,6 +185,17 @@ end
 Peak2Peak = squeeze(max(Cell.Spike_snippets(:,Best_c,:),[],1) - min(Cell.Spike_snippets(:,Best_c,:),[],1));
 Peak2Peak = Peak2Peak/max(Peak2Peak); % Get a value betwen 0 and 1 for the size of the spike.
 
+%% Calculate the SNR for each electrode of the tetrode
+SNR = nan(size(Cell.Spike_snippets,2),1);
+MeanSpike = nan(size(Cell.Spike_snippets,2),size(Cell.Spike_snippets,1));
+StdSpike = nan(size(Cell.Spike_snippets,2),size(Cell.Spike_snippets,1));
+for ee=1:size(Cell.Spike_snippets,2)
+    MeanSpike(ee,:) = mean(squeeze(Cell.Spike_snippets(:,ee,:)),2);
+    StdSpike(ee,:) = std(squeeze(Cell.Spike_snippets(:,ee,:)),0,2);
+    [MaxVal,IndMax] = max(MeanSpike(ee,:));
+    [MinVal,IndMin] = min(MeanSpike(ee,:));
+    SNR(ee) = (MaxVal-MinVal) / ((StdSpike(ee,IndMax).^2 + StdSpike(ee, IndMin).^2)/2).^0.5;
+end
 %% Calculate the ISI and percentage of violations of the refractory period
 ISI = diff(sort(Cell.Spike_arrival_times))*(10^-3);% ISI in ms
 ISIViolation = sum(ISI<1)/length(ISI)*100;
@@ -192,9 +203,9 @@ ISIViolation = sum(ISI<1)/length(ISI)*100;
 %% Plot the KDE along time with the zones for each session
 Fig = figure();
 if ~isempty(TetrodeFile)
-    SS1=subplot(3,1,1);
+    SS1=subplot(5,4,1:4);
 else
-    SS1 = subplot(2,1,1);
+    SS1 = subplot(4,4,1:4);
 end
         
 shadedErrorBar((TimePoints(2:end)-TimeStep/2)/60,KDE,KDE_error,{'k-', 'LineWidth',2})
@@ -216,19 +227,52 @@ hold on
 % scatter(SpikeTimes/60, MaxYLim/5.*rand(size(SpikeTimes)) + MaxYLim,1,'k')
 scatter(SpikeTimes/60, MaxYLim/3.*Peak2Peak + MaxYLim,1,'k')
 hold on
-title(sprintf('%s on %s TT%s%s SS%s', SubjectID, Date, NeuralInputID{3},NeuralInputID{1},NeuralInputID{2}))
-
+if isempty(TetrodeFile)
+    title(sprintf('%s on %s SS%s T%s-%s', SubjectID, Date, NeuralInputID{3},NeuralInputID{1},NeuralInputID{2}))
+end
+ 
 %% Plot the ISI
 if ~isempty(TetrodeFile)
-    SS3 = subplot(3,1,3);
+    SS3 = subplot(5,4,9:12);
 else
-    SS3 = subplot(2,1,2);
+    SS3 = subplot(4,4,5:8);
 end
 histogram(ISI, 0:0.5:50, 'FaceColor', 'k','EdgeColor','k')
-xlabel('Time (ms)')
+ylabel('ISI histogram (ms)')
 text(45,0.9*SS3.YLim(2),sprintf('Violation=%.2f%%',ISIViolation))
-title('ISI')
+% title('ISI')
 
+%% Plot the average snippets and a random subset of snippets
+YLimSSLast = nan(size(Cell.Spike_snippets,2),2);
+for ee=1:size(Cell.Spike_snippets,2)
+    if ~isempty(TetrodeFile)
+        SSLast = subplot(5,4,12+ee);
+    else
+        SSLast = subplot(4,4,8+ee);
+    end
+    shadedErrorBar(1:length(MeanSpike(ee,:)),MeanSpike(ee,:),StdSpike(ee,:),{'k-','LineWidth',2})
+    title(sprintf('Channel %d, SNR=%.2f',ee, SNR(ee)))
+    YLimSSLast(ee,:) = SSLast.YLim;
+end
+YLimSSLastF(1) = min(YLimSSLast(:,1));
+YLimSSLastF(2) = max(YLimSSLast(:,2));
+for ee=1:size(Cell.Spike_snippets,2)
+    if ~isempty(TetrodeFile)
+        SSLast2 = subplot(5,4,16+ee);
+    else
+        SSLast2 = subplot(4,4,12+ee);
+    end
+    plot(squeeze(Cell.Spike_snippets(:,ee,randperm(size(Cell.Spike_snippets,3),min(100,size(Cell.Spike_snippets,3))))),'k-')
+    SSLast2.YLim = YLimSSLastF;
+    SSLast2.XLim = [0 82];
+    if ~isempty(TetrodeFile)
+        SSLast = subplot(5,4,12+ee);
+    else
+        SSLast = subplot(4,4,8+ee);
+    end
+    SSLast.YLim = YLimSSLastF;
+    SSLast.XLim = [0 82];
+end
 %% get the spike sorting quality for that cell along time
 
 if ~isempty(TetrodeFile)
@@ -236,7 +280,7 @@ if ~isempty(TetrodeFile)
     SS_i = find(TData.UnitClusters == str2double(NeuralInputID{2}));
     TimeStepQ = diff(TData.TimePoints(1:2));
     XLimSS1 = SS1.XLim;
-    SS2=subplot(3,1,2);
+    SS2=subplot(5,4,5:8);
     Xtime = ((TData.TimePoints(2:end)-TimeStepQ/2).*10^-6 - OperantSession(1))/60;
     yyaxis left
     plot(Xtime, TData.TimeLRatio(:,SS_i), 'b-', 'LineWidth',2);
@@ -247,9 +291,9 @@ if ~isempty(TetrodeFile)
     ylabel('IsolationDistance (log10 scale)')
     xlabel('Time (min)')
     SS2.XLim = XLimSS1;
-    title(sprintf('cluster %d, LRatio = %.1f, IDist = %.1f', TData.UnitClusters(SS_i), TData.LRatio(SS_i),TData.IsolationDistance(SS_i)));
     hold off
-    
+    SS1=subplot(5,4,1:4);
+    title(sprintf('%s on %s SS%s T%s-%s; cluster %d, LRatio = %.1f, IDist = %.1f', SubjectID, Date, NeuralInputID{3},NeuralInputID{1},NeuralInputID{2}, TData.UnitClusters(SS_i), TData.LRatio(SS_i),TData.IsolationDistance(SS_i)));
 end
 
 
@@ -263,9 +307,9 @@ if ~isempty(DeadCell_Idx)
     DeadCell_Idx = unique(reshape(repmat(DeadCell_Idx',1,DurDead) + repmat(0:(DurDead-1),length(DeadCell_Idx),1), length(DeadCell_Idx)*DurDead,1));
     % plot these unstable data points
     if ~isempty(TetrodeFile)
-        SS1=subplot(3,1,1);
+        SS1=subplot(5,4,1:4);
     else
-        SS1 = subplot(2,1,1);
+        SS1 = subplot(4,4,1:4);
     end
     hold on
     plot((TimePoints(DeadCell_Idx+1)-TimeStep/2)/60, KDE(DeadCell_Idx), 'r+')

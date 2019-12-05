@@ -42,7 +42,7 @@ if ~isempty(IndVocPD) && ~isempty(IndVocPDO) && ~isempty(IndVocPDF)
     Fig1 = figure();
     Color = [0 0.1 0].*contains(Data.What, 'Tr') + repmat([1 0.8 0.8], length(Data.What),1);
     timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPD,Color);
-    suplabel(sprintf('CALLS FROM SUBJECT O and F   %s on %s Raster Tetrode %s S%s %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{3},NeuralInputID{2}),'t');
+    suplabel(sprintf('CALLS FROM SUBJECT O and F   %s on %s Raster T%s SS%s %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{3},NeuralInputID{2}),'t');
     print(Fig1,fullfile(OutputPath,sprintf('%s_RasterVocSelf_%d.pdf', FileNameBase, Delay(1))),'-dpdf','-fillpage');
 end
 
@@ -51,7 +51,7 @@ if ~isempty(IndVocHD) && ~isempty(IndVocHDO) && ~isempty(IndVocHDF)
     Fig2 = figure();
     Color = [0 0.1 0].*contains(Data.What, 'Tr') + repmat([0.8 0.8 1], length(Data.What),1);
     timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocHD,Color)
-    suplabel(sprintf('CALLS FROM OTHERS O and F    %s on %s Raster Tetrode %s S%s %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{3},NeuralInputID{2}),'t');
+    suplabel(sprintf('CALLS FROM OTHERS O and F    %s on %s Raster T%s SS%s %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{3},NeuralInputID{2}),'t');
     print(Fig2,fullfile(OutputPath,sprintf('%s_RasterVocOthers_%d.pdf', FileNameBase, Delay(1))),'-dpdf','-fillpage')
 end
 
@@ -60,7 +60,7 @@ if ~isempty(IndVocPDO)
     Fig6 = figure();
     Color = [0 0.1 0].*contains(Data.What, 'Tr') + repmat([1 0.8 0.8], length(Data.What),1);
     timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPDO,Color)
-    suplabel(sprintf('CALLS FROM SUBJECT OPERANT   %s on %s Raster Tetrode %s S%s %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{3},NeuralInputID{2}),'t');
+    suplabel(sprintf('CALLS FROM SUBJECT OPERANT   %s on %s Raster T%s SS%s %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{3},NeuralInputID{2}),'t');
     print(Fig6,fullfile(OutputPath,sprintf('%s_RasterVocSelfOp_%d.pdf', FileNameBase, Delay(1))),'-dpdf','-fillpage')
 end
 
@@ -69,7 +69,7 @@ if ~isempty(IndVocHDO)
     Fig7 = figure();
     Color = [0 0.1 0].*contains(Data.What, 'Tr') + repmat([0.8 0.8 1], length(Data.What),1);
     timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocHDO,Color)
-    suplabel(sprintf('CALLS FROM OTHERS OPERANT    %s on %s Raster Tetrode %s S%s %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{3},NeuralInputID{2}),'t');
+    suplabel(sprintf('CALLS FROM OTHERS OPERANT    %s on %s Raster T%s SS%s %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{3},NeuralInputID{2}),'t');
     print(Fig7,fullfile(OutputPath,sprintf('%s_RasterVocOthersOp_%d.pdf', FileNameBase, Delay(1))),'-dpdf','-fillpage')
 end
 
@@ -78,7 +78,7 @@ if ~isempty(IndVocPDF)
     Fig8 = figure();
     Color = [0 0.1 0].*contains(Data.What, 'Tr') + repmat([1 0.8 0.8], length(Data.What),1);
     timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPDF,Color)
-    suplabel(sprintf('CALLS FROM SUBJECT FREE SESSION    %s on %s Raster Tetrode %s S%s %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{3},NeuralInputID{2}),'t');
+    suplabel(sprintf('CALLS FROM SUBJECT FREE SESSION    %s on %s Raster T%s SS%s %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{3},NeuralInputID{2}),'t');
     print(Fig8,fullfile(OutputPath,sprintf('%s_RasterVocSelfFr_%d.pdf', FileNameBase, Delay(1))),'-dpdf','-fillpage')
 end
 
@@ -87,7 +87,7 @@ if ~isempty(IndVocHDF)
     Fig9 = figure();
     Color = [0 0.1 0].*contains(Data.What, 'Tr') + repmat([0.8 0.8 1], length(Data.What),1);
     timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocHDF,Color)
-    suplabel(sprintf('CALLS FROM OTHERS FREE SESSION    %s on %s Raster Tetrode %s S%s %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{3},NeuralInputID{2}),'t');
+    suplabel(sprintf('CALLS FROM OTHERS FREE SESSION    %s on %s Raster T%s SS%s %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{3},NeuralInputID{2}),'t');
     print(Fig9,fullfile(OutputPath,sprintf('%s_RasterVocOthersFr_%d.pdf', FileNameBase, Delay(1))),'-dpdf','-fillpage')
 end
 
@@ -99,19 +99,22 @@ for vv=1:length(IndVocP)
     Ind_SAT(vv) = sum((SAT>0).*(SAT<=Data.Duration(IndVocP(vv))));
 end
 if any(sum(Ind_SAT))
+    fprintf(1,'All Calls raster plot\n')
+%     for vv=1:length(IndVocP)
+%         fprintf(1,'All calls ratser: Voc %d/%d\n',vv, length(IndVocP))
+%         Fig3=figure(10);
+%         if vv==1
+%             Legend=1;
+%         else
+%             Legend=0;
+%         end
+%         hold on
+%         plotCallDynamic(Data.BioSound{IndVocP(vv),1}, Data.BioSound{IndVocP(vv),2},[],Legend)
+%     end
+% Just plot one call for the legend
+plotCallDynamic(Data.BioSound{IndVocP(1),1}, Data.BioSound{IndVocP(1),2},[],1)
     for vv=1:length(IndVocP)
-        fprintf(1,'Voc %d/%d\n',vv, length(IndVocP))
-        Fig3=figure(10);
-        if vv==1
-            Legend=1;
-        else
-            Legend=0;
-        end
-        hold on
-        plotCallDynamic(Data.BioSound{IndVocP(vv),1}, Data.BioSound{IndVocP(vv),2},[],Legend)
-    end
-    for vv=1:length(IndVocP)
-        fprintf(1,'Voc %d/%d\n',vv, length(IndVocP))
+        fprintf(1,'All calls ratser: Voc %d/%d\n',vv, length(IndVocP))
         Fig3=figure(10);
         SAT = Data.SpikesArrivalTimes_Behav{IndVocP(vv)};
         if any(Ind_SAT(vv))
@@ -130,8 +133,9 @@ if ~isempty(IndVocPTr)
         Ind_SAT(vv) = sum((SAT>0).*(SAT<=Data.Duration(IndVocPTr(vv))));
     end
     if any(sum(Ind_SAT))
+        fprintf(1,'Trill raster plot\n')
         for vv=1:length(IndVocPTr)
-            fprintf(1,'Voc %d/%d\n',vv, length(IndVocPTr))
+            fprintf(1,'Trill raster Voc %d/%d\n',vv, length(IndVocPTr))
             Fig4=figure(11);
             if vv==1
                 Legend=1;
@@ -142,7 +146,7 @@ if ~isempty(IndVocPTr)
             plotCallDynamic(Data.BioSound{IndVocPTr(vv),1}, Data.BioSound{IndVocPTr(vv),2},[],Legend)
         end
         for vv=1:length(IndVocPTr)
-            fprintf(1,'Voc %d/%d\n',vv, length(IndVocPTr))
+            fprintf(1,'Trill raster Neural data Voc %d/%d\n',vv, length(IndVocPTr))
             Fig4=figure(11);
             SAT = Data.SpikesArrivalTimes_Behav{IndVocPTr(vv)};
             if any(Ind_SAT(vv))
@@ -162,8 +166,9 @@ if ~isempty(IndVocPBa)
         Ind_SAT(vv) = sum((SAT>0).*(SAT<=Data.Duration(IndVocPBa(vv))));
     end
     if any(sum(Ind_SAT))
+        fprintf(1,'Bark raster plot\n')
         for vv=1:length(IndVocPBa)
-            fprintf(1,'Voc %d/%d\n',vv, length(IndVocPBa))
+            fprintf(1,'Bark raster Voc %d/%d\n',vv, length(IndVocPBa))
             Fig5=figure(12);
             if vv==1
                 Legend=1;
@@ -174,7 +179,7 @@ if ~isempty(IndVocPBa)
             plotCallDynamic(Data.BioSound{IndVocPBa(vv),1}, Data.BioSound{IndVocPBa(vv),2},[],Legend)
         end
         for vv=1:length(IndVocPBa)
-            fprintf(1,'Voc %d/%d\n',vv, length(IndVocPBa))
+            fprintf(1,'Bark raster neural data Voc %d/%d\n',vv, length(IndVocPBa))
             Fig5=figure(12);
             SAT = Data.SpikesArrivalTimes_Behav{IndVocPBa(vv)};
             if any(Ind_SAT(vv))
@@ -244,7 +249,8 @@ end
 
     function plotCallDynamic(BiosoundRaw, BiosoundPiezo,SAT,Legend)
         SpikeMarkerSize = 5;
-        SpikeMarkerColor = 'r';
+        MAP = colormap('hot');
+        MAP = flip(MAP(1:10:128,:));
         Span = 9;% Span is an unevennumber. smooth has a default span of 5 points = 5ms However end points are unchanged...
         HalfSpan = (Span-1)/2;
         % Plot the pitch saliency vs amplitude on microphone
@@ -265,6 +271,7 @@ end
             for ii=HalfSpan:nx-HalfSpan
                 Nspike = sum((SAT>=TimeSound(ii)) .* (SAT<TimeSound(ii+1)));
                 if Nspike
+                    SpikeMarkerColor = MAP(Nspike,:);
                     plot([Saliency(ii), Saliency(ii+1)], [BiosoundRaw.amp(ii), BiosoundRaw.amp(ii+1)],'o','MarkerSize',SpikeMarkerSize,'MarkerFaceColor', SpikeMarkerColor, 'MarkerEdgeColor',SpikeMarkerColor);
                 end
                 hold on
@@ -295,6 +302,7 @@ end
             for ii=HalfSpan:nx-HalfSpan
                 Nspike = sum((SAT>=TimeSound(ii)) .* (SAT<TimeSound(ii+1)));
                 if Nspike
+                    SpikeMarkerColor = MAP(Nspike,:);
                     plot([FormantDisp(ii), FormantDisp(ii+1)], [BiosoundRaw.amp(ii), BiosoundRaw.amp(ii+1)],'o','MarkerSize',SpikeMarkerSize,'MarkerFaceColor', SpikeMarkerColor, 'MarkerEdgeColor',SpikeMarkerColor);
                 end
                 hold on
@@ -321,6 +329,7 @@ end
                 for ii=HalfSpan:nx-HalfSpan
                     Nspike = sum((SAT>=TimeSound(ii)) .* (SAT<TimeSound(ii+1)));
                     if Nspike
+                        SpikeMarkerColor = MAP(Nspike,:);
                         plot([SoundFund(ii), SoundFund(ii+1)], [BiosoundRaw.amp(ii), BiosoundRaw.amp(ii+1)],'o','MarkerSize',SpikeMarkerSize,'MarkerFaceColor', SpikeMarkerColor, 'MarkerEdgeColor',SpikeMarkerColor);
                     end
                     hold on
@@ -348,6 +357,7 @@ end
                 for ii=HalfSpan:nx-HalfSpan
                     Nspike = sum((SAT>=TimeSound(ii)) .* (SAT<TimeSound(ii+1)));
                     if Nspike
+                        SpikeMarkerColor = MAP(Nspike,:);
                         plot([SoundSpecMean(ii), SoundSpecMean(ii+1)], [BiosoundRaw.amp(ii), BiosoundRaw.amp(ii+1)],'o','MarkerSize',SpikeMarkerSize,'MarkerFaceColor', SpikeMarkerColor, 'MarkerEdgeColor',SpikeMarkerColor);
                     end
                     hold on
@@ -376,6 +386,7 @@ end
         %         end
         
     end
+
 
     function outyy = mysmooth(yy,Span)
         if nargin<2

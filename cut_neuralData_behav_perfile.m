@@ -2,10 +2,6 @@ function cut_neuralData_behav_perfile(InputDataFile, OutputPath, BehaviorType,Fl
 %% This function uses the calculation of behavior onset/offset in transceiver time (ms) calculated by get_logger_data_behav
 % (AllActions_Time) And extract the corresponding neural data in
 % the input datafile.
-% This functions also extracts neural data of baseline activity in the
-% seconds preceding the vocalization, this baseline calculation assumes
-% that there is no vocalization or behavioral event between the behavioral
-% events indicated by Voc_trans_time_refined.
 %
 
 % INPUT:

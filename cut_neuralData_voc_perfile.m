@@ -170,7 +170,7 @@ elseif contains(DataFile,'SS')
     
     % Find if there is any period of unstability for the neural
     % activity %% NOT IMPLEMENTED AS OF NOW
-    % load(fullfile(OutputPath, sprintf('%s_%s_SSU%s-%s.mat', SubjectID, Date,NeuralInputID{1},NeuralInputID{2})),'QualitySSU');
+    % load(fullfile(OutputPath, sprintf('%s_%s_SS%s_%s-%s.mat', SubjectID, Date,NeuralInputID{3},NeuralInputID{1},NeuralInputID{2}),'QualitySSU');
     
     % Loop through audio data
     AudioDir = dir(fullfile(Loggers_dir, sprintf('%s*VocExtractData.mat', Date(3:end)))); % These are all the results of vocalization localization for both operant conditioning and free session

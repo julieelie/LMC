@@ -137,7 +137,7 @@ end
 ylabel('Spike rate (Hz)')
 FullLegend = [LegendVoc LegendSNVB LegendONVB];
 set(gca,'XTick', 1:length(FullLegend),'XTickLabel',FullLegend)
-title(sprintf('Mean rate\n%s on %s Tetrode %s SU %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{2}))
+title(sprintf('Mean rate\n%s on %s Tetrode %s SS%s %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{3},NeuralInputID{2}))
 xlim(gca,[0 8+2*length(SpikeRate.BehavType)+1])
 
 orient(Fig,'landscape')

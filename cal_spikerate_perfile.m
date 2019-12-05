@@ -40,8 +40,7 @@ if ~isempty(IndVocS)
         SAT = Data.SpikesArrivalTimes_Behav{IndVocS(oo)};
         NumSpikes = sum((SAT>=0).*(SAT<(Data.Duration(IndVocS(oo)))));
         SelfCall_rate(oo,1) = NumSpikes./Data.Duration(IndVocS(oo)).*10^3;
-        SAT = Data.SpikesArrivalTimes_Baseline{IndVocS(oo)};
-        NumSpikes = sum((SAT>=0).*(SAT<(Data.BSLDuration(IndVocS(oo)))));
+        NumSpikes = length(Data.SpikesArrivalTimes_Baseline{IndVocS(oo)});
         SelfCall_rate(oo,2) = NumSpikes./Data.BSLDuration(IndVocS(oo)).*10^3;
         SelfCall_exptype{oo} = Data.ExpType{IndVocS(oo)};
     end
@@ -58,8 +57,7 @@ if ~isempty(IndVocO)
         SAT = Data.SpikesArrivalTimes_Behav{IndVocO(oo)};
         NumSpikes = sum((SAT>=0).*(SAT<(Data.Duration(IndVocO(oo)))));
         OthersCall_rate(oo,1) = NumSpikes./Data.Duration(IndVocO(oo)).*10^3;
-        SAT = Data.SpikesArrivalTimes_Baseline{IndVocO(oo)};
-        NumSpikes = sum((SAT>=0).*(SAT<(Data.BSLDuration(IndVocO(oo)))));
+        NumSpikes = length(Data.SpikesArrivalTimes_Baseline{IndVocO(oo)});
         OthersCall_rate(oo,2) = NumSpikes./Data.BSLDuration(IndVocO(oo)).*10^3;
         OthersCall_exptype{oo} = Data.ExpType{IndVocO(oo)};
     end
@@ -69,7 +67,7 @@ else
 end
 
 % Calculate the spike rate in Hz of self non-vocal behaviors cut into the
-% same duartion chuncks as vocalizations (for fair comparisons 
+% same duration chuncks as vocalizations (for fair comparisons 
 SelfNVBehav_rate = cell(length(BehavType),1);
 for bb=1:length(BehavType)
     IndNVBehavS = find(contains(Data.What, BehavType{bb}).*contains(Data.Who, 'self'));
