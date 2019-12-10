@@ -424,7 +424,8 @@ else
     else
         for vv=1:Nvoc
             fprintf(1,'No better estimate of call allignment\n')
-            
+            % save the raw wavefrom
+            [Raw_wave{vv}, ~] = audioread(VocExt.Voc_filename{vv});
             if vv==1 % get the sampling frequency of sound extracts
                 AInfo = audioinfo(VocExt.Voc_filename{vv});
                 FS = AInfo.SampleRate;
