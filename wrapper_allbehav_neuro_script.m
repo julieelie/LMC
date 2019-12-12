@@ -81,33 +81,59 @@ OutputPath = fullfile(BasePath, 'ResultsFiles');
 fprintf('NEURONS SANITARY CHECK.... ')
 % Files2Run = 1:length(ListSSU);
 % Files2Run = [1:29 87:108];
-Files2Run = 33:55;
+ Files2Run = 15:30;
 for ss=Files2Run
     sanitary_check_perSSfile(ListSSU{ss}, OutputPath)
 end
 fprintf(' DONE \n')
-% Data for each unit are saved under: sprintf('%s_%s_SS%s_%s-%s.mat', SubjectID, Date,SSQ,TetrodeID,SSID)    
+% Data for each unit are saved under: sprintf('%s_%s_SS%s_%s-%s.mat', SubjectID, Date,SSQ,TetrodeID,SSID)
+
+%% Sort unit
+% Multi-unit SSM should have at least one SNR value above 2
+% Single unt SSS should have at least one SNR value above 6 and ISI
+% below 0.1%
+fprintf('ONLY KEEPING GOOD UNITS.... ')
+SSQ_Files2Run = cell(length(Files2Run),1);
+for ss=Files2Run
+    [~,FileName] = fileparts(ListSSU{ss});
+    Ind_ = strfind(FileName,'_');
+    SubjectID = FileName(1:5);
+    Date = FileName(7:14);
+    TetrodeID = FileName(Ind_(3)-1);
+    SSQ = FileName(Ind_(3)+3);
+    SSID = FileName((Ind_(4)+1):end);
+    Data=load(fullfile(OutputPath,sprintf('%s_%s_SS%s_%s-%s.mat', SubjectID, Date,SSQ,TetrodeID,SSID)));
+    if any(Data.QualitySSU.SNR>=6) && (Data.QualitySSU.ISIViolation<=0.1)
+        SSQ_Files2Run{ss} = 'SSSU';
+    elseif any(Data.QualitySSU.SNR>=2)
+        SSQ_Files2Run{ss} = 'SSMU';
+    else
+        SSQ_Files2Run{ss} = 'NOISE';
+    end
+end
+GoodCellIndices = find(contains(SSQ_Files2Run, 'SS'));
+fprintf(' DONE \n')
 %% Extract the neural data corresponding to the bouts of vocalizations identified
 % by voc_localize and voc_localize_operant (run by result_operant_bat.m) for each cell
 fprintf(' EXTRACTING NEURAL DATA CORRESPONDING TO VOCALIZATIONS.... ')
 NeuralBuffer = 5000; %duration of the time buffer in
 %       ms that should be added before and after the onset and offset time
 %       of vocalizations for extracting neural data.
-% Files2Run = 1:length(ListSSU);
-for ss=Files2Run
-    fprintf(1,'File %d/%d\n',ss,length(Files2Run))
-    cut_neuralData_voc_perfile(ListSSU{ss}, OutputPath,NeuralBuffer)
+
+for ss=1:length(GoodCellIndices)
+    fprintf(1,'File %d/%d\n',ss,length(GoodCellIndices))
+    cut_neuralData_voc_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath,NeuralBuffer)
 end
 fprintf(' DONE \n')
 % Data for each unit and each experimental session are saved as sprintf('%s_%s_%s_SS%s_%s-%s.mat', SubjectID, Date, ExpStartTime,SSQ,TetrodeID,SSID)
 %% Extract the neural data corresponding to the behaviors identified during the free session
 % by get_logger_data_behav (run by result_reconly_bat.m) for each cell
 fprintf(' EXTRACTING NEURAL DATA CORRESPONDING TO OTHER BEHAVIORS.... ')
-% Files2Run = 1:length(ListSSU);
 
-for ss=Files2Run
-    fprintf(1,'File %d/%d\n',ss,length(Files2Run))
-    cut_neuralData_behav_perfile(ListSSU{ss}, OutputPath)
+
+for ss=1:length(GoodCellIndices)
+    fprintf(1,'File %d/%d\n',ss,length(GoodCellIndices))
+    cut_neuralData_behav_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath)
 end
 fprintf(' DONE \n')
 % Data for each unit and each experimental session are saved as or apppended to sprintf('%s_%s_%s_SS%s_%s-%s.mat', SubjectID, Date, ExpStartTime,SSQ, TetrodeID,SSID)
@@ -116,47 +142,46 @@ fprintf(' COMPILING NEURAL DATA .... ')
 % turn off warnings for python saving issues
 id = 'MATLAB:Python:UnsupportedLoad';
 warning('off',id)
-% Files2Run = 1:length(ListSSU);
 
-for ss=Files2Run
-    fprintf(1,'File %d/%d\n',ss,length(Files2Run))
-    neuralData_compile_perfile(ListSSU{ss}, OutputPath, NeuralBuffer)
+
+for ss=1:length(GoodCellIndices)
+    fprintf(1,'File %d/%d\n',ss,length(GoodCellIndices))
+    neuralData_compile_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath, NeuralBuffer)
 end
 warning('on',id)
 fprintf(' DONE \n')
 % Data for each unit and all experimental session are appended to: sprintf('%s_%s_SS%s_%s-%s.mat', SubjectID, Date,SSQ,TetrodeID,SSID) 
 %% Calculating the average spike rate during various types of behaviors including vocalizations
 fprintf(' CALCULATING SPIKE RATE CORRESPONDING TO ALL BEHAVIORS.... ')
-% Files2Run = 1:length(ListSSU);
-for ss=Files2Run
+
+for ss=1:length(GoodCellIndices)
     fprintf(1,'File %d/%d\n',ss,length(Files2Run))
-    cal_spikerate_perfile(ListSSU{ss},OutputPath)
+    cal_spikerate_perfile(ListSSU{Files2Run(GoodCellIndices(ss))},OutputPath)
 end
 fprintf(' DONE \n')
 % Data for each unit and all experimental session are appended to: sprintf('%s_%s_SS%s_%s-%s.mat', SubjectID, Date,SSQ,TetrodeID,SSID) 
 %% Plot the average spike rate during various types of behaviors including vocalizations
 fprintf(' PLOTING NEURAL DATA (Av RATE) CORRESPONDING TO ALL BEHAVIORS.... ')
-% Files2Run = 1:length(ListSSU);
-for ss=Files2Run
+
+for ss=1:length(GoodCellIndices)
     fprintf(1,'File %d/%d\n',ss,length(Files2Run))
-    plot_av_spikerate_perfile(ListSSU{ss}, OutputPath)
+    plot_av_spikerate_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath)
 end
 fprintf(' DONE \n')
 % The plot is saved under OutputPath as sprintf('%s_%s_%s_SS%s_%s-%s_MeanRateScatter.pdf', SubjectID, SSQ,TetrodeID,SSID))
 %% Plot rasters for vocalizations
 fprintf(1,' RASTER PLOTS of NEURAL DATA CORRESPONDING TO VOCALIZATIONS\n');
-% Files2Run = 1:length(ListSSU);
-for ss=Files2Run
-    plot_rastervoc_perfile(ListSSU{ss}, OutputPath)
+
+for ss=1:length(GoodCellIndices)
+    plot_rastervoc_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath)
     close all
 end
 fprintf(' DONE \n')
 %% calculate the KDE SPIKE RATE of vocalizations
 fprintf(1,' CALCULATING KDE OF THE TIME-VARYING SPIKE RATE CORRESPONDING TO VOCALIZATIONS\n');
-% Files2Run = 1:length(ListSSU);
-Files2Run = 1:17;
-for ss=Files2Run
-    cal_kderatevoc_perfile(ListSSU{ss}, OutputPath)
+
+for ss=1:length(GoodCellIndices)
+    cal_kderatevoc_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath)
 end
 
 
@@ -315,7 +340,21 @@ for ee=1:length(ExpFolders)
         fprintf(1, '   %s\n', DateFolders(dd).name);
         LoggerFolders = dir(fullfile(DateFolders(dd).folder, DateFolders(dd).name,'Logger*'));
         for ll = 1:length(LoggerFolders)
-            SSFiles = dir(fullfile(LoggerFolders(ll).folder, LoggerFolders(ll).name, 'extracted_data', '*_TT*_SS*.mat'));
+            SSFiles = dir(fullfile(LoggerFolders(ll).folder, LoggerFolders(ll).name, 'extracted_data', '*_TT*_SSS*.mat'));
+            if ~isempty(SSFiles)
+                for ssf=1:length(SSFiles)
+                    NSSU = NSSU +1;
+                    ListSSU{NSSU} = fullfile(SSFiles(ssf).folder, SSFiles(ssf).name);
+                end
+            end
+            SSFiles = dir(fullfile(LoggerFolders(ll).folder, LoggerFolders(ll).name, 'extracted_data', '*_TT*_SSM*.mat'));
+            if ~isempty(SSFiles)
+                for ssf=1:length(SSFiles)
+                    NSSU = NSSU +1;
+                    ListSSU{NSSU} = fullfile(SSFiles(ssf).folder, SSFiles(ssf).name);
+                end
+            end
+            SSFiles = dir(fullfile(LoggerFolders(ll).folder, LoggerFolders(ll).name, 'extracted_data', '*_TT*_SSU*.mat'));
             if ~isempty(SSFiles)
                 for ssf=1:length(SSFiles)
                     NSSU = NSSU +1;
