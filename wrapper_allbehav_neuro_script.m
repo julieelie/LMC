@@ -81,7 +81,7 @@ OutputPath = fullfile(BasePath, 'ResultsFiles');
 fprintf('NEURONS SANITARY CHECK.... ')
 % Files2Run = 1:length(ListSSU);
 % Files2Run = [1:29 87:108];
- Files2Run = 15:30;
+ Files2Run = 15:37;
 for ss=Files2Run
     sanitary_check_perSSfile(ListSSU{ss}, OutputPath)
 end
@@ -94,8 +94,9 @@ fprintf(' DONE \n')
 % below 0.1%
 fprintf('ONLY KEEPING GOOD UNITS.... ')
 SSQ_Files2Run = cell(length(Files2Run),1);
-for ss=Files2Run
-    [~,FileName] = fileparts(ListSSU{ss});
+for ss=1:length(Files2Run)
+    ff=Files2Run(ss);
+    [~,FileName] = fileparts(ListSSU{ff});
     Ind_ = strfind(FileName,'_');
     SubjectID = FileName(1:5);
     Date = FileName(7:14);
