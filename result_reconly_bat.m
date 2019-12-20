@@ -10,7 +10,7 @@ ForceVocExt2 = 0; % In case the localization on Loggers of vocalizations that we
 ReAllignment = 0; % Incase we don't have a logger on all animals, it's better not to reallign the vocal data by cross correlation between the Microphone and the loggers
 ForceWhoID = 0; % In case the identification of bats was already done but you want to re-do it again
 ForceWhat = 0; % In case running biosound was already done but you want to re-do it
-ForceBehav = 0;% Force extracting onset/offset time of other behaviors
+ForceBehav = 1;% Force extracting onset/offset time of other behaviors
 close all
 
 % Get the recording date

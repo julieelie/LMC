@@ -147,8 +147,8 @@ for ff=1:length(DataDir)
                     if Ncall(vv)
                         % Get the vector of all starts and stops of
                         % vocalizations detected in that sequence
-                        AllStarts = cell2mat(IndVocStartRaw_merged{VocInd(vv)});
-                        AllStops = cell2mat(IndVocStopRaw_merged{VocInd(vv)});
+                        AllStarts = cell2mat(IndVocStartRaw_merged{VocInd(vv)}');
+                        AllStops = cell2mat(IndVocStopRaw_merged{VocInd(vv)}');
                         for nn=1:Ncall(vv)
                             VocCall = VocCall+1; % Increment the counter of vocalization events
                             % Save the vocalization Rank as first or last

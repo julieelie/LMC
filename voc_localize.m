@@ -48,7 +48,7 @@ if TranscTime
 end
 
 % List of manual extracts
-AllVocs = dir(fullfile(Voc_dir, sprintf('*%s*.wav', Date)));
+AllVocs = dir(fullfile(Voc_dir, sprintf('*%s_%s*.wav', Date,ExpStartTime)));
 
 % If taken of avisoft we need to resample the input files, so getting ready
 % the filters
