@@ -81,7 +81,7 @@ OutputPath = fullfile(BasePath, 'ResultsFiles');
 fprintf('NEURONS SANITARY CHECK.... ')
 % Files2Run = 1:length(ListSSU);
 % Files2Run = [1:29 87:108];
- Files2Run = 47:61;
+ Files2Run = 83:88;
 for ss=Files2Run
     sanitary_check_perSSfile(ListSSU{ss}, OutputPath)
 end
@@ -172,9 +172,9 @@ fprintf(' DONE \n')
 % The plot is saved under OutputPath as sprintf('%s_%s_%s_SS%s_%s-%s_MeanRateScatter.pdf', SubjectID, SSQ,TetrodeID,SSID))
 %% Plot rasters for vocalizations
 fprintf(1,' RASTER PLOTS of NEURAL DATA CORRESPONDING TO VOCALIZATIONS\n');
-
+Delay = [200 200];
 for ss=1:length(GoodCellIndices)
-    plot_rastervoc_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath)
+    plot_rastervoc_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath, Delay)
     close all
 end
 fprintf(' DONE \n')
