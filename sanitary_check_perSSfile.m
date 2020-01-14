@@ -202,7 +202,7 @@ ISIViolation = sum(ISI<1)/length(ISI)*100;
 
 %% Calculate the cross correlogram and the index of contamination as in KS2
 Nbins =500;
-[K, Qi, Q00, Q01, Qi_pvalues] = ccg(Cell.Spike_arrival_times, Cell.Spike_arrival_times, Nbins, 10^-3); % % compute the auto-correlogram with 500 bins at 1ms bins
+[K, Qi, Q00, Q01, Qi_pvalues] = ccg(Cell.Spike_arrival_times*(10^-6), Cell.Spike_arrival_times*(10^-6), Nbins, 10^-3); % % compute the auto-correlogram with 500 bins at 1ms bins
 [Q, Imin] = min(Qi/(max(Q00, Q01))); % Q is a measure of refractoriness
 Qpval = Qi_pvalues(Imin); % Qpval is the p-value of the test of refractoriness against a Poisson distribution
 
