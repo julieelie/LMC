@@ -200,12 +200,18 @@ end
 ISI = diff(sort(Cell.Spike_arrival_times))*(10^-3);% ISI in ms
 ISIViolation = sum(ISI<1)/length(ISI)*100;
 
+%% Calculate the cross correlogram and the index of contamination as in KS2
+Nbins =500;
+[K, Qi, Q00, Q01, Qi_pvalues] = ccg(Cell.Spike_arrival_times, Cell.Spike_arrival_times, Nbins, 10^-3); % % compute the auto-correlogram with 500 bins at 1ms bins
+[Q, Imin] = min(Qi/(max(Q00, Q01))); % Q is a measure of refractoriness
+Qpval = Qi_pvalues(Imin); % Qpval is the p-value of the test of refractoriness against a Poisson distribution
+
 %% Plot the KDE along time with the zones for each session
 Fig = figure();
 if ~isempty(TetrodeFile)
-    SS1=subplot(5,4,1:4);
+    SS1=subplot(6,4,1:4);
 else
-    SS1 = subplot(4,4,1:4);
+    SS1 = subplot(5,4,1:4);
 end
         
 shadedErrorBar((TimePoints(2:end)-TimeStep/2)/60,KDE,KDE_error,{'k-', 'LineWidth',2})
@@ -233,22 +239,37 @@ end
  
 %% Plot the ISI
 if ~isempty(TetrodeFile)
-    SS3 = subplot(5,4,9:12);
+    SS3 = subplot(6,4,9:12);
 else
-    SS3 = subplot(4,4,5:8);
+    SS3 = subplot(5,4,5:8);
 end
 histogram(ISI, 0:0.5:50, 'FaceColor', 'k','EdgeColor','k')
 ylabel('ISI histogram (ms)')
 text(45,0.9*SS3.YLim(2),sprintf('Violation=%.2f%%',ISIViolation))
 % title('ISI')
 
+%% Plot the autocorrelogram
+if ~isempty(TetrodeFile)
+    SS4 = subplot(6,4,12:16);
+else
+    SS4 = subplot(5,4,9:12);
+end
+MaxPlot = 50; %range of the plot in ms
+XautoCorr = -MaxPlot:MaxPlot;
+Istart = Nbins-MaxPlot+1;
+Istop = Nbins+1+MaxPlot;
+plot(XautoCorr,K(Istart:Istop), '-k','LineWdith',2)
+ylabel('Autocorrelation (ms)')
+
+text(1,0.9*SS4.YLim(2),sprintf('IContam=%.2f p-val = %.2f',Q,Qpval))
+
 %% Plot the average snippets and a random subset of snippets
 YLimSSLast = nan(size(Cell.Spike_snippets,2),2);
 for ee=1:size(Cell.Spike_snippets,2)
     if ~isempty(TetrodeFile)
-        SSLast = subplot(5,4,12+ee);
+        SSLast = subplot(6,4,16+ee);
     else
-        SSLast = subplot(4,4,8+ee);
+        SSLast = subplot(5,4,12+ee);
     end
     shadedErrorBar(1:length(MeanSpike(ee,:)),MeanSpike(ee,:),StdSpike(ee,:),{'k-','LineWidth',2})
     title(sprintf('Channel %d, SNR=%.2f',ee, SNR(ee)))
