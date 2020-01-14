@@ -356,6 +356,8 @@ QualitySSU.KDE_error = KDE_error;
 QualitySSU.TimePoints = TimePoints;
 QualitySSU.ISIViolation = ISIViolation;
 QualitySSU.SNR = SNR;
+QualitySSU.ContamInd = Q;
+QualitySSU.ContamIndp = Qpval;
 if ~isempty(TetrodeFile)
     QualitySSU.LRatioIsolationDistTimePoints =TData.TimePoints;
     QualitySSU.TimeLRatio = TData.TimeLRatio(:,SS_i);
