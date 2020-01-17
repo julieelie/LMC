@@ -1,6 +1,7 @@
 addpath(genpath('/Users/elie/Documents/CODE/operant_bats'))
 addpath(genpath('/Users/elie/Documents/CODE/GeneralCode'))
 addpath(genpath('/Users/elie/Documents/CODE/LMC'))
+addpath(genpath('/Users/elie/Documents/CODE/Kilosort2'))
 addpath(genpath('/Users/elie/Documents/CODE/LoggerDataProcessing'))
 addpath(genpath('/Users/elie/Documents/CODE/SoundAnalysisBats'))
 Path2RecordingTable = '/Users/elie/Google Drive/BatmanData/RecordingLogs/recording_logs.xlsx';
@@ -81,8 +82,9 @@ OutputPath = fullfile(BasePath, 'ResultsFiles');
 fprintf('NEURONS SANITARY CHECK.... ')
 % Files2Run = 1:length(ListSSU);
 % Files2Run = [1:29 87:108];
- Files2Run = 83:88;
+ Files2Run = 1:22;
 for ss=Files2Run
+    fprintf(1,'File %d/%d\n',ss,length(Files2Run))
     sanitary_check_perSSfile(ListSSU{ss}, OutputPath)
 end
 fprintf(' DONE \n')
@@ -95,6 +97,7 @@ fprintf(' DONE \n')
 fprintf('ONLY KEEPING GOOD UNITS.... ')
 SSQ_Files2Run = cell(length(Files2Run),1);
 for ss=1:length(Files2Run)
+    fprintf(1,'File %d/%d\n',ss,length(Files2Run))
     ff=Files2Run(ss);
     [~,FileName] = fileparts(ListSSU{ff});
     Ind_ = strfind(FileName,'_');
@@ -116,7 +119,7 @@ GoodCellIndices = find(contains(SSQ_Files2Run, 'SS'));
 fprintf(' DONE \n')
 %% Extract the neural data corresponding to the bouts of vocalizations identified
 % by voc_localize and voc_localize_operant (run by result_operant_bat.m) for each cell
-fprintf(' EXTRACTING NEURAL DATA CORRESPONDING TO VOCALIZATIONS.... ')
+fprintf(' EXTRACTING NEURAL DATA CORRESPONDING TO VOCALIZATIONS.... \n')
 NeuralBuffer = 5000; %duration of the time buffer in
 %       ms that should be added before and after the onset and offset time
 %       of vocalizations for extracting neural data.
@@ -172,9 +175,10 @@ fprintf(' DONE \n')
 % The plot is saved under OutputPath as sprintf('%s_%s_%s_SS%s_%s-%s_MeanRateScatter.pdf', SubjectID, SSQ,TetrodeID,SSID))
 %% Plot rasters for vocalizations
 fprintf(1,' RASTER PLOTS of NEURAL DATA CORRESPONDING TO VOCALIZATIONS\n');
-Delay = [200 200];
+Delay = [5000 200];
+PlotDyn = 0; %Set to 1 to plot dnamic plots
 for ss=1:length(GoodCellIndices)
-    plot_rastervoc_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath, Delay)
+    plot_rastervoc_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath, Delay, PlotDyn)
     close all
 end
 fprintf(' DONE \n')

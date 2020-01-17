@@ -25,7 +25,7 @@ BandPassFilter = [1000 5000 9000];
 %Parameter for detecting who is vocalizing:
 Fhigh_power = 20; %Hz
 Fs_env = 1000; %Hz Sample frequency of the enveloppe
-Dur_RMS = 1; % duration of the silence sample in min for the calculation of average running RMS
+Dur_RMS = 0.1; % duration of the silence sample in min for the calculation of average running RMS
 %% Load the localization info of vocalization extracts
 VocExt=load(fullfile(Audio_dir, sprintf('%s_%s_VocExtractTimes.mat', Date, ExpStartTime)));
 % Get the number of vocalizations

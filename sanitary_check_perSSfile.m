@@ -258,7 +258,9 @@ MaxPlot = 50; %range of the plot in ms
 XautoCorr = -MaxPlot:MaxPlot;
 Istart = Nbins-MaxPlot+1;
 Istop = Nbins+1+MaxPlot;
-plot(XautoCorr,K(Istart:Istop), '-k','LineWdith',2)
+Kplot = K;
+Kplot(Nbins+1) = 0;
+plot(XautoCorr,Kplot(Istart:Istop), '-k','LineWidth',2)
 ylabel('Autocorrelation (ms)')
 
 text(1,0.9*SS4.YLim(2),sprintf('IContam=%.2f p-val = %.2f',Q,Qpval))
@@ -279,17 +281,17 @@ YLimSSLastF(1) = min(YLimSSLast(:,1));
 YLimSSLastF(2) = max(YLimSSLast(:,2));
 for ee=1:size(Cell.Spike_snippets,2)
     if ~isempty(TetrodeFile)
-        SSLast2 = subplot(5,4,16+ee);
+        SSLast2 = subplot(6,4,20+ee);
     else
-        SSLast2 = subplot(4,4,12+ee);
+        SSLast2 = subplot(5,4,16+ee);
     end
     plot(squeeze(Cell.Spike_snippets(:,ee,randperm(size(Cell.Spike_snippets,3),min(100,size(Cell.Spike_snippets,3))))),'k-')
     SSLast2.YLim = YLimSSLastF;
     SSLast2.XLim = [0 82];
     if ~isempty(TetrodeFile)
-        SSLast = subplot(5,4,12+ee);
+        SSLast = subplot(6,4,16+ee);
     else
-        SSLast = subplot(4,4,8+ee);
+        SSLast = subplot(5,4,12+ee);
     end
     SSLast.YLim = YLimSSLastF;
     SSLast.XLim = [0 82];
@@ -301,7 +303,7 @@ if ~isempty(TetrodeFile)
     SS_i = find(TData.UnitClusters == str2double(NeuralInputID{2}));
     TimeStepQ = diff(TData.TimePoints(1:2));
     XLimSS1 = SS1.XLim;
-    SS2=subplot(5,4,5:8);
+    SS2=subplot(6,4,5:8);
     Xtime = ((TData.TimePoints(2:end)-TimeStepQ/2).*10^-6 - OperantSession(1))/60;
     yyaxis left
     plot(Xtime, TData.TimeLRatio(:,SS_i), 'b-', 'LineWidth',2);
@@ -313,7 +315,7 @@ if ~isempty(TetrodeFile)
     xlabel('Time (min)')
     SS2.XLim = XLimSS1;
     hold off
-    SS1=subplot(5,4,1:4);
+    SS1=subplot(6,4,1:4);
     title(sprintf('%s on %s SS%s T%s-%s; cluster %d, LRatio = %.1f, IDist = %.1f', SubjectID, Date, NeuralInputID{3},NeuralInputID{1},NeuralInputID{2}, TData.UnitClusters(SS_i), TData.LRatio(SS_i),TData.IsolationDistance(SS_i)));
 end
 
