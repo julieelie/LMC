@@ -3,8 +3,8 @@ function cal_kderatevoc_perfile(InputDataFile,OutputPath, Delay)
 if nargin<3
     Delay=[3000 200];% in ms
 end
-
-Bin_ms = 1; % size of the KDE binning
+MinNumCall =10; % Minimum number of events (vocalizations) to calculate a PSTH
+Bin_ms = 1; % size of the KDE binning in ms
 %Response_samprate = 1/Bin_ms;% Sampling rate of the KDE in kHz
 
 [~, DataFile]=fileparts(InputDataFile);
@@ -55,7 +55,7 @@ if ~isempty(IndVocPD) && ~isempty(IndVocPDO) && ~isempty(IndVocPDF)
     
     end
     IndBaPD = intersect(IndBa, IndVocPD);
-    if length(IndBaPD)>MicNumCall
+    if length(IndBaPD)>MinNumCall
         [KDE_onset.SelfBaAll] = kderate_onset(Data.SpikesArrivalTimes_Behav(IndBaPD),Data.Duration(IndBaPD),Delay,Bin_ms);
         [KDE_offset.SelfBaAll] = kderate_offset(Data.SpikesArrivalTimes_Behav(IndBaPD),Data.Duration(IndBaPD),Delay,Bin_ms);
     end
@@ -78,7 +78,7 @@ if ~isempty(IndVocHD) && ~isempty(IndVocHDO) && ~isempty(IndVocHDF)
 end
 
 %% KDE time-varying rate alligned to vocalization production onset/offset during Operant conditioning
-if ~isempty(IndVocPDO)
+if ~isempty(IndVocPDO) && length(IndVocPDO)>MinNumCall
     [KDE_onset.SelfVocOp] = kderate_onset(Data.SpikesArrivalTimes_Behav(IndVocPDO),Data.Duration(IndVocPDO),Delay,Bin_ms);
     [KDE_offset.SelfVocOp] = kderate_offset(Data.SpikesArrivalTimes_Behav(IndVocPDO),Data.Duration(IndVocPDO),Delay,Bin_ms);
     IndTrPDO = intersect(IndTr, IndVocPDO);
@@ -94,7 +94,7 @@ if ~isempty(IndVocPDO)
 end
 
 %% KDE time-varying rate alligned to vocalization perception onset/offset during operant conditioning
-if ~isempty(IndVocHDO)
+if ~isempty(IndVocHDO) && length(IndVocHDO)>MinNumCall
     [KDE_onset.OthersVocOp] = kderate_onset(Data.SpikesArrivalTimes_Behav(IndVocHDO),Data.Duration(IndVocHDO),Delay,Bin_ms);
     [KDE_offset.OthersVocOp] = kderate_offset(Data.SpikesArrivalTimes_Behav(IndVocHDO),Data.Duration(IndVocHDO),Delay,Bin_ms);
     IndTrHDO = intersect(IndTr, IndVocHDO);
@@ -110,7 +110,7 @@ if ~isempty(IndVocHDO)
 end
 
 %% KDE time-varying rate alligned to vocalization production onset/offset during Free session
-if ~isempty(IndVocPDF)
+if ~isempty(IndVocPDF) && length(IndVocPDF)>MinNumCall
     [KDE_onset.SelfVocFr] = kderate_onset(Data.SpikesArrivalTimes_Behav(IndVocPDF),Data.Duration(IndVocPDF),Delay,Bin_ms);
     [KDE_offset.SelfVocFr] = kderate_offset(Data.SpikesArrivalTimes_Behav(IndVocPDF),Data.Duration(IndVocPDF),Delay,Bin_ms);
     IndTrPDF = intersect(IndTr, IndVocPDF);
@@ -126,7 +126,7 @@ if ~isempty(IndVocPDF)
 end
 
 %% KDE time-varying rate alligned to vocalization perception onset/offset during Free session
-if ~isempty(IndVocHDF)
+if ~isempty(IndVocHDF) && length(IndVocHDF)>MinNumCall
     [KDE_onset.OthersVocFr] = kderate_onset(Data.SpikesArrivalTimes_Behav(IndVocHDF),Data.Duration(IndVocHDF),Delay,Bin_ms);
     [KDE_offset.OthersVocFr] = kderate_offset(Data.SpikesArrivalTimes_Behav(IndVocHDF),Data.Duration(IndVocHDF),Delay,Bin_ms);
     IndTrHDF = intersect(IndTr, IndVocHDF);
@@ -153,29 +153,44 @@ save(FullDataSetFile, 'KDE_onset','KDE_offset', '-append')
         % Find the number of events for each time window
         t=-Delay(1): Bin_ms : round((max(Duration) + Delay(2))/Bin_ms)*Bin_ms;
         Weight = zeros(1,length(t));
-        for vv=1:length(Duration)
+        Nevents = length(Duration);
+        for vv=1:Nevents
             t_local = -Delay(1): Bin_ms : (Duration(vv) + Delay(2));
             Weight(1:length(t_local))=Weight(1:length(t_local))+1;
         end
+        % Restrict the calculation to the time windows where there is at
+        % least 50% of the total number of events
+        IndStop = find(Weight<=(Nevents*0.5),1,'first');
+        t = t(1:IndStop);
+        Weight = Weight(1:IndStop);
+        
         % calculated KDE
-        AllSpikes_local = cell2mat(SpikesArrivalTimes);
+        AllSpikes_local = cell2mat(SpikesArrivalTimes');
         [Kde,T,Error] = kde_wrapper(AllSpikes_local,t,Response_samprate,Weight); % Calculate the kde in spike /ms
-        OUT = [Kde*10^3;T;Error*10^3];% save the kde in Hz (spike /s) and timeline in ms
+        OUT = [Kde.*10^3;T;Error.*10^3];% save the kde in Hz (spike /s) and timeline in ms
     end
 
     function [OUT] = kderate_offset(SpikesArrivalTimes,Duration,Delay, Bin_ms)
         Response_samprate = 1/Bin_ms;% Sampling rate of the KDE in kHz
         % Find the number of events for each time window and center spikes
         % to vocalization offset
-        t = -round((max(Duration) + Delay(2))/Bin_ms)*Bin_ms : Bin_ms : Delay(1);
+        t = -round((max(Duration) + Delay(1))/Bin_ms)*Bin_ms : Bin_ms : Delay(2);
         Weight = zeros(1,length(t));
-        for vv=1:length(Duration)
-            t_local = -(Duration(vv) + Delay(2)) : Bin_ms : Delay(1);
+        Nevents = length(Duration);
+        for vv=1:Nevents
+            t_local = -(Duration(vv) + Delay(1)) : Bin_ms : Delay(2);
             Weight((length(t)-length(t_local)+1):length(t))=Weight((length(t)-length(t_local)+1):length(t))+1;
             SpikesArrivalTimes{vv} = SpikesArrivalTimes{vv}-Duration(vv);
         end
+        
+        % Restrict the calculation to the time windows where there is at
+        % least 50% of the total number of events
+        IndStart = find(Weight<=Nevents*0.5,1,'last');
+        t = t(IndStart:end);
+        Weight = Weight(IndStart:end);
+        
         % calculated KDE
-        AllSpikes_local = cell2mat(SpikesArrivalTimes);
+        AllSpikes_local = cell2mat(SpikesArrivalTimes');
         [Kde,T,Error] = kde_wrapper(AllSpikes_local,t,Response_samprate,Weight); % Calculate the kde in spike /ms
         OUT = [Kde*10^3;T;Error*10^3];% save the kde in Hz (spike /s) and timeline in ms
     end
