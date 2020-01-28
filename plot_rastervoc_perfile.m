@@ -44,7 +44,11 @@ IndVocHDF = intersect(IndVocHD, IndVocF);
 if ~isempty(IndVocPD) && ~isempty(IndVocPDO) && ~isempty(IndVocPDF)
     Fig1 = figure();
     Color = [0 0.1 0].*contains(Data.What, 'Tr') + repmat([1 0.8 0.8], length(Data.What),1);
-    timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPD,Color);
+    if isfield(Data.KDE_onset,'SelfVocAll')
+        timerasterkde(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPD,Color,Data.KDE_onset.SelfVocAll,Data.KDE_offset.SelfVocAll,[1 0.45 0.4]);
+    else
+        timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPD,Color);
+    end
     suplabel(sprintf('CALLS FROM SUBJECT O and F   %s on %s Raster T%s SS%s %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{3},NeuralInputID{2}),'t');
     print(Fig1,fullfile(OutputPath,sprintf('%s_RasterVocSelf_%d.pdf', FileNameBase, Delay(1))),'-dpdf','-fillpage');
 end
@@ -53,7 +57,11 @@ end
 if ~isempty(IndVocHD) && ~isempty(IndVocHDO) && ~isempty(IndVocHDF)
     Fig2 = figure();
     Color = [0 0.1 0].*contains(Data.What, 'Tr') + repmat([0.8 0.8 1], length(Data.What),1);
-    timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocHD,Color)
+    if isfield(Data.KDE_onset, 'OthersVocAll')
+        timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocHD,Color, Data.KDE_onset.OthersVocAll,Data.KDE_offset.OthersVocAll,[0.4 0.45 1])
+    else
+        timerasterkde(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocHD,Color)
+    end
     suplabel(sprintf('CALLS FROM OTHERS O and F    %s on %s Raster T%s SS%s %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{3},NeuralInputID{2}),'t');
     print(Fig2,fullfile(OutputPath,sprintf('%s_RasterVocOthers_%d.pdf', FileNameBase, Delay(1))),'-dpdf','-fillpage')
 end
@@ -62,7 +70,11 @@ end
 if ~isempty(IndVocPDO)
     Fig6 = figure();
     Color = [0 0.1 0].*contains(Data.What, 'Tr') + repmat([1 0.8 0.8], length(Data.What),1);
-    timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPDO,Color)
+    if isfield(Data.KDE_onset, 'SelfVocOp')
+        timerasterkde(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPDO,Color,Data.KDE_onset.SelfVocOp,Data.KDE_offset.SelfVocOp,[1 0.45 0.4])
+    else
+        timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPDO,Color)
+    end
     suplabel(sprintf('CALLS FROM SUBJECT OPERANT   %s on %s Raster T%s SS%s %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{3},NeuralInputID{2}),'t');
     print(Fig6,fullfile(OutputPath,sprintf('%s_RasterVocSelfOp_%d.pdf', FileNameBase, Delay(1))),'-dpdf','-fillpage')
 end
@@ -71,7 +83,11 @@ end
 if ~isempty(IndVocHDO)
     Fig7 = figure();
     Color = [0 0.1 0].*contains(Data.What, 'Tr') + repmat([0.8 0.8 1], length(Data.What),1);
-    timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocHDO,Color)
+    if isfield(Data.KDE_onset,'OthersVocOp')
+        timerasterkde(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocHDO,Color,Data.KDE_onset.OthersVocOp,Data.KDE_offset.OthersVocOp,[0.4 0.45 1])
+    else
+        timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocHDO,Color)
+    end
     suplabel(sprintf('CALLS FROM OTHERS OPERANT    %s on %s Raster T%s SS%s %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{3},NeuralInputID{2}),'t');
     print(Fig7,fullfile(OutputPath,sprintf('%s_RasterVocOthersOp_%d.pdf', FileNameBase, Delay(1))),'-dpdf','-fillpage')
 end
@@ -80,7 +96,11 @@ end
 if ~isempty(IndVocPDF)
     Fig8 = figure();
     Color = [0 0.1 0].*contains(Data.What, 'Tr') + repmat([1 0.8 0.8], length(Data.What),1);
-    timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPDF,Color)
+    if isfield(Data.KDE_onset,'SelfVocFr')
+        timerasterkde(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPDF,Color,Data.KDE_onset.SelfVocFr,Data.KDE_offset.SelfVocFr,[1 0.45 0.4])
+    else
+        timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPDF,Color)
+    end
     suplabel(sprintf('CALLS FROM SUBJECT FREE SESSION    %s on %s Raster T%s SS%s %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{3},NeuralInputID{2}),'t');
     print(Fig8,fullfile(OutputPath,sprintf('%s_RasterVocSelfFr_%d.pdf', FileNameBase, Delay(1))),'-dpdf','-fillpage')
 end
@@ -89,7 +109,11 @@ end
 if ~isempty(IndVocHDF)
     Fig9 = figure();
     Color = [0 0.1 0].*contains(Data.What, 'Tr') + repmat([0.8 0.8 1], length(Data.What),1);
-    timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocHDF,Color)
+    if isfield(Data.KDE_onset,'OthersVocFr')
+        timerasterkde(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocHDF,Color, Data.KDE_onset.OthersVocFr,Data.KDE_offset.OthersVocFr,[0.4 0.45 1])
+    else
+        timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocHDF,Color)
+    end
     suplabel(sprintf('CALLS FROM OTHERS FREE SESSION    %s on %s Raster T%s SS%s %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{3},NeuralInputID{2}),'t');
     print(Fig9,fullfile(OutputPath,sprintf('%s_RasterVocOthersFr_%d.pdf', FileNameBase, Delay(1))),'-dpdf','-fillpage')
 end
@@ -202,6 +226,7 @@ end
         % We want to plot data with increasing duration of
         % vocalizations.
         [~,IDur] = sort(Duration(Indices));
+
         subplot(1,2,1)
 
         % First alligned to vocalization onset
@@ -226,7 +251,8 @@ end
         xlim(XLIM)
         ylabel('Vocalization renditions')
         hold off
-
+        
+        
         % then alligned to vocalization offset
         subplot(1,2,2)
 
@@ -251,6 +277,86 @@ end
         xlim(XLIM)
         ylabel('Vocalization renditions')
         hold off
+    end
+
+
+function timerasterkde(SpikesArrivalTimes,Duration,Delay,Indices, Color, Dat1, Dat2, Col1)
+        % We want to plot data with increasing duration of
+        % vocalizations.
+        [~,IDur] = sort(Duration(Indices));
+        subplot(4,2,[1 3 5])
+
+        % First alligned to vocalization onset
+        for oo=1:length(Indices)
+            cc=IDur(oo);
+            hold on
+            plot([0 Duration(Indices(cc))], oo-[0.5 0.5], '-','LineWidth',250/length(Indices),'Color', Color(Indices(cc),:)) % vocalization
+            Sat = SpikesArrivalTimes{Indices(cc)};
+            SpikeInd = find((Sat>-Delay(1)).*(Sat<(Duration(Indices(cc))+Delay(2))));
+            if ~isempty(SpikeInd)
+                Sat = Sat(SpikeInd);
+                for spike=1:length(Sat)
+                    hold on
+                    plot(Sat(spike)*ones(2,1), oo-[0.9 0.1], 'k-', 'LineWidth',2)
+                end
+            end
+            hold on
+        end
+        XLIM = [-Delay(1) max(Duration(Indices))+Delay(2)];
+        xlabel('Time centered at vocalization onset (ms)')
+        ylim([0 length(Indices)+1])
+        xlim(XLIM)
+        ylabel('Vocalization renditions')
+        hold off
+        
+        subplot(4,2,7)
+        plot(Dat1(2,:),Dat1(1,:),'-','Color',Col1,'LineWidth',2)
+        hold on
+        shadedErrorBar(Dat1(2,:),Dat1(1,:),Dat1(3:4,:),{'-','Color',Col1, 'LineWidth',2})
+        hold on
+        VL = vline(0,':k');
+        VL.LineWidth = 2;
+        hold off
+        xlim(XLIM)
+        xlabel('Time (ms)')
+        ylabel('Rate (Hz)')
+        
+        % then alligned to vocalization offset
+        subplot(4,2,[2 4 6])
+
+        for oo=1:length(Indices)
+            cc=IDur(oo);
+            hold on
+            plot([-Duration(Indices(cc)) 0], oo-[0.5 0.5], '-','LineWidth',250/length(Indices),'Color', Color(Indices(cc),:)) % vocalization
+            Sat = SpikesArrivalTimes{Indices(cc)};
+            SpikeInd = find((Sat>-Delay(1)).*(Sat<(Duration(Indices(cc))+Delay(2))));
+            if ~isempty(SpikeInd)
+                Sat = Sat(SpikeInd)- Duration(Indices(cc));
+                for spike=1:length(Sat)
+                    hold on
+                    plot(Sat(spike)*ones(2,1), oo-[0.9 0.1], 'k-', 'LineWidth',2)
+                end
+            end
+            hold on
+        end
+        XLIM = [-Delay(1)-max(Duration(Indices)) Delay(2)];
+        xlabel('Time centered at vocalization offset (ms)')
+        ylim([0 length(Indices)+1])
+        xlim(XLIM)
+        ylabel('Vocalization renditions')
+        hold off
+        
+        subplot(4,2,8)
+        plot(Dat2(2,:),Dat2(1,:),'-','Color',Col1,'LineWidth',2)
+        hold on
+        shadedErrorBar(Dat2(2,:),Dat2(1,:),Dat2(3:4,:),{'-','Color',Col1, 'LineWidth',2})
+        hold on
+        VL = vline(0,':k');
+        VL.LineWidth = 2;
+        hold off
+        xlim(XLIM)
+        xlabel('Time (ms)')
+        ylabel('Rate (Hz)')
     end
 
 
