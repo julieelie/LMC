@@ -69,11 +69,12 @@ for ff=1:length(DataDir)
     end
 end
 Duration = cell(1,NExpe); % Duration of the behavioral event in ms
-DelayBefore = cell(1,NExpe); % Duration of no behavioral event before the onset in ms if no event after, Delay ms is considered as the safest estimate of the silence time after
+DelayBefore = cell(1,NExpe); % Duration of no behavioral event before the onset in ms if no event after, Delay ms is considered as the safest estimate of the silence time before
 DelayAfter = cell(1,NExpe);% Duration of no behavioral event after the offset in ms if no event after, Delay ms is considered as the safest estimate of the silence time after
 VocWave = cell(1,NExpe);% Wave of the vocalization exactly extracted on Mic
 VocPiezoWave = cell(1,NExpe);% Wave of the vocalization exactly extracted on Piezo
 VocRank = cell(1,NExpe); % Rank of the call in the vocalization sequence
+RewardTime = cell(1,NExpe); % Time of the reward alligned to voc onset
 BioSound = cell(1,NExpe);%
 BSLDuration = cell(1,NExpe);% Duration of the baseline sequence
 SpikesArrivalTimes_Baseline = cell(1,NExpe); % Spike arrival time of the Baseline sequence
@@ -131,6 +132,7 @@ for ff=1:length(DataDir)
             VocWave{NExpe} = cell(1,VocCall);% Wave of the vocalization exactly extracted on Mic
             VocPiezoWave{NExpe} = cell(1,VocCall);% Wave of the vocalization exactly extracted on Piezo
             VocRank{NExpe} = cell(1,VocCall);% Rank of the vocal element in the sequence of vocalization as first last or middle
+            RewardTime{NExpe} = nan(1,VocCall); % time of the reward if call was rewarded
             BioSound{NExpe} = cell(2,VocCall);% Biosound of the microphone on row1, biosound of the piezo on line 2
             BSLDuration{NExpe} = nan(1,VocCall);% Duration of the baseline sequence
             SpikesArrivalTimes_Baseline{NExpe} = cell(1,VocCall); % Spike arrival time of the Baseline sequence
@@ -146,9 +148,18 @@ for ff=1:length(DataDir)
                     Ncall(vv) = length(IndVocStartRaw_merged{VocInd(vv)}{ll});
                     if Ncall(vv)
                         % Get the vector of all starts and stops of
-                        % vocalizations detected in that sequence
-                        AllStarts = cell2mat(IndVocStartRaw_merged{VocInd(vv)}');
-                        AllStops = cell2mat(IndVocStopRaw_merged{VocInd(vv)}');
+                        % vocalizations detected in that sequence and in
+                        % the previous or following sequence
+                        if vv==NV
+                            AllStarts = [cell2mat(IndVocStartRaw_merged{VocInd(vv)}') cell2mat(IndVocStartRaw_merged{VocInd(vv+1)}')];
+                        else
+                            AllStarts = cell2mat(IndVocStartRaw_merged{VocInd(vv)}');
+                        end
+                        if vv>1
+                            AllStops = cell2mat(IndVocStopRaw_merged{VocInd(vv)}');
+                        else
+                            AllStops = [cell2mat(IndVocStopRaw_merged{VocInd(vv)}') cell2mat(IndVocStopRaw_merged{VocInd(vv-1)}')];
+                        end
                         for nn=1:Ncall(vv)
                             VocCall = VocCall+1; % Increment the counter of vocalization events
                             % Save the vocalization Rank as first or last
@@ -195,8 +206,8 @@ for ff=1:length(DataDir)
                             
                             % Extract the sound of the microphone that
                             % correspond to the data
-                            IndOn = IndVocStartRaw_merged{VocInd(vv)}{ll}(nn) - DelayBefore{NExpe}(VocCall)*FS/1000;
-                            IndOff = IndVocStopRaw_merged{VocInd(vv)}{ll}(nn)+DelayAfter{NExpe}(VocCall)*FS/1000;
+                            IndOn = round(IndVocStartRaw_merged{VocInd(vv)}{ll}(nn) - DelayBefore{NExpe}(VocCall)*FS/1000);
+                            IndOff = round(IndVocStopRaw_merged{VocInd(vv)}{ll}(nn)+DelayAfter{NExpe}(VocCall)*FS/1000);
                             DurWave_local = length(Raw_wave{VocInd(vv)});
                             WL = Raw_wave{VocInd(vv)}(max(1,IndOn):min(DurWave_local, IndOff));
                             if IndOn<1
@@ -247,6 +258,9 @@ for ff=1:length(DataDir)
                                     SpikesArrivalTimes_Baseline{NExpe}{VocCall} = SpikesArrivalTimes_Baseline{NExpe}{VocCall-1};
                                 end
                             end
+                            % Save the reward time in ms after
+                            % centering them to the vocalization onset
+                            RewardTime{NExpe}(VocCall) = Neuro.Voc_NeuroSSU.ReTime(VocInd(vv))- IndVocStartRaw_merged{VocInd(VocInd(vv))}{ll}(nn)/FS*1000;
 
                             % Debug figure if requested
                             if Debug_Fig

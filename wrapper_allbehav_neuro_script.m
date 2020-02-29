@@ -7,27 +7,34 @@ addpath(genpath('/Users/elie/Documents/CODE/SoundAnalysisBats'))
 Path2RecordingTable = '/Users/elie/Google Drive/BatmanData/RecordingLogs/recording_logs.xlsx';
 
 %% RUN audio data extraction for the operant tests
-ListOfPaths = {
-    %'/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190130/HoHa_190130_1007_VocTrigger_param.txt';
-    %'/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190129/HoHa_190129_1023_VocTrigger_param.txt';
-    '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190120/HoHa_190120_1208_VocTrigger_param.txt';
-    '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190124/HoHa_190124_0957_VocTrigger_param.txt';
-    '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190202/HoHa_190202_1046_VocTrigger_param.txt';
-    '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190205/HoHa_190205_1140_VocTrigger_param.txt';
-    '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190206/HoHa_190206_1024_VocTrigger_param.txt';
-    '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190207/HoHa_190207_1136_VocTrigger_param.txt';
-    '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190208/HoHa_190208_1018_VocTrigger_param.txt';
-    % '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190211/HoHa_190211_1152_VocTrigger_param.txt';
-    '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190212/HoHa_190212_1033_VocTrigger_param.txt';
-    '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190213/HoHa_190213_1101_VocTrigger_param.txt';
-    '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190214/HoHa_190214_1130_VocTrigger_param.txt';
-    %'/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190119/HoHa_190119_1158_VocTrigger_param.txt';
-    %'/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190118/HoHa_190118_1027_VocTrigger_param.txt';
-    %'/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190117/HoHa_190117_1008_VocTrigger_param.txt';
-    %'/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190116/HoHa_190116_1126_VocTrigger_param.txt'
-    };
-for pp=1:length(ListOfPaths)
-    Path2ParamFile = ListOfPaths{pp};
+
+ListOfPaths = gather_operant_datapath(BasePath);
+
+% ListOfPaths = {
+%     %'/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190130/HoHa_190130_1007_VocTrigger_param.txt';
+%     %'/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190129/HoHa_190129_1023_VocTrigger_param.txt';
+%     '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190120/HoHa_190120_1208_VocTrigger_param.txt';
+%     '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190124/HoHa_190124_0957_VocTrigger_param.txt';
+%     '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190202/HoHa_190202_1046_VocTrigger_param.txt';
+%     '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190205/HoHa_190205_1140_VocTrigger_param.txt';
+%     '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190206/HoHa_190206_1024_VocTrigger_param.txt';
+%     '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190207/HoHa_190207_1136_VocTrigger_param.txt';
+%     '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190208/HoHa_190208_1018_VocTrigger_param.txt';
+%     % '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190211/HoHa_190211_1152_VocTrigger_param.txt';
+%     '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190212/HoHa_190212_1033_VocTrigger_param.txt';
+%     '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190213/HoHa_190213_1101_VocTrigger_param.txt';
+%     '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190214/HoHa_190214_1130_VocTrigger_param.txt';
+%     %'/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190119/HoHa_190119_1158_VocTrigger_param.txt';
+%     %'/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190118/HoHa_190118_1027_VocTrigger_param.txt';
+%     %'/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190117/HoHa_190117_1008_VocTrigger_param.txt';
+%     %'/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190116/HoHa_190116_1126_VocTrigger_param.txt'
+%     };
+% Path2Run = find(contains(ListOfPaths, 'CoEd'));
+Path2Run=52:65;
+for pp=1:length(Path2Run)
+    
+    Path2ParamFile = ListOfPaths{Path2Run(pp)};
+    fprintf(1,'\n\n\n\nRunning result_operant_bat on %s\n\n', Path2ParamFile)
     
     % Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190202/HoHa_190202_1046_VocTrigger_param.txt';
     % Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190131/HoHa_190131_1108_VocTrigger_param.txt';
@@ -53,11 +60,11 @@ for pp=1:length(ListOfPaths)
     % Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190212/HoHa_190212_1033_VocTrigger_param.txt';
     % Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190213/HoHa_190213_1101_VocTrigger_param.txt';
 %     Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190214/HoHa_190214_1130_VocTrigger_param.txt';
-    Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC/LMC_CoEd/audio/20190604/CoEd_190604_1200_VocTrigger_param.txt'; % Needs to point to a reconly param files
-    Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC/LMC_CoEd/audio/20190610/CoEd_190610_0953_VocTrigger_param.txt';
-    Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC/LMC_CoEd/audio/20190607/CoEd_190607_0827_VocTrigger_param.txt';
-
-    
+%     Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC/LMC_CoEd/audio/20190604/CoEd_190604_1200_VocTrigger_param.txt'; % Needs to point to a reconly param files
+%     Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC/LMC_CoEd/audio/20190610/CoEd_190610_0953_VocTrigger_param.txt';
+%     Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC/LMC_CoEd/audio/20190607/CoEd_190607_0827_VocTrigger_param.txt';
+%     Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC/LMC_CoEd/audio/20190612/CoEd_190612_1030_VocTrigger_param.txt';
+%     
      result_operant_bat(Path2ParamFile)
     
 end
@@ -71,9 +78,10 @@ result_reconly_bat(Path2ParamFile)
 
 %% Generate the list of paths to gather the data
 BasePath = '/Volumes/server_home/users/JulieE/LMC';
+OutputPath = '/Users/elie/Documents/LMCResults';
 [ListSSU] = gather_neural_datapath(BasePath);
 % Define the path were the data will be saved
-OutputPath = fullfile(BasePath, 'ResultsFiles');
+% OutputPath = fullfile(BasePath, 'ResultsFiles');
 
 %% Sanitary check of neurons
 % ( calculate the average spike rate over the...
@@ -82,7 +90,7 @@ OutputPath = fullfile(BasePath, 'ResultsFiles');
 fprintf('NEURONS SANITARY CHECK.... ')
 % Files2Run = 1:length(ListSSU);
 % Files2Run = [1:29 87:108];
- Files2Run = 1:22;
+ Files2Run=400:417;
 for ss=Files2Run
     fprintf(1,'File %d/%d\n',ss,length(Files2Run))
     sanitary_check_perSSfile(ListSSU{ss}, OutputPath)
@@ -159,40 +167,59 @@ fprintf(' DONE \n')
 fprintf(' CALCULATING SPIKE RATE CORRESPONDING TO ALL BEHAVIORS.... ')
 
 for ss=1:length(GoodCellIndices)
-    fprintf(1,'File %d/%d\n',ss,length(Files2Run))
+    fprintf(1,'File %d/%d\n',ss,length(GoodCellIndices))
     cal_spikerate_perfile(ListSSU{Files2Run(GoodCellIndices(ss))},OutputPath)
 end
 fprintf(' DONE \n')
 % Data for each unit and all experimental session are appended to: sprintf('%s_%s_SS%s_%s-%s.mat', SubjectID, Date,SSQ,TetrodeID,SSID) 
+%% calculate the KDE SPIKE RATE of vocalizations
+fprintf(1,' CALCULATING KDE OF THE TIME-VARYING SPIKE RATE CORRESPONDING TO VOCALIZATIONS\n');
+Delay = [5000 5000];
+for ss=1:length(GoodCellIndices)
+    fprintf(1,'File %d/%d\n',ss,length(GoodCellIndices))
+    cal_kderatevoc_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath,Delay)
+end
+fprintf(' DONE \n')
 %% Plot the average spike rate during various types of behaviors including vocalizations
 fprintf(' PLOTING NEURAL DATA (Av RATE) CORRESPONDING TO ALL BEHAVIORS.... ')
 
 for ss=1:length(GoodCellIndices)
-    fprintf(1,'File %d/%d\n',ss,length(Files2Run))
+    fprintf(1,'File %d/%d\n',ss,length(GoodCellIndices))
     plot_av_spikerate_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath)
 end
 fprintf(' DONE \n')
 % The plot is saved under OutputPath as sprintf('%s_%s_%s_SS%s_%s-%s_MeanRateScatter.pdf', SubjectID, SSQ,TetrodeID,SSID))
 %% Plot rasters for vocalizations
-fprintf(1,' RASTER PLOTS of NEURAL DATA CORRESPONDING TO VOCALIZATIONS\n');
-Delay = [5000 200];
+fprintf(1,' RASTER PLOTS (AND KDE) of NEURAL DATA CORRESPONDING TO VOCALIZATIONS\n');
+Delay = [200 200];
 PlotDyn = 0; %Set to 1 to plot dnamic plots
 for ss=1:length(GoodCellIndices)
+    fprintf(1,'File %d/%d\n',ss,length(GoodCellIndices))
     plot_rastervoc_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath, Delay, PlotDyn)
     close all
 end
 fprintf(' DONE \n')
-%% calculate the KDE SPIKE RATE of vocalizations
-fprintf(1,' CALCULATING KDE OF THE TIME-VARYING SPIKE RATE CORRESPONDING TO VOCALIZATIONS\n');
+
+%% Plot the time varying rate of vocalizations
+fprintf(1,' PLOTING KDE OF THE TIME-VARYING SPIKE RATE CORRESPONDING TO VOCALIZATIONS\n');
 
 for ss=1:length(GoodCellIndices)
-    cal_kderatevoc_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath)
+    fprintf(1,'File %d/%d\n',ss,length(GoodCellIndices))
+    plot_kderatevoc_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath, Delay)
 end
+fprintf(' DONE \n')
+
+    
 
 
 
 
-    %% Get the path to audio data for operant conditioning experiment
+
+
+
+
+
+%% Get the path to audio data for operant conditioning experiment
     [AudioDataPath, DataFile ,~]=fileparts(Path2ParamFile);
     Date = DataFile(6:11);
     fprintf(1,'Working on %s\n', Date)
@@ -371,4 +398,26 @@ for ee=1:length(ExpFolders)
 end
 ListSSU = ListSSU(1:NSSU);
 fprintf(1, '\n Files from %d single units have been retrieved\n', NSSU);
+end
+
+
+function [List2ParamPath] = gather_operant_datapath(BasePath)
+fprintf(1,'*** Gathering paths to audio operant data ***')
+List2ParamPath = cell(10^3,1); % initialize the list to 1000
+ExpFolders = dir(fullfile(BasePath,'LMC*'));
+NF = 0; % counter for single files
+for ee=1:length(ExpFolders)
+    fprintf(1, '\n  -> Looking into  %s...\n ', fullfile(ExpFolders(ee).folder,ExpFolders(ee).name))
+    DateFolders = dir(fullfile(ExpFolders(ee).folder,ExpFolders(ee).name, 'audio','20*'));
+    for dd=1:length(DateFolders)
+        fprintf(1, '   %s\n', DateFolders(dd).name);
+        AudioParamFiles = dir(fullfile(DateFolders(dd).folder, DateFolders(dd).name,'*VocTrigger_param.txt'));
+        for ll = 1:length(AudioParamFiles)
+            NF = NF +1;
+            List2ParamPath{NF} = fullfile(AudioParamFiles(ll).folder, AudioParamFiles(ll).name);
+        end
+    end
+end
+List2ParamPath = List2ParamPath(1:NF);
+fprintf(1, '\n Files from %d sessions or operant conditioning have been retrieved\n', NF);
 end

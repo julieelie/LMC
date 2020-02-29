@@ -57,7 +57,7 @@ if nargin<6
 end
 MaxEventDur = NaN; % Set to NaN: The neural data is extracted for the whole duration of each event
 BaselineDur = 1000; % Duration of the baseline section in ms that is seeked at least BaselineDelay ms before sound onset
-BaselineDelay = 1000;
+BaselineDelay = 5000;
 
 %% Identify the neural data and run the corresponding extraction
 [Path2Data, DataFile]=fileparts(InputDataFile);
@@ -179,18 +179,19 @@ elseif contains(DataFile,'SS')
     for nn=1:Nsession
         Idx_2 = strfind(AudioDir(nn).name, '_');
         ExpStartTimes{nn} = AudioDir(nn).name((Idx_2(1)+1) : (Idx_2(2)-1));
-        load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date(3:end), ExpStartTimes{nn})), 'Voc_transc_time_refined');
+        load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date(3:end), ExpStartTimes{nn})), 'Voc_transc_time_refined','Re_transc_time');
         AudioDir2 = dir(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_*.mat', Date(3:end), ExpStartTimes{nn}))); % These are the results of vocalization identificaion and merging with Who calls for this session
         Idx_3 = strfind(AudioDir2.name, '_');
         Idxmat = strfind(AudioDir2.name, '.mat');
         if isempty(NeuroBuffer)
             NeuroBuffer = str2double(AudioDir2.name((Idx_3(end)+1):(Idxmat-1))); % This is the merged threshold used in the extracted vocalization data in ms we want to use the same value as the neural buffer
         end
-        % Find the boundaries for obtaining silence sections of 1 second before 1s of each vocalization event
+        % Find the boundaries for obtaining silence sections of BaselineDur second before BaselineDelay s of each vocalization event
         BSL_transc_time_refined = find_dead_time(Voc_transc_time_refined,BaselineDelay,BaselineDur);
         % Extract Spike data
-        [Voc_NeuroSSU] = extract_timeslot_SSU(InputDataFile, Voc_transc_time_refined, BSL_transc_time_refined, NeuroBuffer,MaxEventDur,Inf);
+        [Voc_NeuroSSU] = extract_timeslot_SSU(InputDataFile, Voc_transc_time_refined, BSL_transc_time_refined,Re_transc_time, NeuroBuffer,MaxEventDur,Inf);
         Voc_NeuroSSU.BSL_transc_time_refined = BSL_transc_time_refined;
+        
         OutputFile = fullfile(OutputPath, sprintf('%s_%s_%s_SS%s_%s-%s.mat', SubjectID, Date, ExpStartTimes{nn},NeuralInputID{3},NeuralInputID{1},NeuralInputID{2}));
         if exist(OutputFile, 'file')
             save(OutputFile, 'Voc_NeuroSSU','-append');
@@ -217,7 +218,7 @@ end
             else
                 if PotentialOnset>InputTime(ee-1,2) % all good to go
                     DeadTimes(ee,:) = PotentialOnset + [0 Duration];
-                else %take at least one second after previous event offset and up to one second before current event onset
+                else %take at least Delay second after previous event offset and up to Delay second before current event onset
                     DeadTimes(ee,1) = InputTime(ee-1,2) + Delay;
                     DeadTimes(ee,2) = InputTime(ee,1) - Delay;
                     if diff(DeadTimes(ee,:))<0 % No baseline available here!
@@ -341,7 +342,7 @@ end
 
 
 % Extracting spike sorted unit data
-    function [OutData] = extract_timeslot_SSU(InputFile, Voc_transc_time, BSL_transc_time, Buffer,MaxEventDur,DeadTime_usec)
+    function [OutData] = extract_timeslot_SSU(InputFile, Voc_transc_time, BSL_transc_time,Re_transc_time, Buffer,MaxEventDur,DeadTime_usec)
         % Don't extract data for events that happened after the DeadTime of
         % the unit
         VocIdxSSUAlive = find(sum(Voc_transc_time<(DeadTime_usec.*10^-3),2)==2);
@@ -349,6 +350,7 @@ end
         OutData.VocIdxSSUAlive = VocIdxSSUAlive;
         OutData.SpikeSUVoc = cell(Nevent,1);
         OutData.SpikeSUBSL = cell(Nevent,1);
+        OutData.ReTime = nan(Nevent,1);
         % reframe the extraction windows of each vocalization
         [EventOnset_time ,EventOffset_time] = reframe(Voc_transc_time, Buffer, MaxEventDur);
         % loading the single unit spike arrival times
@@ -361,6 +363,11 @@ end
             % behavioral event, save in ms
             OutData.SpikeSUVoc{vv} = Spikes.Spike_arrival_times(logical((Spikes.Spike_arrival_times>(EventOnset_time(ii)*10^3)) .* (Spikes.Spike_arrival_times<(EventOffset_time(ii)*10^3))))/10^3 - Voc_transc_time(ii,1);
             OutData.SpikeSUBSL{vv} = Spikes.Spike_arrival_times(logical((Spikes.Spike_arrival_times>(BSL_transc_time(ii,1)*10^3)) .* (Spikes.Spike_arrival_times<(BSL_transc_time(ii,2)*10^3))))/10^3 - Voc_transc_time(ii,1);
+            if vv<Nevent
+                OutData.ReTime(vv) = Re_transc_time(logical(Re_transc_time>EventOnset_time(ii) .* Re_transc_time<EventOnset_time(ii+1)))- Voc_transc_time(ii,1);
+            else
+                OutData.ReTime(vv) = Re_transc_time(find(Re_transc_time>(EventOnset_time(ii)*10^3),1))- Voc_transc_time(ii,1);
+            end
         end
     end
 

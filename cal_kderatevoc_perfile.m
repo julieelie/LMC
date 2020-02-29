@@ -3,7 +3,7 @@ function cal_kderatevoc_perfile(InputDataFile,OutputPath, Delay)
 if nargin<3
     Delay=[3000 200];% in ms
 end
-MinNumCall =10; % Minimum number of events (vocalizations) to calculate a PSTH
+MinNumCall =8; % Minimum number of events (vocalizations) to calculate a PSTH
 Bin_ms = 1; % size of the KDE binning in ms
 %Response_samprate = 1/Bin_ms;% Sampling rate of the KDE in kHz
 

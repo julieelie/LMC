@@ -330,9 +330,9 @@ if ~isempty(DeadCell_Idx)
     DeadCell_Idx = unique(reshape(repmat(DeadCell_Idx',1,DurDead) + repmat(0:(DurDead-1),length(DeadCell_Idx),1), length(DeadCell_Idx)*DurDead,1));
     % plot these unstable data points
     if ~isempty(TetrodeFile)
-        SS1=subplot(5,4,1:4);
+        SS1=subplot(6,4,1:4);
     else
-        SS1 = subplot(4,4,1:4);
+        SS1 = subplot(5,4,1:4);
     end
     hold on
     plot((TimePoints(DeadCell_Idx+1)-TimeStep/2)/60, KDE(DeadCell_Idx), 'r+')
