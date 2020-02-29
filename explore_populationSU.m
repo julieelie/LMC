@@ -1,18 +1,62 @@
 % Path 2 Data
-Path2AllData = '/Volumes/server_home/users/JulieE/LMC_HoHa/logger/';
+Path2AllData = '/Volumes/Julie4T/Results';
 addpath(genpath('/Users/elie/Documents/CODE/GeneralCode'))
 ADBitVolts_sorting=500/32767; %Conversion value used in mat2ntt for proper ploting under spikesort3D in AD count
 % Let's find the date of interest in the Google sheet
-Path2RecordingTable = '/Users/elie/Google Drive/BatmanData/RecordingLogs/recording_logs.xlsx';
-[~,~,RecTableData]=xlsread(Path2RecordingTable,1,'A1:AF200','basic');
-Header = RecTableData(1,:);
-ND_IDCol = find(contains(Header, 'Neural data voc in operant + PSTH'));
-BatIDCol = find(contains(Header, 'Bat'));
-NLCol = find(contains(Header, 'NL'));
-Dates_Ind = find(cell2mat(RecTableData(2:end,ND_IDCol))==1)+1;
-Dates = cell2mat(RecTableData(Dates_Ind,1));
+% Path2RecordingTable = '/Users/elie/Google Drive/BatmanData/RecordingLogs/recording_logs.xlsx';
+% [~,~,RecTableData]=xlsread(Path2RecordingTable,1,'A1:AF200','basic');
+% Header = RecTableData(1,:);
+% ND_IDCol = find(contains(Header, 'Neural data voc in operant + PSTH'));
+% BatIDCol = find(contains(Header, 'Bat'));
+% NLCol = find(contains(Header, 'NL'));
+% Dates_Ind = find(cell2mat(RecTableData(2:end,ND_IDCol))==1)+1;
+% Dates = cell2mat(RecTableData(Dates_Ind,1));
 ThreshSig=50;
-%% Loop through dates and gather data
+%% Loop through spike sorting units and evaluate quality
+SubjectID = '59834';
+ListSSU = dir(fullfile(Path2AllData, sprintf('%s*.mat',SubjectID)));
+NU = length(ListSSU);
+% get rid fo files that corresponds to individual experiments
+Data2Keep = nan(1,NU);
+for ss=1:NU
+    Data2Keep(ss) = length(strfind(ListSSU(ss).name, '_'))==3;
+end
+ListSSU = ListSSU(find(Data2Keep));
+NU = length(ListSSU);
+
+SSQ = cell(NU,1);
+SNR = nan(NU,1);
+ContamInd = nan(NU,1);
+ISIViolation = nan(NU,1);
+for ss=1:NU
+    fprintf(1,'File %d/%d\n',ss,NU)
+    [~,FileName] = fileparts(ListSSU(ss).name);
+    Ind_ = strfind(FileName,'_');
+    SubjectID = FileName(1:5);
+    Date = FileName(7:14);
+    TetrodeID = FileName(Ind_(3)+1);
+    SSQ = FileName(Ind_(3)-1);
+    Ind__ = strfind(FileName,'-');
+    SSID = FileName(Ind__:end);
+    Data=load(fullfile(ListSSU(ss).folder,ListSSU(ss).name));
+    SNR(ss) = max(Data.QualitySSU.SNR);
+    ContamInd(ss) = Data.QualitySSU.ContamInd;
+    ISIViolation(ss) = Data.ISIViolation;
+    if (SNR(ss)>=6) && (ISIViolation(ss)<=0.1) && (ContamInd(ss)<=0.2)
+        SSQ{ss} = 'SSSU';
+    elseif (SNR(ss)>=2)
+        SSQ{ss} = 'SSMU';
+    else
+        SSQ{ss} = 'NOISE';
+    end
+end
+
+
+
+GoodCellIndices = find(contains(SSQ_Files2Run, 'SS'));
+
+
+
 % For each day, each logger, each unit find the average spike rate
 PLOT=1;
 MeanSR4Calulations = 1; % Values in Hz of the mean SR for doing calculations
