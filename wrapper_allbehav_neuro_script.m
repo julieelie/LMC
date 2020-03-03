@@ -30,7 +30,7 @@ ListOfPaths = gather_operant_datapath(BasePath);
 %     %'/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190116/HoHa_190116_1126_VocTrigger_param.txt'
 %     };
 % Path2Run = find(contains(ListOfPaths, 'CoEd'));
-Path2Run=52:65;
+Path2Run=55:62;
 for pp=1:length(Path2Run)
     
     Path2ParamFile = ListOfPaths{Path2Run(pp)};
