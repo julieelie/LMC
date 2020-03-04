@@ -35,18 +35,20 @@ if isfield(KDE_onset, 'OthersVocAll') && isfield(KDE_onset,'SelfVocAll')
 end
 
 %% KDE Trill vs Ba from self from all sessions
-BaCol = [0.9290, 0.6940, 0.1250];
+TrCol = [0.9290, 0.6940, 0.1250];
+BaCol = [1, 0, 0];
 if isfield(KDE_onset, 'SelfTrAll') && isfield(KDE_onset,'SelfBaAll')
-    Fig1 = kdeplot1v1(KDE_onset.SelfTrAll,KDE_onset.SelfBaAll,KDE_offset.SelfTrAll,KDE_offset.SelfBaAll,[1 0 0],BaCol,'Trill','Ba');
+    Fig1 = kdeplot1v1(KDE_onset.SelfTrAll,KDE_onset.SelfBaAll,KDE_offset.SelfTrAll,KDE_offset.SelfBaAll,TrCol,BaCol,'Trill','Ba');
     suplabel('Self vocalizations all sessions','t');
     orient(Fig1,'landscape')
     print(Fig1,fullfile(OutputPath,sprintf('%s_KDESelfVoc_AllSession_%d_%d.pdf', FileNameBase, Delay(1),Delay(2))),'-dpdf','-fillpage')
 end
 
 %% KDE Trill vs Ba from self from operant sessions
-BaCol = [0.9290, 0.6940, 0.1250];
+TrCol = [0.9290, 0.6940, 0.1250];
+BaCol = [1, 0, 0];
 if isfield(KDE_onset, 'SelfTrOp') && isfield(KDE_onset,'SelfBaOp')
-    Fig1 = kdeplot1v1(KDE_onset.SelfTrOp,KDE_onset.SelfBaOp,KDE_offset.SelfTrOp,KDE_offset.SelfBaOp,[1 0 0],BaCol,'Trill','Ba');
+    Fig1 = kdeplot1v1(KDE_onset.SelfTrOp,KDE_onset.SelfBaOp,KDE_offset.SelfTrOp,KDE_offset.SelfBaOp,TrCol,BaCol,'Trill','Ba');
     suplabel('Self vocalizations operant session','t');
     orient(Fig1,'landscape')
     print(Fig1,fullfile(OutputPath,sprintf('%s_KDESelfVoc_OpSession_%d_%d.pdf', FileNameBase, Delay(1),Delay(2))),'-dpdf','-fillpage')
@@ -64,8 +66,9 @@ end
 
 %% KDE Self Trills between operant and free
 ColTrFr = [0.75, 0.75, 0];
+TrCol = [0.9290, 0.6940, 0.1250];
 if isfield(KDE_onset, 'SelfTrOp') && isfield(KDE_onset,'SelfTrFr')
-    Fig1 = kdeplot1v1(KDE_onset.SelfTrOp,KDE_onset.SelfTrFr,KDE_offset.SelfTrOp,KDE_offset.SelfTrFr,[1 0 0],ColTrFr,'Operant','Free session');
+    Fig1 = kdeplot1v1(KDE_onset.SelfTrOp,KDE_onset.SelfTrFr,KDE_offset.SelfTrOp,KDE_offset.SelfTrFr,TrCol,ColTrFr,'Operant','Free session');
     suplabel('Self Trills all sessions','t');
     orient(Fig1,'landscape')
     print(Fig1,fullfile(OutputPath,sprintf('%s_KDESelfTr_OpvsFr_%d_%d.pdf', FileNameBase, Delay(1),Delay(2))),'-dpdf','-fillpage')
