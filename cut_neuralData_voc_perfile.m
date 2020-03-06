@@ -67,6 +67,8 @@ if nargin<2 || isempty(OutputPath)
     OutputPath = Loggers_dir;
 end
 
+
+
 if contains(DataFile, 'Tetrode')
     % this is a tetrode file
     % Get the date of the recording
@@ -93,10 +95,14 @@ if contains(DataFile, 'Tetrode')
         if isempty(NeuroBuffer)
             NeuroBuffer = str2double(AudioDir2.name((Idx_3+1):(Idxmat-1))); % This is the merged threshold used in the extracted vocalization data in ms we want to use the same value as the neural buffer
         end
+        
+        % Make sure to re-order values in chronological order
+        [~,SortInd] = sort(Voc_transc_time_refined(:,1));
+        
         % Find the boundaries for obtaining silence sections of 1 second before 1s of each vocalization event
-        BSL_transc_time_refined = find_dead_time(Voc_transc_time_refined,BaselineDelay,BaselineDur);
+        BSL_transc_time_refined = find_dead_time(Voc_transc_time_refined(SortInd),BaselineDelay,BaselineDur);
         % extract Tetrode data
-        [Voc_NeuroT] = extract_timeslot_Tetrode(InputDataFile, Voc_transc_time_refined, BSL_transc_time_refined, NeuroBuffer,MaxEventDur, DenoiseT, Rthreshold, SubjectID, Date, NeuralInputID);
+        [Voc_NeuroT] = extract_timeslot_Tetrode(InputDataFile, Voc_transc_time_refined(SortInd), BSL_transc_time_refined, NeuroBuffer,MaxEventDur, DenoiseT, Rthreshold, SubjectID, Date, NeuralInputID);
         OutputFile = fullfile(OutputPath, sprintf('%s_%s_%s_Tet%s.mat', SubjectID, Date, ExpStartTimes{nn},NeuralInputID));
         if exist(OutputFile, 'file')
             save(OutputFile, 'Voc_NeuroT','-append');
@@ -131,10 +137,14 @@ elseif contains(DataFile, 'CSC')
         if isempty(NeuroBuffer)
             NeuroBuffer = str2double(AudioDir2.name((Idx_3+1):(Idxmat-1))); % This is the merged threshold used in the extracted vocalization data in ms we want to use the same value as the neural buffer
         end
-        % Find the boundaries for obtaining silence sections of 1 second before 1s of each vocalization event
-        BSL_transc_time_refined = find_dead_time(Voc_transc_time_refined,BaselineDelay,BaselineDur);
         
-        [Voc_NeuroRaw, Voc_NeuroLFP] = extract_timeslot_RawLFP(InputDataFile, Voc_transc_time_refined, BSL_transc_time_refined, NeuroBuffer,MaxEventDur,NeuralInputID, Flags);
+        % Make sure to re-order values in chronological order
+        [~,SortInd] = sort(Voc_transc_time_refined(:,1));
+        
+        % Find the boundaries for obtaining silence sections of 1 second before 1s of each vocalization event
+        BSL_transc_time_refined = find_dead_time(Voc_transc_time_refined(SortInd),BaselineDelay,BaselineDur);
+        
+        [Voc_NeuroRaw, Voc_NeuroLFP] = extract_timeslot_RawLFP(InputDataFile, Voc_transc_time_refined(SortInd), BSL_transc_time_refined, NeuroBuffer,MaxEventDur,NeuralInputID, Flags);
         if Flags(1)
             OutputFile = fullfile(OutputPath, sprintf('%s_%s_%s_Raw%s.mat', SubjectID, Date, ExpStartTimes{nn},NeuralInputID));
             if exist(OutputFile, 'file')
@@ -157,6 +167,7 @@ elseif contains(DataFile,'SS')
     % Get the date of the recording
     Idx_ = strfind(DataFile, '_');
     Date = DataFile((Idx_(1)+1) : (Idx_(2)-1));
+    AudioDataPath = ['/' fullfile(PathParts{1:end-4}, 'audio',Date)];
     
     % Get the tetrode ID
     NeuralInputID{1} = DataFile(strfind(DataFile, 'TT')+2);
@@ -179,18 +190,25 @@ elseif contains(DataFile,'SS')
     for nn=1:Nsession
         Idx_2 = strfind(AudioDir(nn).name, '_');
         ExpStartTimes{nn} = AudioDir(nn).name((Idx_2(1)+1) : (Idx_2(2)-1));
-        load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date(3:end), ExpStartTimes{nn})), 'Voc_transc_time_refined','Re_transc_time');
+        load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date(3:end), ExpStartTimes{nn})), 'Voc_transc_time_refined');
+        load(fullfile(AudioDataPath, sprintf('%s_%s_VocExtractTimes.mat', Date(3:end), ExpStartTimes{nn})),'Re_transc_time');
+        if ~exist('Re_transc_time','var')
+            Re_transc_time = nan(size(Voc_transc_time_refined,1),1);
+        end
         AudioDir2 = dir(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_*.mat', Date(3:end), ExpStartTimes{nn}))); % These are the results of vocalization identificaion and merging with Who calls for this session
         Idx_3 = strfind(AudioDir2.name, '_');
         Idxmat = strfind(AudioDir2.name, '.mat');
         if isempty(NeuroBuffer)
             NeuroBuffer = str2double(AudioDir2.name((Idx_3(end)+1):(Idxmat-1))); % This is the merged threshold used in the extracted vocalization data in ms we want to use the same value as the neural buffer
         end
+        % Make sure to re-order values in chronological order
+        [~,SortInd] = sort(Voc_transc_time_refined(:,1));
         % Find the boundaries for obtaining silence sections of BaselineDur second before BaselineDelay s of each vocalization event
-        BSL_transc_time_refined = find_dead_time(Voc_transc_time_refined,BaselineDelay,BaselineDur);
+        BSL_transc_time_refined = find_dead_time(Voc_transc_time_refined(SortInd,:),BaselineDelay,BaselineDur);
         % Extract Spike data
-        [Voc_NeuroSSU] = extract_timeslot_SSU(InputDataFile, Voc_transc_time_refined, BSL_transc_time_refined,Re_transc_time, NeuroBuffer,MaxEventDur,Inf);
+        [Voc_NeuroSSU] = extract_timeslot_SSU(InputDataFile, Voc_transc_time_refined(SortInd,:), BSL_transc_time_refined,Re_transc_time(SortInd), NeuroBuffer,MaxEventDur,Inf);
         Voc_NeuroSSU.BSL_transc_time_refined = BSL_transc_time_refined;
+        Voc_NeuroSSU.SortInd=SortInd;
         
         OutputFile = fullfile(OutputPath, sprintf('%s_%s_%s_SS%s_%s-%s.mat', SubjectID, Date, ExpStartTimes{nn},NeuralInputID{3},NeuralInputID{1},NeuralInputID{2}));
         if exist(OutputFile, 'file')
@@ -198,6 +216,7 @@ elseif contains(DataFile,'SS')
         else
             save(OutputFile, 'Voc_NeuroSSU');
         end
+        clear Re_transc_time
     end
 end
 
@@ -211,18 +230,22 @@ end
         % Duration: how long should be the baseline extract in ms
         NEvent = size(InputTime,1);
         DeadTimes = nan(size(InputTime));
+        [~, IndSort] = sort(InputTime(:,1));
+        SortInputTime = InputTime(IndSort,:);
         for ee=1:NEvent
-            PotentialOnset = InputTime(ee,1)-Duration-Delay;
+            PotentialOnset = SortInputTime(ee,1)-Duration-Delay;
             if ee==1 % Nothing to fear before
-                DeadTimes(ee,:) = PotentialOnset + [0 Duration];
+                DeadTimes(IndSort(ee),:) = PotentialOnset + [0 Duration];
             else
-                if PotentialOnset>InputTime(ee-1,2) % all good to go
-                    DeadTimes(ee,:) = PotentialOnset + [0 Duration];
-                else %take at least Delay second after previous event offset and up to Delay second before current event onset
-                    DeadTimes(ee,1) = InputTime(ee-1,2) + Delay;
-                    DeadTimes(ee,2) = InputTime(ee,1) - Delay;
-                    if diff(DeadTimes(ee,:))<0 % No baseline available here!
-                        DeadTimes(ee,:) = nan(1,2);
+                if PotentialOnset>SortInputTime(ee-1,2) % all good to go
+                    DeadTimes(IndSort(ee),:) = PotentialOnset + [0 Duration];
+                elseif ((SortInputTime(ee,1)>SortInputTime(ee-1,1) && SortInputTime(ee,1)<SortInputTime(ee-1,2)) || (SortInputTime(ee,2)>SortInputTime(ee-1,1) && SortInputTime(ee,2)<SortInputTime(ee-1,2))) && ((PotentialOnset + Duration)<(SortInputTime(ee-1,1)+Delay)) % These extracts largely overlap, and the background is taken before the onset so good!  
+                    DeadTimes(IndSort(ee),:) = PotentialOnset + [0 Duration];
+                else%take at least Delay second after previous event offset and up to Delay second before current event onset
+                    DeadTimes(IndSort(ee),1) = SortInputTime(ee-1,2) + Delay;
+                    DeadTimes(IndSort(ee),2) = SortInputTime(ee,1) - Delay;
+                    if diff(DeadTimes(IndSort(ee),:))<0 % No baseline available here!
+                        DeadTimes(IndSort(ee),:) = nan(1,2);
                     end
                     
                 end
@@ -364,9 +387,15 @@ end
             OutData.SpikeSUVoc{vv} = Spikes.Spike_arrival_times(logical((Spikes.Spike_arrival_times>(EventOnset_time(ii)*10^3)) .* (Spikes.Spike_arrival_times<(EventOffset_time(ii)*10^3))))/10^3 - Voc_transc_time(ii,1);
             OutData.SpikeSUBSL{vv} = Spikes.Spike_arrival_times(logical((Spikes.Spike_arrival_times>(BSL_transc_time(ii,1)*10^3)) .* (Spikes.Spike_arrival_times<(BSL_transc_time(ii,2)*10^3))))/10^3 - Voc_transc_time(ii,1);
             if vv<Nevent
-                OutData.ReTime(vv) = Re_transc_time(logical(Re_transc_time>EventOnset_time(ii) .* Re_transc_time<EventOnset_time(ii+1)))- Voc_transc_time(ii,1);
+                vv_timecheck = find(logical((Re_transc_time>Voc_transc_time(ii,1)) .* (Re_transc_time<Voc_transc_time(ii+1,1))));
             else
-                OutData.ReTime(vv) = Re_transc_time(find(Re_transc_time>(EventOnset_time(ii)*10^3),1))- Voc_transc_time(ii,1);
+                vv_timecheck = find(Re_transc_time>(Voc_transc_time(ii,1)),1);
+            end
+            if vv ~= vv_timecheck
+                warning('Discrepancy between the guessed reward time given the vocalization onset times and the order in which they are in Re_transc_time\n')
+                keyboard
+            else
+                OutData.ReTime(vv) = Re_transc_time(vv) - Voc_transc_time(ii,1);
             end
         end
     end

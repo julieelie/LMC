@@ -7,7 +7,7 @@ addpath(genpath('/Users/elie/Documents/CODE/SoundAnalysisBats'))
 Path2RecordingTable = '/Users/elie/Google Drive/BatmanData/RecordingLogs/recording_logs.xlsx';
 
 %% RUN audio data extraction for the operant tests
-
+BasePath = '/Volumes/server_home/users/JulieE/LMC';
 ListOfPaths = gather_operant_datapath(BasePath);
 
 % ListOfPaths = {
@@ -29,8 +29,18 @@ ListOfPaths = gather_operant_datapath(BasePath);
 %     %'/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190117/HoHa_190117_1008_VocTrigger_param.txt';
 %     %'/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190116/HoHa_190116_1126_VocTrigger_param.txt'
 %     };
-% Path2Run = find(contains(ListOfPaths, 'CoEd'));
-Path2Run=55:62;
+ Path2Run = find(contains(ListOfPaths, 'CoEd'));
+ Path2Run(contains(ListOfPaths(Path2Run), '20190703'))=[];
+ Path2Run(contains(ListOfPaths(Path2Run), '20190709'))=[];
+ Path2Run(contains(ListOfPaths(Path2Run), '190701_0951'))=[];
+ Path2Run(contains(ListOfPaths(Path2Run), '2020'))=[];
+ Path2Run(contains(ListOfPaths(Path2Run), '201905'))=[];% No neural data
+ Path2Run(contains(ListOfPaths(Path2Run), '190605_1406'))=[]; % No vocalization
+ Path2Run(contains(ListOfPaths(Path2Run), '190603_1039'))=[]; % No vocalization
+ Path2Run(contains(ListOfPaths(Path2Run), '190606_1540'))=[]; % This is not operant but free session, error in choosing the right expe
+ Path2Run(contains(ListOfPaths(Path2Run), '20190712'))=[]; % No neural data
+%%
+
 for pp=1:length(Path2Run)
     
     Path2ParamFile = ListOfPaths{Path2Run(pp)};
@@ -90,7 +100,7 @@ OutputPath = '/Users/elie/Documents/LMCResults';
 fprintf('NEURONS SANITARY CHECK.... ')
 % Files2Run = 1:length(ListSSU);
 % Files2Run = [1:29 87:108];
- Files2Run=400:417;
+ Files2Run=1:488;
 for ss=Files2Run
     fprintf(1,'File %d/%d\n',ss,length(Files2Run))
     sanitary_check_perSSfile(ListSSU{ss}, OutputPath)
