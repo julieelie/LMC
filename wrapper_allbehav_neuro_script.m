@@ -92,7 +92,7 @@ OutputPath = '/Users/elie/Documents/LMCResults';
 [ListSSU] = gather_neural_datapath(BasePath);
 % Define the path were the data will be saved
 % OutputPath = fullfile(BasePath, 'ResultsFiles');
-
+Files2Run = find(contains(ListSSU,'LMC_CoEd') .* ~contains(ListSSU, '20200109'));
 %% Sanitary check of neurons
 % ( calculate the average spike rate over the...
 % whole experiment, measure stability, quality...
@@ -142,8 +142,8 @@ NeuralBuffer = 5000; %duration of the time buffer in
 %       ms that should be added before and after the onset and offset time
 %       of vocalizations for extracting neural data.
 
-for ss=1:length(GoodCellIndices)
-    fprintf(1,'File %d/%d\n',ss,length(GoodCellIndices))
+for ss=112:length(GoodCellIndices)
+    fprintf(1,'File %d/%d: %s \n',ss,length(GoodCellIndices),ListSSU{Files2Run(GoodCellIndices(ss))})
     cut_neuralData_voc_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath,NeuralBuffer)
 end
 fprintf(' DONE \n')
@@ -201,7 +201,7 @@ fprintf(' DONE \n')
 % The plot is saved under OutputPath as sprintf('%s_%s_%s_SS%s_%s-%s_MeanRateScatter.pdf', SubjectID, SSQ,TetrodeID,SSID))
 %% Plot rasters for vocalizations
 fprintf(1,' RASTER PLOTS (AND KDE) of NEURAL DATA CORRESPONDING TO VOCALIZATIONS\n');
-Delay = [200 200];
+Delay = [5000 5000];
 PlotDyn = 0; %Set to 1 to plot dnamic plots
 for ss=1:length(GoodCellIndices)
     fprintf(1,'File %d/%d\n',ss,length(GoodCellIndices))

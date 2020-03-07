@@ -386,16 +386,32 @@ end
             % behavioral event, save in ms
             OutData.SpikeSUVoc{vv} = Spikes.Spike_arrival_times(logical((Spikes.Spike_arrival_times>(EventOnset_time(ii)*10^3)) .* (Spikes.Spike_arrival_times<(EventOffset_time(ii)*10^3))))/10^3 - Voc_transc_time(ii,1);
             OutData.SpikeSUBSL{vv} = Spikes.Spike_arrival_times(logical((Spikes.Spike_arrival_times>(BSL_transc_time(ii,1)*10^3)) .* (Spikes.Spike_arrival_times<(BSL_transc_time(ii,2)*10^3))))/10^3 - Voc_transc_time(ii,1);
-            if vv<Nevent
-                vv_timecheck = find(logical((Re_transc_time>Voc_transc_time(ii,1)) .* (Re_transc_time<Voc_transc_time(ii+1,1))));
+            if sum(isnan(Re_transc_time)) == length(Re_transc_time) % there is no reward time
+                OutData.ReTime(vv) = NaN;
             else
-                vv_timecheck = find(Re_transc_time>(Voc_transc_time(ii,1)),1);
-            end
-            if vv ~= vv_timecheck
-                warning('Discrepancy between the guessed reward time given the vocalization onset times and the order in which they are in Re_transc_time\n')
-                keyboard
-            else
-                OutData.ReTime(vv) = Re_transc_time(vv) - Voc_transc_time(ii,1);
+                if vv<Nevent
+                    vv_timecheck = find(logical((Re_transc_time>Voc_transc_time(ii,1)) .* (Re_transc_time<Voc_transc_time(ii+1,1))));
+                else
+                    vv_timecheck = find(Re_transc_time>(Voc_transc_time(ii,1)));
+                end
+                if any(vv == vv_timecheck)
+                    OutData.ReTime(vv) = Re_transc_time(vv) - Voc_transc_time(ii,1);
+                elseif isinf(Re_transc_time(vv))
+                    OutData.ReTime(vv) = Re_transc_time(vv) - Voc_transc_time(ii,1);
+                else
+                    warning('Discrepancy between the guessed reward time given the vocalization onset times and the order in which they are in Re_transc_time\n')
+                    keyboard
+                    GuessVV = Re_transc_time(vv) - Voc_transc_time(ii,1);
+                    GuessVVTC = Re_transc_time(vv_timecheck) - Voc_transc_time(ii,1);
+                    if GuessVV<0 && GuessVVTC>0
+                        OutData.ReTime(vv) = GuessVVTC;
+                    elseif GuessVV>0 && GuessVVTC<0
+                        OutData.ReTime(vv) = GuessVV;
+                    else
+                        keyboard
+                    end
+                end
+                
             end
         end
     end
