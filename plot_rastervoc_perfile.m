@@ -43,9 +43,9 @@ IndVocHDF = intersect(IndVocHD, IndVocF);
 %% Time Raster plot alligned to vocalization production onset/offset self vocalizations Operant + Free First voc of sequence only
 if ~isempty(IndVocPD) && ~isempty(IndVocPDO) && ~isempty(IndVocPDF)
     Fig1 = figure();
-    Color = [0 0.2 0].*contains(Data.What, 'Tr') + repmat([1 0.8 0.8], length(Data.What),1);
+    Color = [0 0.3 0].*contains(Data.What, 'Tr') + repmat([1 0.7 0.7], length(Data.What),1);
     if isfield(Data.KDE_onset,'SelfVocAll')
-        timerasterkde(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPD,Color,Data.KDE_onset.SelfVocAll,Data.KDE_offset.SelfVocAll,[1 0.45 0.4]);
+        timerasterkde(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPD,Color,Data.KDE_onset.SelfVocAll,Data.KDE_offset.SelfVocAll,[1 0.45 0.4],Data.RewardTime);
     else
         timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPD,Color);
     end
@@ -56,9 +56,9 @@ end
 %% Time Raster plot alligned to vocalization perception onset/offset others vocalizations Operant + Free First voc of sequence only
 if ~isempty(IndVocHD) && ~isempty(IndVocHDO) && ~isempty(IndVocHDF)
     Fig2 = figure();
-    Color = [0 0.2 0].*contains(Data.What, 'Tr') + repmat([0.8 0.8 1], length(Data.What),1);
+    Color = [0 0.3 0].*contains(Data.What, 'Tr') + repmat([0.7 0.7 1], length(Data.What),1);
     if isfield(Data.KDE_onset, 'OthersVocAll')
-        timerasterkde(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocHD,Color, Data.KDE_onset.OthersVocAll,Data.KDE_offset.OthersVocAll,[0.4 0.45 1])
+        timerasterkde(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocHD,Color, Data.KDE_onset.OthersVocAll,Data.KDE_offset.OthersVocAll,[0.4 0.45 1],Data.RewardTime)
     else
         timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocHD,Color)
     end
@@ -69,9 +69,9 @@ end
 %% Time Raster plot alligned to vocalization production onset/offset during Operant conditioning First voc of sequence only
 if ~isempty(IndVocPDO)
     Fig6 = figure();
-    Color = [0 0.2 0].*contains(Data.What, 'Tr') + repmat([1 0.8 0.8], length(Data.What),1);
+    Color = [0 0.3 0].*contains(Data.What, 'Tr') + repmat([1 0.7 0.7], length(Data.What),1);
     if isfield(Data.KDE_onset, 'SelfVocOp')
-        timerasterkde(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPDO,Color,Data.KDE_onset.SelfVocOp,Data.KDE_offset.SelfVocOp,[1 0.45 0.4])
+        timerasterkde(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPDO,Color,Data.KDE_onset.SelfVocOp,Data.KDE_offset.SelfVocOp,[1 0.45 0.4],Data.RewardTime)
     else
         timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPDO,Color)
     end
@@ -82,9 +82,9 @@ end
 %% Time Raster plot alligned to vocalization perception onset/offset during operant conditioning First voc of sequence only
 if ~isempty(IndVocHDO)
     Fig7 = figure();
-    Color = [0 0.2 0].*contains(Data.What, 'Tr') + repmat([0.8 0.8 1], length(Data.What),1);
+    Color = [0 0.3 0].*contains(Data.What, 'Tr') + repmat([0.7 0.7 1], length(Data.What),1);
     if isfield(Data.KDE_onset,'OthersVocOp')
-        timerasterkde(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocHDO,Color,Data.KDE_onset.OthersVocOp,Data.KDE_offset.OthersVocOp,[0.4 0.45 1])
+        timerasterkde(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocHDO,Color,Data.KDE_onset.OthersVocOp,Data.KDE_offset.OthersVocOp,[0.4 0.45 1],Data.RewardTime)
     else
         timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocHDO,Color)
     end
@@ -95,7 +95,7 @@ end
 %% Time Raster plot alligned to vocalization production onset/offset during Free session First voc of sequence only
 if ~isempty(IndVocPDF)
     Fig8 = figure();
-    Color = [0 0.2 0].*contains(Data.What, 'Tr') + repmat([1 0.8 0.8], length(Data.What),1);
+    Color = [0 0.3 0].*contains(Data.What, 'Tr') + repmat([1 0.7 0.7], length(Data.What),1);
     if isfield(Data.KDE_onset,'SelfVocFr')
         timerasterkde(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPDF,Color,Data.KDE_onset.SelfVocFr,Data.KDE_offset.SelfVocFr,[1 0.45 0.4])
     else
@@ -108,7 +108,7 @@ end
 %% Time Raster plot alligned to vocalization perception onset/offset during Free session First voc of sequence only
 if ~isempty(IndVocHDF)
     Fig9 = figure();
-    Color = [0 0.2 0].*contains(Data.What, 'Tr') + repmat([0.8 0.8 1], length(Data.What),1);
+    Color = [0 0.3 0].*contains(Data.What, 'Tr') + repmat([0.7 0.7 1], length(Data.What),1);
     if isfield(Data.KDE_onset,'OthersVocFr')
         timerasterkde(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocHDF,Color, Data.KDE_onset.OthersVocFr,Data.KDE_offset.OthersVocFr,[0.4 0.45 1])
     else
@@ -297,7 +297,7 @@ function timerasterkde(SpikesArrivalTimes,Duration,Delay,Indices, Color, Dat1, D
             plot([0 Duration(Indices(cc))], oo-[0.5 0.5], '-','LineWidth',250/length(Indices),'Color', Color(Indices(cc),:)) % vocalization
             % plot reward time
             if ~isinf(RewardTime(Indices(cc))) && ~isnan(RewardTime(Indices(cc)))
-                plot(RewardTime(Indices(cc)), oo-0.5,'go','MarkerSize',10)
+                plot(RewardTime(Indices(cc)), oo-0.5,'o','MarkerSize',8, 'MarkerFaceColor',[1 0.85 0.275],'MarkerEdgeColor',[1 0.85 0.275])
                 hold on
             end
             % plot spikes
@@ -342,7 +342,7 @@ function timerasterkde(SpikesArrivalTimes,Duration,Delay,Indices, Color, Dat1, D
             plot([-Duration(Indices(cc)) 0], oo-[0.5 0.5], '-','LineWidth',250/length(Indices),'Color', Color(Indices(cc),:)) % vocalization
             % plot reward time
             if ~isinf(RewardTime(Indices(cc))) && ~isnan(RewardTime(Indices(cc)))
-                plot(RewardTime(Indices(cc))- Duration(Indices(cc)), oo-0.5,'go','MarkerSize',10)
+                plot(RewardTime(Indices(cc))- Duration(Indices(cc)), oo-0.5,'o','MarkerSize',8, 'MarkerFaceColor',[1 0.85 0.275],'MarkerEdgeColor',[1 0.85 0.275])
                 hold on
             end
             % plot spikes

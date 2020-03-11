@@ -7,7 +7,7 @@ addpath(genpath('/Users/elie/Documents/CODE/SoundAnalysisBats'))
 Path2RecordingTable = '/Users/elie/Google Drive/BatmanData/RecordingLogs/recording_logs.xlsx';
 
 %% RUN audio data extraction for the operant tests
-
+BasePath = '/Volumes/server_home/users/JulieE/LMC';
 ListOfPaths = gather_operant_datapath(BasePath);
 
 % ListOfPaths = {
@@ -29,8 +29,18 @@ ListOfPaths = gather_operant_datapath(BasePath);
 %     %'/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190117/HoHa_190117_1008_VocTrigger_param.txt';
 %     %'/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190116/HoHa_190116_1126_VocTrigger_param.txt'
 %     };
-% Path2Run = find(contains(ListOfPaths, 'CoEd'));
-Path2Run=55:62;
+ Path2Run = find(contains(ListOfPaths, 'CoEd'));
+ Path2Run(contains(ListOfPaths(Path2Run), '20190703'))=[];
+ Path2Run(contains(ListOfPaths(Path2Run), '20190709'))=[];
+ Path2Run(contains(ListOfPaths(Path2Run), '190701_0951'))=[];
+ Path2Run(contains(ListOfPaths(Path2Run), '2020'))=[];
+ Path2Run(contains(ListOfPaths(Path2Run), '201905'))=[];% No neural data
+ Path2Run(contains(ListOfPaths(Path2Run), '190605_1406'))=[]; % No vocalization
+ Path2Run(contains(ListOfPaths(Path2Run), '190603_1039'))=[]; % No vocalization
+ Path2Run(contains(ListOfPaths(Path2Run), '190606_1540'))=[]; % This is not operant but free session, error in choosing the right expe
+ Path2Run(contains(ListOfPaths(Path2Run), '20190712'))=[]; % No neural data
+%%
+
 for pp=1:length(Path2Run)
     
     Path2ParamFile = ListOfPaths{Path2Run(pp)};
@@ -82,7 +92,7 @@ OutputPath = '/Users/elie/Documents/LMCResults';
 [ListSSU] = gather_neural_datapath(BasePath);
 % Define the path were the data will be saved
 % OutputPath = fullfile(BasePath, 'ResultsFiles');
-
+Files2Run = find(contains(ListSSU,'LMC_CoEd') .* ~contains(ListSSU, '20200109'));
 %% Sanitary check of neurons
 % ( calculate the average spike rate over the...
 % whole experiment, measure stability, quality...
@@ -90,7 +100,7 @@ OutputPath = '/Users/elie/Documents/LMCResults';
 fprintf('NEURONS SANITARY CHECK.... ')
 % Files2Run = 1:length(ListSSU);
 % Files2Run = [1:29 87:108];
- Files2Run=400:417;
+ Files2Run=1:488;
 for ss=Files2Run
     fprintf(1,'File %d/%d\n',ss,length(Files2Run))
     sanitary_check_perSSfile(ListSSU{ss}, OutputPath)
@@ -132,8 +142,8 @@ NeuralBuffer = 5000; %duration of the time buffer in
 %       ms that should be added before and after the onset and offset time
 %       of vocalizations for extracting neural data.
 
-for ss=1:length(GoodCellIndices)
-    fprintf(1,'File %d/%d\n',ss,length(GoodCellIndices))
+for ss=112:length(GoodCellIndices)
+    fprintf(1,'File %d/%d: %s \n',ss,length(GoodCellIndices),ListSSU{Files2Run(GoodCellIndices(ss))})
     cut_neuralData_voc_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath,NeuralBuffer)
 end
 fprintf(' DONE \n')
@@ -191,7 +201,7 @@ fprintf(' DONE \n')
 % The plot is saved under OutputPath as sprintf('%s_%s_%s_SS%s_%s-%s_MeanRateScatter.pdf', SubjectID, SSQ,TetrodeID,SSID))
 %% Plot rasters for vocalizations
 fprintf(1,' RASTER PLOTS (AND KDE) of NEURAL DATA CORRESPONDING TO VOCALIZATIONS\n');
-Delay = [200 200];
+Delay = [5000 5000];
 PlotDyn = 0; %Set to 1 to plot dnamic plots
 for ss=1:length(GoodCellIndices)
     fprintf(1,'File %d/%d\n',ss,length(GoodCellIndices))

@@ -69,8 +69,8 @@ for ff=1:length(DataDir)
     end
 end
 Duration = cell(1,NExpe); % Duration of the behavioral event in ms
-DelayBefore = cell(1,NExpe); % Duration of no behavioral event before the onset in ms if no event after, Delay ms is considered as the safest estimate of the silence time before
-DelayAfter = cell(1,NExpe);% Duration of no behavioral event after the offset in ms if no event after, Delay ms is considered as the safest estimate of the silence time after
+DelayBefore = cell(1,NExpe); % Duration of no behavioral event before the onset in ms if no event before, Delay ms is considered as the safest estimate of the silence time before but here we are doing the assumption that nothing happened between call detected by voc_localize and voc_localize_operant
+DelayAfter = cell(1,NExpe);% Duration of no behavioral event after the offset in ms if no event after, Delay ms is considered as the safest estimate of the silence time after but here we are doing the assumption that nothing happened between call detected by voc_localize and voc_localize_operant
 VocWave = cell(1,NExpe);% Wave of the vocalization exactly extracted on Mic
 VocPiezoWave = cell(1,NExpe);% Wave of the vocalization exactly extracted on Piezo
 VocRank = cell(1,NExpe); % Rank of the call in the vocalization sequence
@@ -102,7 +102,7 @@ for ff=1:length(DataDir)
             Idxmat = strfind(DataFile.name,'.mat');
             Delay = str2double(DataFile.name((Idx_(end)+1):(Idxmat-1)));
             load(fullfile(DataFile.folder, DataFile.name), 'IndVocStartRaw_merged', 'IndVocStopRaw_merged', 'IndVocStartPiezo_merged', 'IndVocStopPiezo_merged', 'BatID','LoggerName','BioSoundCalls');
-            load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date(3:end), ExpStartTime_new)), 'FS','Piezo_wave','Raw_wave','Piezo_FS');
+            load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date(3:end), ExpStartTime_new)), 'FS','Piezo_wave','Raw_wave','Piezo_FS','Voc_transc_time_refined');
             
             % find the logger number worn by the subject
             ALNum = contains(LoggerName, 'AL');
@@ -112,9 +112,17 @@ for ff=1:length(DataDir)
             % find the vocalizations emitted by the vocalizer of interest
             Fns_AL = fieldnames(Piezo_wave);
             FocIndAudio = find(contains(Fns_AL, SubjectAL));
-            % Number of call sequences with identified vocalizations
-            VocInd = find(~cellfun('isempty',IndVocStartRaw_merged));
+            % Call sequences with identified vocalizations and re-order the
+            % vocalization in chornological order (calculated in
+            % cut_neural_data_voc)
+            VocInd_Bin = ~cellfun('isempty',IndVocStartRaw_merged);
+            IndSort_local = Neuro.Voc_NeuroSSU.SortInd(VocInd_Bin);
+            VocInd = find(VocInd_Bin);
+            VocInd = VocInd(IndSort_local);
             NV = length(VocInd);
+            % find the corresponding indices in NEuroSSU
+            VocInd_Neuro = find(~cellfun('isempty',IndVocStartRaw_merged(Neuro.Voc_NeuroSSU.SortInd)));
+            
             % Count the number of vocalization cuts for preallocation of space
             VocCall = 0;
             for vv=1:NV
@@ -140,6 +148,7 @@ for ff=1:length(DataDir)
             Who{NExpe} = cell(1,VocCall);% Identity of the performing bat (self or ID of the bat)
             What{NExpe} = cell(1,VocCall);% Type of Behavior
             ExpType{NExpe} = cell(1,VocCall); % Type of experiment (P=Play-Back, O=Operant conditioning, F=Free interactions)
+            AllVocCall = VocCall;
             
             VocCall = 0;
             Ncall = nan(NV,1);
@@ -149,16 +158,42 @@ for ff=1:length(DataDir)
                     if Ncall(vv)
                         % Get the vector of all starts and stops of
                         % vocalizations detected in that sequence and in
-                        % the previous or following sequence
+                        % the previous or following sequences
                         if vv==NV
-                            AllStarts = [cell2mat(IndVocStartRaw_merged{VocInd(vv)}') cell2mat(IndVocStartRaw_merged{VocInd(vv+1)}')];
-                        else
                             AllStarts = cell2mat(IndVocStartRaw_merged{VocInd(vv)}');
+                        else
+                            jj=0;
+                            Next=[];
+                            while (isempty(Next)) && (jj<(length(VocInd)-vv))
+                                jj=jj+1;
+                                % next onset times if any
+                                Next = cell2mat(IndVocStartRaw_merged{VocInd(vv+jj)}');
+                                % timedelay between this sequence begining and
+                                % the next sequence onset
+                                Delay2next = (Voc_transc_time_refined(VocInd(vv+jj),1) - Voc_transc_time_refined(VocInd(vv),1))*FS/1000; %Voc_transc_time_refined is in ms
+                                AllStarts = [cell2mat(IndVocStartRaw_merged{VocInd(vv)}') (Next+Delay2next)];
+                            end
+                            if isempty(Next)
+                                AllStarts = cell2mat(IndVocStartRaw_merged{VocInd(vv)}');
+                            end
                         end
                         if vv>1
-                            AllStops = cell2mat(IndVocStopRaw_merged{VocInd(vv)}');
+                            jj=0;
+                            Previous = [];
+                            while (isempty(Previous)) && (jj<vv)
+                                jj=jj+1;
+                                % previous offset times if any
+                                Previous = cell2mat(IndVocStopRaw_merged{VocInd(vv-jj)}');
+                                % timedelay between this sequence begining and
+                                % the previous sequence onset
+                                Delay2previous = (Voc_transc_time_refined(VocInd(vv),1) - Voc_transc_time_refined(VocInd(vv-jj),1))*FS/1000; %Voc_transc_time_refined is in ms
+                                AllStops = [cell2mat(IndVocStopRaw_merged{VocInd(vv)}') (Previous- Delay2previous)];
+                            end
+                            if isempty(Previous)
+                                AllStops = cell2mat(IndVocStopRaw_merged{VocInd(vv)}');
+                            end
                         else
-                            AllStops = [cell2mat(IndVocStopRaw_merged{VocInd(vv)}') cell2mat(IndVocStopRaw_merged{VocInd(vv-1)}')];
+                            AllStops = cell2mat(IndVocStopRaw_merged{VocInd(vv)}');
                         end
                         for nn=1:Ncall(vv)
                             VocCall = VocCall+1; % Increment the counter of vocalization events
@@ -170,7 +205,7 @@ for ff=1:length(DataDir)
                             else
                                 VocRank{NExpe}{VocCall} = 'middle';
                             end
-                            % Save the tye of experiment
+                            % Save the type of experiment
                             if str2double(ExpStartTime_Old) < str2double(ExpStartTime_new) % I always do operant before the free session
                                 ExpType{NExpe}{VocCall} = 'F';
                             else
@@ -192,22 +227,27 @@ for ff=1:length(DataDir)
                             Durations2Preceding_events = IndVocStartRaw_merged{VocInd(vv)}{ll}(nn) - AllStops;
                             if sum(Durations2Preceding_events>0)
                                 DelayBefore{NExpe}(VocCall) = (min(Durations2Preceding_events(Durations2Preceding_events>0)))/FS*1000;
+                            elseif VocInd(vv)==1
+                                DelayBefore{NExpe}(VocCall) = NeuralBuffer;
                             else
                                 DelayBefore{NExpe}(VocCall) = Delay;
                             end
                             Durations2Following_events = AllStarts - IndVocStopRaw_merged{VocInd(vv)}{ll}(nn);
                             if sum(Durations2Following_events>0)
                                 DelayAfter{NExpe}(VocCall) = (min(Durations2Following_events(Durations2Following_events>0)))/FS*1000;
+                            elseif VocInd(vv) == max(VocInd) && nn == Ncall(vv)
+                                DelayAfter{NExpe}(VocCall) = NeuralBuffer;
                             else
                                 DelayAfter{NExpe}(VocCall) = Delay;
                             end
                             % Duration of the baseline sequence
-                            BSLDuration{NExpe}(VocCall) = Neuro.Voc_NeuroSSU.BSL_transc_time_refined(VocInd(vv),2)-Neuro.Voc_NeuroSSU.BSL_transc_time_refined(VocInd(vv),1);
+                            BSLDuration{NExpe}(VocCall) = Neuro.Voc_NeuroSSU.BSL_transc_time_refined(VocInd_Neuro(vv),2)-Neuro.Voc_NeuroSSU.BSL_transc_time_refined(VocInd_Neuro(vv),1);
                             
                             % Extract the sound of the microphone that
-                            % correspond to the data
-                            IndOn = round(IndVocStartRaw_merged{VocInd(vv)}{ll}(nn) - DelayBefore{NExpe}(VocCall)*FS/1000);
-                            IndOff = round(IndVocStopRaw_merged{VocInd(vv)}{ll}(nn)+DelayAfter{NExpe}(VocCall)*FS/1000);
+                            % correspond to the data with the same delay
+                            % before/after as the neural response
+                            IndOn = round(IndVocStartRaw_merged{VocInd(vv)}{ll}(nn) - NeuralBuffer*FS/1000);
+                            IndOff = round(IndVocStopRaw_merged{VocInd(vv)}{ll}(nn) + NeuralBuffer*FS/1000);
                             DurWave_local = length(Raw_wave{VocInd(vv)});
                             WL = Raw_wave{VocInd(vv)}(max(1,IndOn):min(DurWave_local, IndOff));
                             if IndOn<1
@@ -219,10 +259,11 @@ for ff=1:length(DataDir)
                             VocWave{NExpe}{VocCall} = WL; % contains the vocalization with the same delay before/after as the neural response
                             
                             % Extract the sound of the audio-logger that
-                            % correspond to the data
+                            % correspond to the neural data (NeuralBuffer
+                            % before/after vocalization onset/offset)
                             Piezo_samprate = Piezo_FS.(Fns_AL{ll})(VocInd(vv));
-                            IndOn = round(IndVocStartPiezo_merged{VocInd(vv)}{ll}(nn) - DelayBefore{NExpe}(VocCall)*Piezo_samprate/1000);
-                            IndOff = round(IndVocStopPiezo_merged{VocInd(vv)}{ll}(nn) + DelayAfter{NExpe}(VocCall)*Piezo_samprate/1000);
+                            IndOn = round(IndVocStartPiezo_merged{VocInd(vv)}{ll}(nn) - NeuralBuffer*Piezo_samprate/1000);
+                            IndOff = round(IndVocStopPiezo_merged{VocInd(vv)}{ll}(nn) + NeuralBuffer*Piezo_samprate/1000);
                             DurWave_local = length(Piezo_wave.(Fns_AL{ll}){VocInd(vv)});
                             WL = Piezo_wave.(Fns_AL{ll}){VocInd(vv)}(max(1,IndOn):min(DurWave_local, IndOff));
                             WL = reshape(WL,length(WL),1);
@@ -232,7 +273,7 @@ for ff=1:length(DataDir)
                             if IndOff>DurWave_local
                                 WL = [WL ; zeros(IndOff-DurWave_local,1)]; %#ok<AGROW>
                             end
-                            VocPiezoWave{NExpe}{VocCall} = WL; % contains the vocalization with the same delay before/after as the neural response
+                            VocPiezoWave{NExpe}{VocCall} = WL; % contains the vocalization with the same delay NeuralBuffer before/after as the neural response
                             
                             % Get the biosound parameters
                             BioSound{NExpe}{1,VocCall} = BioSoundCalls{VocCall,1};
@@ -245,22 +286,22 @@ for ff=1:length(DataDir)
                             
                             % Finding the spikes that are during, before
                             % NeuroBuffer ms and after NeuroBuffer ms the vocalization 
-                            IndSU01 = logical((Neuro.Voc_NeuroSSU.SpikeSUVoc{vv}>(IndVocStartRaw_merged{VocInd(vv)}{ll}(nn)/FS*1000 - NeuralBuffer)) .* (Neuro.Voc_NeuroSSU.SpikeSUVoc{vv}<(IndVocStopRaw_merged{VocInd(vv)}{ll}(nn)/FS*1000 + NeuralBuffer)));
+                            IndSU01 = logical((Neuro.Voc_NeuroSSU.SpikeSUVoc{VocInd_Neuro(vv)}>(IndVocStartRaw_merged{VocInd(vv)}{ll}(nn)/FS*1000 - NeuralBuffer)) .* (Neuro.Voc_NeuroSSU.SpikeSUVoc{VocInd_Neuro(vv)}<(IndVocStopRaw_merged{VocInd(vv)}{ll}(nn)/FS*1000 + NeuralBuffer)));
                             % saving the spike arrival times in ms after
                             % centering them to the vocalization onset
-                            SpikesArrivalTimes_Behav{NExpe}{VocCall} = (Neuro.Voc_NeuroSSU.SpikeSUVoc{VocInd(vv)}(IndSU01) - IndVocStartRaw_merged{VocInd(VocInd(vv))}{ll}(nn)/FS*1000)';
+                            SpikesArrivalTimes_Behav{NExpe}{VocCall} = (Neuro.Voc_NeuroSSU.SpikeSUVoc{VocInd_Neuro(vv)}(IndSU01) - IndVocStartRaw_merged{VocInd(vv)}{ll}(nn)/FS*1000)';
                             % Finding the spikes that correspond to the
                             % call sequence baseline
                             if ~isnan(BSLDuration{NExpe}(VocCall)) % if isnan: No baseline period could be taken before the onset of the vocalization
                                 if nn==1 % all calls cut within the sequence have the same baseline, only calcuating if first call
-                                    SpikesArrivalTimes_Baseline{NExpe}{VocCall} = Neuro.Voc_NeuroSSU.SpikeSUBSL{VocInd(vv)};
+                                    SpikesArrivalTimes_Baseline{NExpe}{VocCall} = Neuro.Voc_NeuroSSU.SpikeSUBSL{VocInd_Neuro(vv)};
                                 else
                                     SpikesArrivalTimes_Baseline{NExpe}{VocCall} = SpikesArrivalTimes_Baseline{NExpe}{VocCall-1};
                                 end
                             end
                             % Save the reward time in ms after
                             % centering them to the vocalization onset
-                            RewardTime{NExpe}(VocCall) = Neuro.Voc_NeuroSSU.ReTime(VocInd(vv))- IndVocStartRaw_merged{VocInd(VocInd(vv))}{ll}(nn)/FS*1000;
+                            RewardTime{NExpe}(VocCall) = Neuro.Voc_NeuroSSU.ReTime(VocInd_Neuro(vv))- IndVocStartRaw_merged{VocInd(vv)}{ll}(nn)/FS*1000;
 
                             % Debug figure if requested
                             if Debug_Fig
@@ -269,9 +310,10 @@ for ff=1:length(DataDir)
                                 else
                                     clf(FIG1)
                                 end
-                                SpikesInd  = logical((SpikesArrivalTimes_Behav{NExpe}{VocCall}> -DelayBefore{NExpe}(VocCall)) .*  (SpikesArrivalTimes_Behav{NExpe}{VocCall}< (DelayAfter{NExpe}(VocCall))+ Duration{NExpe}(VocCall)));
-                                plotBiosoundAndSpikes(BioSound{NExpe}{2,VocCall}, F_high_Piezo, DelayBefore{NExpe}(VocCall), DelayAfter{NExpe}(VocCall),Duration{NExpe}(VocCall), SpikesArrivalTimes_Behav{NExpe}{VocCall}(SpikesInd),0)
-                                pause()
+%                                 SpikesInd  = logical((SpikesArrivalTimes_Behav{NExpe}{VocCall}> -DelayBefore{NExpe}(VocCall)) .*  (SpikesArrivalTimes_Behav{NExpe}{VocCall}< (DelayAfter{NExpe}(VocCall))+ Duration{NExpe}(VocCall)));
+                                plotBiosoundAndSpikes(BioSound{NExpe}{2,VocCall}, F_high_Piezo, NeuralBuffer, NeuralBuffer,Duration{NExpe}(VocCall), SpikesArrivalTimes_Behav{NExpe}{VocCall},RewardTime{NExpe}(VocCall),0)
+                                suplabel(sprintf('Voc %d/%d', VocCall,AllVocCall),'t');
+                                pause(1)
                             end
                         end
                         
@@ -300,6 +342,7 @@ for ff=1:length(DataDir)
             VocRank{NExpe} = cell(1,NBehav);% This stays empty
             BioSound{NExpe} = cell(2,NBehav);% This stays empty
             BSLDuration{NExpe} = nan(1,NBehav);% This stays empty
+            RewardTime{NExpe} = nan(1,NBehav);% This stays empty
             SpikesArrivalTimes_Baseline{NExpe} = cell(1,NBehav); % This stays empty
             
             for bb=1:NBehav
@@ -327,6 +370,7 @@ VocPiezoWave = reshape([VocPiezoWave{:}],1,sum(NEvents))'; % Wave of the vocaliz
 VocRank = reshape([VocRank{:}], 1,sum(NEvents))';% Rank of the vocal element in the sequence of vocalization
 BioSound = reshape([BioSound{:}],2,sum(NEvents))'; %
 BSLDuration = reshape([BSLDuration{:}],1,sum(NEvents))'; % Duration of the baseline sequence
+RewardTime = reshape([RewardTime{:}],1,sum(NEvents))'; % Time of the reward for operant vocalizations
 SpikesArrivalTimes_Baseline = reshape([SpikesArrivalTimes_Baseline{:}],1,sum(NEvents))';  % Spike arrival time of the Baseline sequence
 SpikesArrivalTimes_Behav = reshape([SpikesArrivalTimes_Behav{:}],1,sum(NEvents))'; % Spike arrival time of the behavioral event
 Who = reshape([Who{:}],1,sum(NEvents))'; % Identity of the performing bat (self or ID of the bat)
@@ -334,15 +378,15 @@ What = reshape([What{:}],1,sum(NEvents))'; % Type of Behavior
 ExpType = reshape([ExpType{:}],1,sum(NEvents))'; 
 
 if exist(OutputDataFile, 'file')
-    save(OutputDataFile, 'Duration','DelayBefore','DelayAfter', 'VocWave', 'VocPiezoWave', 'VocRank', 'BioSound','BSLDuration', 'SpikesArrivalTimes_Baseline','SpikesArrivalTimes_Behav','Who','What','ExpType','-append');
+    save(OutputDataFile, 'Duration','DelayBefore','DelayAfter', 'VocWave', 'VocPiezoWave', 'VocRank', 'BioSound','BSLDuration', 'SpikesArrivalTimes_Baseline','SpikesArrivalTimes_Behav','Who','What','ExpType','RewardTime','-append');
 else
-    save(OutputDataFile, 'Duration','DelayBefore','DelayAfter', 'VocWave', 'VocPiezoWave', 'VocRank', 'BioSound','BSLDuration', 'SpikesArrivalTimes_Baseline','SpikesArrivalTimes_Behav','Who','What','ExpType');
+    save(OutputDataFile, 'Duration','DelayBefore','DelayAfter', 'VocWave', 'VocPiezoWave', 'VocRank', 'BioSound','BSLDuration', 'SpikesArrivalTimes_Baseline','SpikesArrivalTimes_Behav','Who','What','ExpType','RewardTime');
 end
 
 %% Local function
 
 
-function plotBiosoundAndSpikes(BiosoundObj, F_high, DelayBefore, DelayAfter,Duration, SpikeArrivalTimes, FormantPlot)
+function plotBiosoundAndSpikes(BiosoundObj, F_high, DelayBefore, DelayAfter,Duration, SpikeArrivalTimes, RewardTime,FormantPlot)
         if nargin<7
             FormantPlot=1;
         end
@@ -371,13 +415,6 @@ function plotBiosoundAndSpikes(BiosoundObj, F_high, DelayBefore, DelayAfter,Dura
         axis(v_axis);
         xlabel('Time (ms)'), ylabel('Frequency');
         
-        % plot the spikes
-        for ss=1:length(SpikeArrivalTimes)
-            hold on
-            plot(SpikeArrivalTimes(ss).*ones(2,1), [F_high-500 F_high-1500], '-k', 'LineWidth',2)
-            hold on
-        end
-        hold off
         
         % Plot the fundamental and formants if they were calculated
         %     if double(BiosoundFi.sal)>MinSaliency
@@ -401,7 +438,22 @@ function plotBiosoundAndSpikes(BiosoundObj, F_high, DelayBefore, DelayAfter,Dura
                 IndLegend = [IndLegend 2:3];
             end
         end
-        legend(Legend(IndLegend))
+        legend(Legend(IndLegend), 'Location','SouthWest')
+        
+        legend('AutoUpdate', 'off')
+        % plot the spikes
+        for ss=1:length(SpikeArrivalTimes)
+            hold on
+            plot(SpikeArrivalTimes(ss).*ones(2,1), [F_high-500 F_high-1500], '-k', 'LineWidth',2)
+            hold on
+        end
+        hold off
+        
+        % Plot the reward time if there is any
+        hold on
+        if ~isnan(RewardTime)
+            plot(RewardTime*ones(2,1), [f_low F_high], 'g-', 'LineWidth',2)
+        end
         hold off
         
         ss2=subplot(2,1,2);
@@ -422,6 +474,12 @@ function plotBiosoundAndSpikes(BiosoundObj, F_high, DelayBefore, DelayAfter,Dura
         xlabel('Time (ms)')
         ylabel('Enveloppe')
         title(sprintf('AmpPeriodicity = %.3f AmpPF = %.1f Hz',BiosoundObj.AmpPeriodP, BiosoundObj.AmpPeriodF))
+        % Plot the reward time if there is any
+        hold on
+        if ~isnan(RewardTime)
+%             legend('AutoUpdate', 'off')
+            plot(RewardTime*ones(2,1), [-1 1], 'g-', 'LineWidth',2)
+        end
         hold off
         
         
