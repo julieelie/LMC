@@ -20,7 +20,7 @@ ExpStartTime = DataFile(13:16);
 
 %% Identify who is calling
 fprintf(' CHECKING RESULT OF IDENTIFY WHO IS CALLING\n')
-who_calls_check(AudioDataPath, Logger_dir,Date, ExpStartTime,200,1);
+who_calls_check(AudioDataPath, Logger_dir,Date, ExpStartTime,200,1,'Working_dir','/Users/elie/WorkingDirectoryWho');
 
 
 end

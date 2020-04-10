@@ -5,9 +5,9 @@ addpath(genpath('/Users/elie/Documents/CODE/Kilosort2'))
 addpath(genpath('/Users/elie/Documents/CODE/LoggerDataProcessing'))
 addpath(genpath('/Users/elie/Documents/CODE/SoundAnalysisBats'))
 Path2RecordingTable = '/Users/elie/Google Drive/BatmanData/RecordingLogs/recording_logs.xlsx';
-
+BasePath = '/Volumes/Julie4T';
 %% RUN audio data extraction for the operant tests
-BasePath = '/Volumes/server_home/users/JulieE/LMC';
+% BasePath = '/Volumes/server_home/users/JulieE/LMC';
 ListOfPaths = gather_operant_datapath(BasePath);
 
 % ListOfPaths = {
@@ -41,7 +41,7 @@ ListOfPaths = gather_operant_datapath(BasePath);
  Path2Run(contains(ListOfPaths(Path2Run), '20190712'))=[]; % No neural data
 %%
 
-for pp=1:length(Path2Run)
+for pp=26:length(Path2Run)
     
     Path2ParamFile = ListOfPaths{Path2Run(pp)};
     fprintf(1,'\n\n\n\nRunning result_operant_bat on %s\n\n', Path2ParamFile)
@@ -80,14 +80,26 @@ for pp=1:length(Path2Run)
 end
 
 %% RUN audio data and other behavior extraction for the reconly sessions
-Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC/LMC_CoEd/audio/20190604/CoEd_190604_1636_RecOnly_param.txt'; % Needs to point to a reconly param files
-Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC/LMC_CoEd/audio/20190610/CoEd_190610_1442_RecOnly_param.txt';
-Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC/LMC_CoEd/audio/20190607/CoEd_190607_1301_RecOnly_param.txt';
-Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC/LMC_CoEd/audio/20190702/CoEd_190702_1425_RecOnly_param.txt';
-result_reconly_bat(Path2ParamFile)
+List2RecOnlyPath = gather_reconly_datapath(BasePath);
+Path2RunRecOnly = find(contains(List2RecOnlyPath, 'CoEd'));
+ Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190703'))=[];
+ Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190709'))=[];
+ Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '190701_0951'))=[];
+ Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '2020'))=[];
+ Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '201905'))=[];% No neural data
+ Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '190605_1406'))=[]; % No vocalization
+ Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '190603_1039'))=[]; % No vocalization
+ Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '190606_1540'))=[]; % This is not operant but free session, error in choosing the right expe
+ Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190712'))=[]; % No neural data
+for pp=1:length(List2RecOnlyPath)
+    Path2ParamFile = List2RecOnlyPath{pp};
+    fprintf(1,'\n\n\n\nRunning result_reconly_bat on %s\n\n', Path2ParamFile)
+    result_reconly_bat(Path2ParamFile)
+end
 
 %% Generate the list of paths to gather the data
-BasePath = '/Volumes/server_home/users/JulieE/LMC';
+% BasePath = '/Volumes/server_home/users/JulieE/LMC';
+BasePath = '/Volumes/Julie4T';
 OutputPath = '/Users/elie/Documents/LMCResults';
 [ListSSU] = gather_neural_datapath(BasePath);
 % Define the path were the data will be saved
@@ -100,7 +112,7 @@ Files2Run = find(contains(ListSSU,'LMC_CoEd') .* ~contains(ListSSU, '20200109'))
 fprintf('NEURONS SANITARY CHECK.... ')
 % Files2Run = 1:length(ListSSU);
 % Files2Run = [1:29 87:108];
- Files2Run=1:488;
+%  Files2Run=1:488;
 for ss=Files2Run
     fprintf(1,'File %d/%d\n',ss,length(Files2Run))
     sanitary_check_perSSfile(ListSSU{ss}, OutputPath)
@@ -110,7 +122,7 @@ fprintf(' DONE \n')
 
 %% Sort unit
 % Multi-unit SSM should have at least one SNR value above 2
-% Single unt SSS should have at least one SNR value above 6 and ISI
+% Single unt SSS should have at least one SNR value above 5 and ISI
 % below 0.1%
 fprintf('ONLY KEEPING GOOD UNITS.... ')
 SSQ_Files2Run = cell(length(Files2Run),1);
@@ -125,7 +137,7 @@ for ss=1:length(Files2Run)
     SSQ = FileName(Ind_(3)+3);
     SSID = FileName((Ind_(4)+1):end);
     Data=load(fullfile(OutputPath,sprintf('%s_%s_SS%s_%s-%s.mat', SubjectID, Date,SSQ,TetrodeID,SSID)));
-    if any(Data.QualitySSU.SNR>=6) && (Data.QualitySSU.ISIViolation<=0.1)
+    if any(Data.QualitySSU.SNR>=5) && (Data.QualitySSU.ISIViolation<=0.1)
         SSQ_Files2Run{ss} = 'SSSU';
     elseif any(Data.QualitySSU.SNR>=2)
         SSQ_Files2Run{ss} = 'SSMU';
@@ -135,6 +147,7 @@ for ss=1:length(Files2Run)
 end
 GoodCellIndices = find(contains(SSQ_Files2Run, 'SS'));
 fprintf(' DONE \n')
+save('GoodCellIndices.mat','GoodCellIndices')
 %% Extract the neural data corresponding to the bouts of vocalizations identified
 % by voc_localize and voc_localize_operant (run by result_operant_bat.m) for each cell
 fprintf(' EXTRACTING NEURAL DATA CORRESPONDING TO VOCALIZATIONS.... \n')
@@ -142,7 +155,7 @@ NeuralBuffer = 5000; %duration of the time buffer in
 %       ms that should be added before and after the onset and offset time
 %       of vocalizations for extracting neural data.
 
-for ss=112:length(GoodCellIndices)
+for ss=1:length(GoodCellIndices)
     fprintf(1,'File %d/%d: %s \n',ss,length(GoodCellIndices),ListSSU{Files2Run(GoodCellIndices(ss))})
     cut_neuralData_voc_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath,NeuralBuffer)
 end
@@ -166,7 +179,7 @@ id = 'MATLAB:Python:UnsupportedLoad';
 warning('off',id)
 
 
-for ss=1:length(GoodCellIndices)
+for ss=312:length(GoodCellIndices)
     fprintf(1,'File %d/%d\n',ss,length(GoodCellIndices))
     neuralData_compile_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath, NeuralBuffer)
 end
@@ -201,11 +214,12 @@ fprintf(' DONE \n')
 % The plot is saved under OutputPath as sprintf('%s_%s_%s_SS%s_%s-%s_MeanRateScatter.pdf', SubjectID, SSQ,TetrodeID,SSID))
 %% Plot rasters for vocalizations
 fprintf(1,' RASTER PLOTS (AND KDE) of NEURAL DATA CORRESPONDING TO VOCALIZATIONS\n');
-Delay = [5000 5000];
+Delay = [200 300];
 PlotDyn = 0; %Set to 1 to plot dnamic plots
+DurOrd = 0; % set to 1 to order neural responses by increasing vocalization duration
 for ss=1:length(GoodCellIndices)
     fprintf(1,'File %d/%d\n',ss,length(GoodCellIndices))
-    plot_rastervoc_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath, Delay, PlotDyn)
+    plot_rastervoc_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath, Delay, PlotDyn, DurOrd)
     close all
 end
 fprintf(' DONE \n')
@@ -422,6 +436,27 @@ for ee=1:length(ExpFolders)
     for dd=1:length(DateFolders)
         fprintf(1, '   %s\n', DateFolders(dd).name);
         AudioParamFiles = dir(fullfile(DateFolders(dd).folder, DateFolders(dd).name,'*VocTrigger_param.txt'));
+        for ll = 1:length(AudioParamFiles)
+            NF = NF +1;
+            List2ParamPath{NF} = fullfile(AudioParamFiles(ll).folder, AudioParamFiles(ll).name);
+        end
+    end
+end
+List2ParamPath = List2ParamPath(1:NF);
+fprintf(1, '\n Files from %d sessions or operant conditioning have been retrieved\n', NF);
+end
+
+function [List2ParamPath] = gather_reconly_datapath(BasePath)
+fprintf(1,'*** Gathering paths to audio reconly data ***')
+List2ParamPath = cell(10^3,1); % initialize the list to 1000
+ExpFolders = dir(fullfile(BasePath,'LMC*'));
+NF = 0; % counter for single files
+for ee=1:length(ExpFolders)
+    fprintf(1, '\n  -> Looking into  %s...\n ', fullfile(ExpFolders(ee).folder,ExpFolders(ee).name))
+    DateFolders = dir(fullfile(ExpFolders(ee).folder,ExpFolders(ee).name, 'audio','20*'));
+    for dd=1:length(DateFolders)
+        fprintf(1, '   %s\n', DateFolders(dd).name);
+        AudioParamFiles = dir(fullfile(DateFolders(dd).folder, DateFolders(dd).name,'*RecOnly_param.txt'));
         for ll = 1:length(AudioParamFiles)
             NF = NF +1;
             List2ParamPath{NF} = fullfile(AudioParamFiles(ll).folder, AudioParamFiles(ll).name);

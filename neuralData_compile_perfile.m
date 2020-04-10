@@ -180,7 +180,7 @@ for ff=1:length(DataDir)
                         if vv>1
                             jj=0;
                             Previous = [];
-                            while (isempty(Previous)) && (jj<vv)
+                            while (isempty(Previous)) && ((jj+1)<vv)
                                 jj=jj+1;
                                 % previous offset times if any
                                 Previous = cell2mat(IndVocStopRaw_merged{VocInd(vv-jj)}');

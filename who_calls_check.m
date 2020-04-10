@@ -71,17 +71,46 @@ else
     sos_raw_band = zp2sos(z,p,k);
     % [z,p,k] = butter(6,BandPassFilter(1:2)/(FS/2),'bandpass');
     % sos_raw_low = zp2sos(z,p,k);
-    
-    PreviousFile = fullfile(Working_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, MergeThresh));
-    load(PreviousFile, 'IndVocStartRaw_merged', 'IndVocStopRaw_merged', 'IndVocStartPiezo_merged', 'IndVocStopPiezo_merged', 'IndVocStart_all', 'IndVocStop_all','RMSRatio_all','RMSDiff_all','vv','MicError','PiezoError','MicErrorType','PiezoErrorType');
-    
+    FileIn = input('Get data from the server (1) or from local working directory (2)?');
+    if FileIn==1
+        PreviousFile = fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, MergeThresh));
+    elseif FileIn==2
+        PreviousFile = fullfile(Working_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, MergeThresh));
+    else
+        keyboard
+    end
+    IndVocStartRaw = cell(1,Nvoc);% Contains for each sequence of vocalizations (Nvoc)
+    % a cell array of the size the number of loggers + 1 in case only one bat without a logger
+    % or +2 incase no identification possible but you want to keep onset/offset of each voc and
+    % for each logger the index onset of when the animal start vocalizing in the raw recording before merge
+    IndVocStartPiezo = cell(1,Nvoc);% Contains for each sequence of vocalizations (Nvoc) a cell array of the size the number of loggers and for each logger the index onset of when the animal start vocalizing in the piezo recording before merge
+    IndVocStopRaw = cell(1,Nvoc);% Contains for each sequence of vocalizations (Nvoc) a cell array of the size the number of loggers and for each logger the index offset of when the animal stop vocalizingin the raw recording before merge
+    IndVocStopPiezo = cell(1,Nvoc);% Contains for each sequence of vocalizations (Nvoc) a cell array of the size the number of loggers and for each logger the index offset of when the animal stop vocalizingin the piezo recording before merge
+    IndVocStart_all = cell(1,Nvoc);
+    IndVocStop_all = cell(1,Nvoc);
+    IndVocStartRaw_merged = cell(1,Nvoc);% Contains for each sequence of vocalizations (Nvoc) a cell array of the size the number of loggers and for each logger the index onset of when the animal start vocalizing in the raw recording
+    IndVocStopRaw_merged = cell(1,Nvoc);% Contains for each sequence of vocalizations (Nvoc) a cell array of the size the number of loggers and for each logger the index offset of when the animal stop vocalizingin the raw recording
+    IndVocStartPiezo_merged = cell(1,Nvoc);% Contains for each sequence of vocalizations (Nvoc) a cell array of the size the number of loggers and for each logger the index onset of when the animal start vocalizing in the piezo recording
+    IndVocStopPiezo_merged = cell(1,Nvoc);% Contains for each sequence of vocalizations (Nvoc) a cell array of the size the number of loggers and for each logger the index offset of when the animal stop vocalizingin the piezo recording
+    RMSRatio_all = cell(1,Nvoc);
+    RMSDiff_all = cell(1,Nvoc);
+    MicError = [0 0];% first element = number of corrections. second = number of detection (question)
+    MicErrorType = [0 0];% first element false negative (detected as noise or already detected when it is a new call), second element false positive (vice versa)
+    PiezoError = [0 0];% first element = number of corrections. second = number of detection (question)
+    PiezoErrorType = [0 0]; % first element false negative (detected as noise or hearing when it is a new call), second element false positive (vice versa)
+    load(PreviousFile, 'IndVocStartRaw_merged', 'IndVocStopRaw_merged', 'IndVocStartPiezo_merged', 'IndVocStopPiezo_merged', 'IndVocStart_all', 'IndVocStop_all','RMSRatio_all','RMSDiff_all','vv','MicError','PiezoError','MicErrorType','PiezoErrorType','IndVocStartRaw','IndVocStartPiezo','IndVocStopRaw','IndVocStopPiezo');
+    SaveRaw_wave=0;
+    if FileIn==1 % We are in check mode, else we are restarting the check mode...
+        vv=1;
+    end
     %% Loop through vocalizations sequences and calculate amplitude envelopes
-    for vv=1:Nvoc
+    for vv=vv:Nvoc
         fprintf(1,'Voc sequence %d/%d\n',vv,Nvoc);
         %% Check Raw_wave
         [Raw_wave_temp, FS] = audioread(Voc_filename{vv});
         if sum(Raw_wave{vv} - Raw_wave_temp)~=0
             warning('the sound extract is not the one expected\n')
+            SaveRaw_wave=1;
             keyboard
         end
         %% Plot figure 1 with already calculated data
@@ -177,10 +206,10 @@ else
                         hold on
                         yyaxis right
                         YLim = get(gca, 'YLim');
-                        plot([IndVocStartRaw_merged{vv}{ll}(ii) IndVocStopRaw_merged{vv}{ll}(ii)]/FS*1000, [YLim(2)*4/5 YLim(2)*4/5], 'k-', 'LineWidth',2)
+                        plot([IndVocStartRaw_merged{vv}{ll}(ii) IndVocStopRaw_merged{vv}{ll}(ii)]/FS*1000, [YLim(2)*4/5 YLim(2)*4/5], 'k--', 'LineWidth',2)
                         subplot(length(AudioLogs)+2,1,length(AudioLogs)+2)
                         hold on
-                        plot([IndVocStartRaw_merged{vv}{ll}(ii) IndVocStopRaw_merged{vv}{ll}(ii)]/FS*1000, [ll ll], 'Color',ColorCode(ll,:), 'LineWidth',2, 'LineStyle','-')
+                        plot([IndVocStartRaw_merged{vv}{ll}(ii) IndVocStopRaw_merged{vv}{ll}(ii)]/FS*1000, [ll ll], 'Color',ColorCode(ll,:), 'LineWidth',2, 'LineStyle','--')
                         hold off
                     end
                    
@@ -197,9 +226,7 @@ else
             set(gca, 'XLim', XLIM);
             ylabel('AL ID')
             xlabel('Time (ms)')
-            
-            clf(F1)
-            clf(F2)
+           
         end
         ManCall = input('Do the data look fine? yes () No (anything)');
         
@@ -260,18 +287,12 @@ else
             %% Find out which calls are emitted by each individual
             Vocp = nan(size(DiffAmp) + [1 0]); % This is the output of the decision criterion to determine at each time point if a bat is vocalizing or not. each row=a logger, each column = a time point
             RowSize = length(AudioLogs);
-            IndVocStartRaw = cell(RowSize,1);
-            IndVocStartPiezo = cell(RowSize,1);
-            IndVocStopRaw = cell(RowSize,1);
-            IndVocStopPiezo = cell(RowSize,1);
+            IndVocStartRaw{vv} = cell(RowSize,1);
+            IndVocStartPiezo{vv} = cell(RowSize,1);
+            IndVocStopRaw{vv} = cell(RowSize,1);
+            IndVocStopPiezo{vv} = cell(RowSize,1);
             IndVocStart = cell(RowSize,1);
             IndVocStop = cell(RowSize,1);
-            IndNoiseStartRaw = cell(RowSize,1);
-            IndNoiseStartPiezo = cell(RowSize,1);
-            IndNoiseStopRaw = cell(RowSize,1);
-            IndNoiseStopPiezo = cell(RowSize,1);
-            IndNoiseStart = cell(RowSize,1);
-            IndNoiseStop = cell(RowSize,1);
             IndVocStartRaw_merge_local = cell(RowSize,1);
             IndVocStopRaw_merge_local = cell(RowSize,1);
             IndVocStartPiezo_merge_local = cell(RowSize,1);
@@ -294,11 +315,8 @@ else
                     RMSRatio{ll} = nan(NV,1);
                     RMSDiff{ll} = nan(NV,1);
                     Call1Hear0_temp = nan(NV,1);
-                    if ManCall
-                        Call1Hear0_man = nan(NV,1);
-                    else
-                        Call1Hear0_man = zeros(NV,1);
-                    end
+                    Call1Hear0_man = nan(NV,1);
+                    
                     for ii=1:NV
                         IVStop = find(Vocp(ll,IndVocStart{ll}(ii):end)==0, 1, 'first');
                         if ~isempty(IVStop)
@@ -359,17 +377,14 @@ else
                         else
                             fprintf('Computer guess for that sound element: %s hearing/noise\n',Fns_AL{ll});
                         end
-                        if ManCall
-                            Call1Hear0_man(ii) = input('Indicate your choice: calling (1) hearing/noise (0) Listen again to that logger recording (any other number)\n');
-                            while Call1Hear0_man(ii)~=0 && Call1Hear0_man(ii)~=1
-                                Player= audioplayer((Piezo_wave.(Fns_AL{ll}){vv}-mean(Piezo_wave.(Fns_AL{ll}){vv}))/std(Piezo_wave.(Fns_AL{ll}){vv}), Piezo_FS.(Fns_AL{ll})(vv)); %#ok<TNMLP>
-                                play(Player)
-                                pause(length(Raw_wave{vv})/FS +1)
-                                Call1Hear0_man(ii) = input('Indicate your choice: calling (1) hearing/noise (0) listen again to that logger recording (any other number)\n');
-                            end
-                        else
-                            fprintf(1,'Manual input enforced: Noise (0)\n');
+                        Call1Hear0_man(ii) = input('Indicate your choice: calling (1) hearing/noise (0) Listen again to that logger recording (any other number)\n');
+                        while Call1Hear0_man(ii)~=0 && Call1Hear0_man(ii)~=1
+                            Player= audioplayer((Piezo_wave.(Fns_AL{ll}){vv}-mean(Piezo_wave.(Fns_AL{ll}){vv}))/std(Piezo_wave.(Fns_AL{ll}){vv}), Piezo_FS.(Fns_AL{ll})(vv)); %#ok<TNMLP>
+                            play(Player)
+                            pause(length(Raw_wave{vv})/FS +1)
+                            Call1Hear0_man(ii) = input('Indicate your choice: calling (1) hearing/noise (0) listen again to that logger recording (any other number)\n');
                         end
+                        
                         Agree = Call1Hear0_temp(ii)== Call1Hear0_man(ii);
                         if ~Agree
                             Call1Hear0_temp(ii) = Call1Hear0_man(ii);
@@ -397,12 +412,6 @@ else
                         
                     % Stash noise and Only keep vocalizations that were produced by the bat
                     % according to the high RMSRatio value
-                    IndNoiseStart{ll} = IndVocStart{ll}(~logical(Call1Hear0_temp));
-                    IndNoiseStop{ll} = IndVocStop{ll}(~logical(Call1Hear0_temp));
-                    IndNoiseStartRaw{vv}{ll} = round(IndNoiseStart{ll}/Fs_env*FS);
-                    IndNoiseStartPiezo{vv}{ll} = round(IndNoiseStart{ll}/Fs_env*Piezo_FS.(Fns_AL{ll})(vv));
-                    IndNoiseStopRaw{vv}{ll} = round(IndNoiseStop{ll}/Fs_env*FS);
-                    IndNoiseStopPiezo{vv}{ll} = round(IndNoiseStop{ll}/Fs_env*Piezo_FS.(Fns_AL{ll})(vv));
                     IndVocStart{ll} = IndVocStart{ll}(logical(Call1Hear0_temp));
                     IndVocStop{ll} = IndVocStop{ll}(logical(Call1Hear0_temp));
                     IndVocStartRaw{vv}{ll} = round(IndVocStart{ll}/Fs_env*FS);
@@ -486,9 +495,12 @@ else
             IndVocStopPiezo_merged{vv} = IndVocStopPiezo_merge_local;
             RMSRatio_all{vv} = RMSRatio;
             RMSDiff_all{vv} = RMSDiff;
+            clf(F2)
         end
         fprintf(1,'saving data...\n')
-        save(fullfile(Working_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, MergeThresh)), 'IndVocStartRaw_merged', 'IndVocStopRaw_merged', 'IndVocStartPiezo_merged', 'IndVocStopPiezo_merged', 'IndVocStartRaw', 'IndVocStopRaw', 'IndVocStartPiezo', 'IndVocStopPiezo', 'IndVocStart_all', 'IndVocStop_all','IndNoiseStart_all','IndNoiseStop_all', 'IndNoiseStartRaw', 'IndNoiseStopRaw', 'IndNoiseStartPiezo', 'IndNoiseStopPiezo','RMSRatio_all','RMSDiff_all','vv','MicError','PiezoError','MicErrorType','PiezoErrorType');
+        save(fullfile(Working_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, MergeThresh)), 'IndVocStartRaw_merged', 'IndVocStopRaw_merged', 'IndVocStartPiezo_merged', 'IndVocStopPiezo_merged', 'IndVocStartRaw', 'IndVocStopRaw', 'IndVocStartPiezo', 'IndVocStopPiezo', 'IndVocStart_all', 'IndVocStop_all','RMSRatio_all','RMSDiff_all','vv','MicError','PiezoError','MicErrorType','PiezoErrorType');
+        clf(F1)
+        
     end
     if ~strcmp(Working_dir,Loggers_dir)
         fprintf(1,'Transferring data back on the server\n')
@@ -501,6 +513,8 @@ else
             [sdel,mdel,edel]=rmdir(Working_dir, 's');
         end
     end
-    save(DataFile, 'Raw_wave','-append')
+    if SaveRaw_wave
+        save(DataFile, 'Raw_wave','-append')
+    end
 end
 end

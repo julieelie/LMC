@@ -101,9 +101,9 @@ else
     % [z,p,k] = butter(6,BandPassFilter(1:2)/(FS/2),'bandpass');
     % sos_raw_low = zp2sos(z,p,k);
     
-    PreviousFile = fullfile(Working_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, MergeThresh));
+    PreviousFile = fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, MergeThresh));
     if ~isempty(dir(PreviousFile)) && UseOld
-        OLD=load(PreviousFile, 'IndVocStartRaw_merged', 'IndVocStopRaw_merged', 'IndVocStartPiezo_merged', 'IndVocStopPiezo_merged', 'IndVocStart_all', 'IndVocStop_all','RMSRatio_all','RMSDiff_all','vv','MicError','PiezoError','MicErrorType','PiezoErrorType');
+        OLD=load(PreviousFile,'IndVocStartRaw_merged','IndVocStopRaw_merged','IndVocStartPiezo_merged','IndVocStopPiezo_merged','IndVocStartRaw','IndVocStopRaw','IndVocStartPiezo','IndVocStopPiezo','IndVocStart_all','IndVocStop_all','IndNoiseStart_all','IndNoiseStop_all','IndNoiseStartRaw','IndNoiseStopRaw','IndNoiseStartPiezo','IndNoiseStopPiezo','RMSRatio_all','RMSDiff_all');
     end
     %% Loop through vocalizations sequences and calculate amplitude envelopes
     for vv=1:Nvoc
@@ -115,18 +115,18 @@ else
             IndVocStopRaw_merged(vv) = OLD.IndVocStopRaw_merged(ProcessedInd);
             IndVocStartPiezo_merged(vv)=OLD.IndVocStartPiezo_merged(ProcessedInd);
             IndVocStopPiezo_merged(vv) = OLD.IndVocStopPiezo_merged(ProcessedInd);
-            IndVocStartRaw(vv) = OLD.IndVocStartRaw(ProcessedInd);
-            IndVocStopRaw(vv) = OLD.IndVocStopRaw(ProcessedInd);
-            IndVocStartPiezo(vv) = OLD.IndVocStartPiezo(ProcessedInd);
-            IndVocStopPiezo(vv) = OLD.IndVocStopPiezo(ProcessedInd);
+%             IndVocStartRaw(vv) = OLD.IndVocStartRaw(ProcessedInd);
+%             IndVocStopRaw(vv) = OLD.IndVocStopRaw(ProcessedInd);
+%             IndVocStartPiezo(vv) = OLD.IndVocStartPiezo(ProcessedInd);
+%             IndVocStopPiezo(vv) = OLD.IndVocStopPiezo(ProcessedInd);
             IndVocStart_all(vv) = OLD.IndVocStart_all(ProcessedInd);
             IndVocStop_all(vv) = OLD.IndVocStop_all(ProcessedInd);
-            IndNoiseStart_all(vv) = OLD.IndNoiseStart_all(ProcessedInd);
-            IndNoiseStop_all(vv) = OLD.IndNoiseStop_all(ProcessedInd);
-            IndNoiseStartRaw(vv) = OLD.IndNoiseStartRaw(ProcessedInd);
-            IndNoiseStopRaw(vv) = OLD.IndNoiseStopRaw(ProcessedInd);
-            IndNoiseStartPiezo(vv) = OLD.IndNoiseStartPiezo(ProcessedInd);
-            IndNoiseStopPiezo(vv) = OLD.IndNoiseStopPiezo(ProcessedInd);
+%             IndNoiseStart_all(vv) = OLD.IndNoiseStart_all(ProcessedInd);
+%             IndNoiseStop_all(vv) = OLD.IndNoiseStop_all(ProcessedInd);
+%             IndNoiseStartRaw(vv) = OLD.IndNoiseStartRaw(ProcessedInd);
+%             IndNoiseStopRaw(vv) = OLD.IndNoiseStopRaw(ProcessedInd);
+%             IndNoiseStartPiezo(vv) = OLD.IndNoiseStartPiezo(ProcessedInd);
+%             IndNoiseStopPiezo(vv) = OLD.IndNoiseStopPiezo(ProcessedInd);
             RMSRatio_all(vv) = OLD.RMSRatio_all(ProcessedInd);
             RMSDiff_all(vv) = OLD.RMSDiff_all(ProcessedInd);
         else
@@ -758,12 +758,12 @@ else
                                     fprintf('Computer guess for that sound element: %s hearing/noise\n',Fns_AL{ll});
                                 end
                                 if ManCall
-                                    Call1Hear0_man(ii) = input('Indicate your choice: calling (1) hearing/noise (0) Play again to that logger recording (any other number)\n');
+                                    Call1Hear0_man(ii) = input('Indicate your choice: calling (1) hearing/noise (0) Listen again to that logger recording (any other number)\n');
                                     while Call1Hear0_man(ii)~=0 && Call1Hear0_man(ii)~=1
                                         Player= audioplayer((Piezo_wave.(Fns_AL{ll}){vv}-mean(Piezo_wave.(Fns_AL{ll}){vv}))/std(Piezo_wave.(Fns_AL{ll}){vv}), Piezo_FS.(Fns_AL{ll})(vv)); %#ok<TNMLP>
                                         play(Player)
                                         pause(length(Raw_wave{vv})/FS +1)
-                                        Call1Hear0_man(ii) = input('Indicate your choice: new call (1) noise (0) listen again to that logger recording (any other number)\n');
+                                        Call1Hear0_man(ii) = input('Indicate your choice: calling (1) hearing/noise (0) listen again to that logger recording (any other number)\n');
                                     end
                                 else
                                     fprintf(1,'Manual input enforced: Noise (0)\n');
@@ -920,6 +920,7 @@ else
             end
         end
     end
+    save(fullfile(Working_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, MergeThresh)), 'IndVocStartRaw_merged', 'IndVocStopRaw_merged', 'IndVocStartPiezo_merged', 'IndVocStopPiezo_merged', 'IndVocStartRaw', 'IndVocStopRaw', 'IndVocStartPiezo', 'IndVocStopPiezo', 'IndVocStart_all', 'IndVocStop_all','IndNoiseStart_all','IndNoiseStop_all', 'IndNoiseStartRaw', 'IndNoiseStopRaw', 'IndNoiseStartPiezo', 'IndNoiseStopPiezo','RMSRatio_all','RMSDiff_all','vv','MicError','PiezoError','MicErrorType','PiezoErrorType');
     if ~strcmp(Working_dir,Loggers_dir)
         fprintf(1,'Transferring data back on the server\n')
         [s,m,e]=copyfile(fullfile(Working_dir,'*'), Loggers_dir, 'f');

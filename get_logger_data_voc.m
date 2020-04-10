@@ -20,7 +20,7 @@ pnames = {'SerialNumber', 'ReAllignment'};
 dflts  = {[],1};
 [SerialNumber, ReAllignment] = internal.stats.parseArgs(pnames,dflts,varargin{:});
 
-Buffer = 100; % Let's cut the audio extracts Buffer ms before and after the predicted time according to audio/transceiver allignment to better allign
+Buffer = 2000; % Let's cut the audio extracts Buffer ms before and after the predicted time according to audio/transceiver allignment to better allign
 BandPassFilter = [1000 5000 9000];
 %Parameter for detecting who is vocalizing:
 Fhigh_power = 20; %Hz
@@ -202,8 +202,8 @@ else
             title('Environmental Mic filtering and resampling')
             legend('Raw voltage trace', sprintf('BandPass %d %d Hz', BandPassFilter(1:2)))
             
-            Player = audioplayer(Filt_Raw_wav, FS);
-            play(Player)
+%             Player = audioplayer(Filt_Raw_wav, FS);
+%             play(Player)
             
             %     % roughly detect loadest vocalization on the environment microphone by
             %     % calculating an RMS in windows of 100ms

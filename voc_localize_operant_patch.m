@@ -1,4 +1,4 @@
-function [Voc_out, Voc_samp_idx,Voc_transc_time] = voc_localize_operant(RawWav_dir, Subj, Date, ExpStartTime, varargin)
+function [Voc_out, Voc_samp_idx,Voc_transc_time] = voc_localize_operant_patch(RawWav_dir, Subj, Date, ExpStartTime, varargin)
 %% VOC_LOCALIZE_OPERANT a function to retrieve the position of detected vocalizations and rewards by vocOperant in continuous recordings
 % First a section of the ambient microphone recording is taken around the time of sound detection given by vocOperant,
 % cuting maximum Buffer_s = 2s before the trigger and Buffer_s = 2s after
@@ -150,36 +150,32 @@ for ss=1:NVoc
     end
     
     % Make sure that stamp does not correspond to a call already saved
-    Idx_Stamp_Y = Stamp - sum(Length_Y(1:(File_Idx-1)));
+    Idx_Stamp_Y = Stamp - sum(Length_Y(1:(File_Idx(ss)-1)));
     Done = 0;
     for ii=1:(ss-1)
-        if (Idx_Stamp_Y>Voc_samp_idx(ii,1)) && (Idx_Stamp_Y<Voc_samp_idx(ii,2))
-            if ~(File_Idx(ss)==File_Idx(ii))
-                keyboard
-            else
-                fprintf('Call already extracted!\n')
-                if isnan(Re_samp_idx(ii)) && ~isnan(Time2Reward(ss)) % this is the first call of the sequence that got rewarded
-                    % saving the time to get the reward for that vocalization
-                    Re_samp_idx(ii) = Stamp - sum(Length_Y(1:(File_Idx(ss)-1))) + Time2Reward(ss)*FS;
-                    Time2re(ii) = Time2Reward(ss);
-                    if TranscTime
-                        % Extract the transceiver time
-                        % zscore the sample stamps
-                        TTL_idx = find(unique(TTL.File_number) == File_Idx(ss));
-                        if isempty(TTL_idx)
-                            fprintf('Transceiver time calculations not possible for that vocalization\n')
-                            Re_transc_time(ii) = NaN;
-                        else
-                            Re_samp_idx_zs = (Re_samp_idx(ii) - TTL.Mean_std_Pulse_samp_audio(TTL_idx,1))/TTL.Mean_std_Pulse_samp_audio(TTL_idx,2);
-                            % calculate the transceiver times
-                            Re_transc_time(ii) = TTL.Mean_std_Pulse_TimeStamp_Transc(TTL_idx,2) .* polyval(TTL.Slope_and_intercept{TTL_idx},Re_samp_idx_zs,[], TTL.Mean_std_x{TTL_idx}) + TTL.Mean_std_Pulse_TimeStamp_Transc(TTL_idx,1);
-                        end
-                        
+        if (Idx_Stamp_Y>=Voc_samp_idx(ii,1)) && (Idx_Stamp_Y<=Voc_samp_idx(ii,2)) && (File_Idx(ss)==File_Idx(ii))
+            fprintf('Call already extracted!\n')
+            if isnan(Re_samp_idx(ii)) && ~isnan(Time2Reward(ss)) % this is the first call of the sequence that got rewarded
+                % saving the time to get the reward for that vocalization
+                Re_samp_idx(ii) = Stamp - sum(Length_Y(1:(File_Idx(ss)-1))) + Time2Reward(ss)*FS;
+                Time2re(ii) = Time2Reward(ss);
+                if TranscTime
+                    % Extract the transceiver time
+                    % zscore the sample stamps
+                    TTL_idx = find(unique(TTL.File_number) == File_Idx(ss));
+                    if isempty(TTL_idx)
+                        fprintf('Transceiver time calculations not possible for that vocalization\n')
+                        Re_transc_time(ii) = NaN;
+                    else
+                        Re_samp_idx_zs = (Re_samp_idx(ii) - TTL.Mean_std_Pulse_samp_audio(TTL_idx,1))/TTL.Mean_std_Pulse_samp_audio(TTL_idx,2);
+                        % calculate the transceiver times
+                        Re_transc_time(ii) = TTL.Mean_std_Pulse_TimeStamp_Transc(TTL_idx,2) .* polyval(TTL.Slope_and_intercept{TTL_idx},Re_samp_idx_zs,[], TTL.Mean_std_x{TTL_idx}) + TTL.Mean_std_Pulse_TimeStamp_Transc(TTL_idx,1);
                     end
+                    
                 end
-                Done = 1;
-                break
             end
+            Done = 1;
+            break
         end
     end
     

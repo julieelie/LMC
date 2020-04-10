@@ -1,10 +1,14 @@
-function plot_rastervoc_perfile(InputDataFile, OutputPath,Delay, PlotDyn)
+function plot_rastervoc_perfile(InputDataFile, OutputPath,Delay, PlotDyn, DurOrd)
 %%
 if nargin<3
     Delay=[3000 200];
 end
 if nargin<4
     PlotDyn = 1;
+end
+
+if nargin<5
+    DurOrd = 0; % set to 1 to order neural responses by decreasing call duration
 end
 
 [~, DataFile]=fileparts(InputDataFile);
@@ -42,10 +46,11 @@ IndVocHDO = intersect(IndVocHD, IndVocO);
 IndVocHDF = intersect(IndVocHD, IndVocF);
 %% Time Raster plot alligned to vocalization production onset/offset self vocalizations Operant + Free First voc of sequence only
 if ~isempty(IndVocPD) && ~isempty(IndVocPDO) && ~isempty(IndVocPDF)
-    Fig1 = figure();
-    Color = [0 0.3 0].*contains(Data.What, 'Tr') + repmat([1 0.7 0.7], length(Data.What),1);
+    Fig1 = figure();% TrCol = [0.9290, 0.6940, 0.1250];BaCol = [1, 0, 0];
+    Color = [0/255 191/255 255/255].*contains(Data.What, 'Tr') + [1 0.7 0.7].*contains(Data.What, 'Ba');
     if isfield(Data.KDE_onset,'SelfVocAll')
-        timerasterkde(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPD,Color,Data.KDE_onset.SelfVocAll,Data.KDE_offset.SelfVocAll,[1 0.45 0.4],Data.RewardTime);
+        ColKDE = [186/255 85/255 211/255];
+        timerasterkde(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPD,Color,Data.KDE_onset.SelfVocAll,Data.KDE_offset.SelfVocAll,ColKDE,Data.RewardTime,DurOrd);
     else
         timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPD,Color);
     end
@@ -58,7 +63,7 @@ if ~isempty(IndVocHD) && ~isempty(IndVocHDO) && ~isempty(IndVocHDF)
     Fig2 = figure();
     Color = [0 0.3 0].*contains(Data.What, 'Tr') + repmat([0.7 0.7 1], length(Data.What),1);
     if isfield(Data.KDE_onset, 'OthersVocAll')
-        timerasterkde(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocHD,Color, Data.KDE_onset.OthersVocAll,Data.KDE_offset.OthersVocAll,[0.4 0.45 1],Data.RewardTime)
+        timerasterkde(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocHD,Color, Data.KDE_onset.OthersVocAll,Data.KDE_offset.OthersVocAll,[0.4 0.45 1],Data.RewardTime,DurOrd)
     else
         timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocHD,Color)
     end
@@ -69,9 +74,10 @@ end
 %% Time Raster plot alligned to vocalization production onset/offset during Operant conditioning First voc of sequence only
 if ~isempty(IndVocPDO)
     Fig6 = figure();
-    Color = [0 0.3 0].*contains(Data.What, 'Tr') + repmat([1 0.7 0.7], length(Data.What),1);
+    Color = [0/255 191/255 255/255].*contains(Data.What, 'Tr') + [1 0.7 0.7].*contains(Data.What, 'Ba');
     if isfield(Data.KDE_onset, 'SelfVocOp')
-        timerasterkde(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPDO,Color,Data.KDE_onset.SelfVocOp,Data.KDE_offset.SelfVocOp,[1 0.45 0.4],Data.RewardTime)
+        ColKDE = [186/255 85/255 211/255];
+        timerasterkde(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPDO,Color,Data.KDE_onset.SelfVocOp,Data.KDE_offset.SelfVocOp,ColKDE,Data.RewardTime,DurOrd)
     else
         timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPDO,Color)
     end
@@ -84,7 +90,7 @@ if ~isempty(IndVocHDO)
     Fig7 = figure();
     Color = [0 0.3 0].*contains(Data.What, 'Tr') + repmat([0.7 0.7 1], length(Data.What),1);
     if isfield(Data.KDE_onset,'OthersVocOp')
-        timerasterkde(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocHDO,Color,Data.KDE_onset.OthersVocOp,Data.KDE_offset.OthersVocOp,[0.4 0.45 1],Data.RewardTime)
+        timerasterkde(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocHDO,Color,Data.KDE_onset.OthersVocOp,Data.KDE_offset.OthersVocOp,[0.4 0.45 1],Data.RewardTime,DurOrd)
     else
         timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocHDO,Color)
     end
@@ -95,9 +101,10 @@ end
 %% Time Raster plot alligned to vocalization production onset/offset during Free session First voc of sequence only
 if ~isempty(IndVocPDF)
     Fig8 = figure();
-    Color = [0 0.3 0].*contains(Data.What, 'Tr') + repmat([1 0.7 0.7], length(Data.What),1);
+    Color = [0/255 191/255 255/255].*contains(Data.What, 'Tr') + [1 0.7 0.7].*contains(Data.What, 'Ba');
     if isfield(Data.KDE_onset,'SelfVocFr')
-        timerasterkde(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPDF,Color,Data.KDE_onset.SelfVocFr,Data.KDE_offset.SelfVocFr,[1 0.45 0.4])
+        ColKDE = [186/255 85/255 211/255];
+        timerasterkde(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPDF,Color,Data.KDE_onset.SelfVocFr,Data.KDE_offset.SelfVocFr,ColKDE)
     else
         timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPDF,Color)
     end
@@ -280,13 +287,21 @@ end
     end
 
 
-function timerasterkde(SpikesArrivalTimes,Duration,Delay,Indices, Color, Dat1, Dat2, Col1, RewardTime)
+function timerasterkde(SpikesArrivalTimes,Duration,Delay,Indices, Color, Dat1, Dat2, Col1, RewardTime,DurOrd)
     if nargin<9
         RewardTime = nan(length(Duration),1);
     end
-    % We want to plot data with increasing duration of
+    if nargin<10
+        DurOrd=0;
+    end
+    if DurOrd
+        % We want to plot data with increasing duration of
         % vocalizations.
         [~,IDur] = sort(Duration(Indices));
+    else
+        IDur = 1:length(Indices);
+    end
+    
         subplot(4,2,[1 3 5])
 
         % First alligned to vocalization onset
@@ -297,12 +312,16 @@ function timerasterkde(SpikesArrivalTimes,Duration,Delay,Indices, Color, Dat1, D
             plot([0 Duration(Indices(cc))], oo-[0.5 0.5], '-','LineWidth',250/length(Indices),'Color', Color(Indices(cc),:)) % vocalization
             % plot reward time
             if ~isinf(RewardTime(Indices(cc))) && ~isnan(RewardTime(Indices(cc)))
-                plot(RewardTime(Indices(cc)), oo-0.5,'o','MarkerSize',8, 'MarkerFaceColor',[1 0.85 0.275],'MarkerEdgeColor',[1 0.85 0.275])
+                plot(RewardTime(Indices(cc)), oo-0.5,'o','MarkerSize',6, 'MarkerFaceColor',[1 0.85 0.275],'MarkerEdgeColor',[1 0.85 0.275])
                 hold on
             end
             % plot spikes
             Sat = SpikesArrivalTimes{Indices(cc)};
-            SpikeInd = find((Sat>-Delay(1)).*(Sat<(Duration(Indices(cc))+Delay(2))));
+            if Delay(2)<5000
+                SpikeInd = find((Sat>-Delay(1)).*(Sat<(max(Duration(Indices))+Delay(2))));
+            else
+                SpikeInd = find((Sat>-Delay(1)).*(Sat<(Duration(Indices(cc))+Delay(2))));
+            end
             if ~isempty(SpikeInd)
                 Sat = Sat(SpikeInd);
                 for spike=1:length(Sat)
@@ -347,7 +366,11 @@ function timerasterkde(SpikesArrivalTimes,Duration,Delay,Indices, Color, Dat1, D
             end
             % plot spikes
             Sat = SpikesArrivalTimes{Indices(cc)};
-            SpikeInd = find((Sat>-Delay(1)).*(Sat<(Duration(Indices(cc))+Delay(2))));
+            if Delay(1)<5000
+                SpikeInd = find((Sat>(-Delay(1)-max(Duration(Indices))+Duration(Indices(cc)))).*(Sat<(Duration(Indices(cc))+Delay(2))));
+            else
+                SpikeInd = find((Sat>-Delay(1)).*(Sat<(Duration(Indices(cc))+Delay(2))));
+            end
             if ~isempty(SpikeInd)
                 Sat = Sat(SpikeInd)- Duration(Indices(cc));
                 for spike=1:length(Sat)
