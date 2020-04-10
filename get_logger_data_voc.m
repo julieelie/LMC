@@ -423,7 +423,7 @@ else
         end
     else
         for vv=1:Nvoc
-            fprintf(1,'No better estimate of call allignment\n')
+            fprintf(1,'%d/%d No better estimate of call allignment\n',vv,Nvoc)
             % save the raw wavefrom
             [Raw_wave{vv}, ~] = audioread(VocExt.Voc_filename{vv});
             if vv==1 % get the sampling frequency of sound extracts
@@ -450,10 +450,11 @@ else
         end
     end
     % Save data
+    fprintf(1,'Save the Data in %s\n',fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date, ExpStartTime)))
     VocFilename = VocExt.Voc_filename;
     % Check the size of variables
-    OP = who('Piezo_wave');
-    OW = who('Raw_wave');
+    OP = whos('Piezo_wave');
+    OW = whos('Raw_wave');
     if ((OP.bytes/10^9)>=2) || ((OW.bytes/10^9)>=2)
         save(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date, ExpStartTime)), 'Piezo_wave', 'Piezo_FS',  'Raw_wave','FS', 'RatioRMS', 'DiffRMS','BandPassFilter', 'AudioLogs', 'RMSHigh', 'RMSLow','VocFilename','Voc_transc_time_refined','LoggerType', 'ReAllignment','-v7.3');
     else
