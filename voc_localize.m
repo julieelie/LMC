@@ -11,7 +11,7 @@ function [Voc_filename,Voc_samp_idx,Voc_transc_time] = voc_localize(Voc_dir,RawW
 % onset anf offset of sound extracts in transceiver time
 
 % Ouputs
-% Voc_filename is the file list of manual extracts 
+% Voc_filename is the file list of manual extracts
 
 % Voc_samp_idx is a 2 column vector that gives the onset and offset indices
 % of each extract in the original recordings, same number of lines as
@@ -27,7 +27,8 @@ Dur_RMS = 0.5; % duration of the silence sample in min for the calculation of av
 Fhigh_power = 20; %Hz
 Fs_env = 1000; %Hz Sample frequency of the enveloppe
 MicThreshNoise = 15*10^-3;
-
+% incase we need to cross-correlate to localize vocalization, filter data:
+BandPassFilter = [500 10000];
 %% Load data and initialize output variables
 % Get input arguments
 Pnames = {'TransceiverTime', 'Avisoft'};
@@ -38,7 +39,7 @@ Dflts  = {TranscTime Avisoft};
 
 if TranscTime
     if Avisoft
-         % Load the pulse times and samples
+        % Load the pulse times and samples
         TTL_dir = dir(fullfile(RawWav_dir,sprintf( '%s_TTLPulseTimes.mat', Date)));
     else
         % Load the pulse times and samples
@@ -70,13 +71,14 @@ Voc_samp_idx = nan(NVoc,2);
 Voc_transc_time = nan(NVoc,2);
 MeanStdAmpRawFile = nan(100,2);
 MeanStdAmpRawExtract = nan(NVoc,2);
+Raw_filename_old = [];
 
 %% Loop through extracts and localize them
 for vv=1:NVoc
     fprintf('vocalization %d/%d\n',vv, NVoc);
     % load the extract
     Voc_filename{vv} = fullfile(AllVocs(vv).folder, AllVocs(vv).name);
-    [Voc_wav] = audioread(Voc_filename{vv});
+    [Voc_wav,FS_voc] = audioread(Voc_filename{vv});
     
     % load the raw file
     Idx_ = strfind(AllVocs(vv).name, '_');
@@ -126,9 +128,31 @@ for vv=1:NVoc
     
     % Find the localization of the extract in
     % the raw file
-    Voc_samp_idx(vv,1) = strfind(Raw_wav', Voc_wav');
-    Voc_samp_idx(vv,2) = Voc_samp_idx(vv,1) + length(Voc_wav);
-     
+    if FS~=FS_voc % the extract was saved at a different sample frequency. Using cross correlation to retrieve the data
+        if ~exist('sosRaw', 'var')
+            [z,p,k] = butter(6,BandPassFilter/(FS/2),'bandpass');% a 12th order Butterworth band-pass filter; the second input argument is normalized cut-off frequency (ie. normalized to the Nyquist frequency, which is half the sampling frequency, as required by MATLAB)
+            sosRaw = zp2sos(z,p,k); % obtain the second order section (biquad) filter to use as input in filtfilt
+            [z,p,k] = butter(6,BandPassFilter/(FS_voc/2),'bandpass');% a 12th order Butterworth band-pass filter; the second input argument is normalized cut-off frequency (ie. normalized to the Nyquist frequency, which is half the sampling frequency, as required by MATLAB)
+            sosVoc = zp2sos(z,p,k); % obtain the second order section (biquad) filter to use as input in filtfilt
+        end
+        % band-pass filter and resample the sounds so they are at the same sample frequency of 4
+        % times the low pass filter value
+        if ~strcmp(Raw_filename_old,Raw_filename) % don't do this again if same raw file as previous stpe
+            Filt_Raw_wave=(filtfilt(sosRaw,1,Raw_wav));
+            Resamp_Filt_Raw_wav = resample(Filt_Raw_wave, 4*BandPassFilter(2), FS);
+        end
+            
+        Filt_Voc_wave = (filtfilt(sosVoc,1,Voc_wav));
+        Resamp_Filt_Voc_wav = resample(Filt_Voc_wave, 4*BandPassFilter(2), FS_voc);
+        % perform the cross correlation
+        [Xcor,Lag] = xcorr(Resamp_Filt_Raw_wav,Resamp_Filt_Voc_wav); % Running a cross correlation between the raw signal and each manually extracted signal
+        [~,I] = max(abs(Xcor));
+        Voc_samp_idx(vv,1) = Lag(I)/(4*BandPassFilter(2))*FS;
+        Voc_samp_idx(vv,2) = round(Voc_samp_idx(vv,1) + length(Voc_wav)/FS_voc*FS);
+    else
+        Voc_samp_idx(vv,1) = strfind(Raw_wav', Voc_wav');
+        Voc_samp_idx(vv,2) = Voc_samp_idx(vv,1) + length(Voc_wav);
+    end
     % Plot the result of the identification
     Buffer = 100; % in ms
     Raw_extract = Raw_wav((Voc_samp_idx(vv,1)-Buffer*FS*10^-3):(Voc_samp_idx(vv,2)+Buffer*FS*10^-3));
@@ -142,7 +166,7 @@ for vv=1:NVoc
     pause(1)
     
     if TranscTime
-        % Extract the transceiver time 
+        % Extract the transceiver time
         % zscore the sample stamps
         TTL_idx = find(unique(TTL.File_number) == FileIdx);
         if Avisoft
@@ -155,6 +179,7 @@ for vv=1:NVoc
             Voc_transc_time(vv,:) = TTL.Mean_std_Pulse_TimeStamp_Transc(TTL_idx,2) .* polyval(TTL.Slope_and_intercept{TTL_idx},Voc_samp_idx_zs,[], TTL.Mean_std_x{TTL_idx}) + TTL.Mean_std_Pulse_TimeStamp_Transc(TTL_idx,1);
         end
     end
+    Raw_filename_old = Raw_filename;
 end
 
 %% save the calculation results

@@ -4,12 +4,12 @@ addpath(genpath('/Users/elie/Documents/CODE/LoggerDataProcessing'))
 addpath(genpath('/Users/elie/Documents/CODE/SoundAnalysisBats'))
 ForceExtract = 0; % set to 1 to redo the extraction of loggers otherwise the calculations will use the previous extraction data
 ForceAllign = 0; % In case the TTL pulses allignment was already done but you want to do it again, set to 1
-ForceVocExt1 = 0; % In case the localization on raw files of vocalizations that were manually extracted was already done but you want to do it again set to 1
-ForceVocExt2 = 0; % In case the localization on Loggers of vocalizations that were manually extracted was already done but you want to do it again set to 1
+ForceVocExt1 = 1; % In case the localization on raw files of vocalizations that were manually extracted was already done but you want to do it again set to 1
+ForceVocExt2 = 1; % In case the localization on Loggers of vocalizations that were manually extracted was already done but you want to do it again set to 1
 ReAllignment = 0; % Incase we don't have a logger on all animals, it's better not to reallign the vocal data by cross correlation between the Microphone and the loggers
-ForceWhoID = 0; % In case the identification of bats was already done but you want to re-do it again
-ForceWhat = 0; % In case running biosound was already done but you want to re-do it
-ForceBehav = 1;% Force extracting onset/offset time of other behaviors
+ForceWhoID = 1; % In case the identification of bats was already done but you want to re-do it again
+ForceWhat = 1; % In case running biosound was already done but you want to re-do it
+ForceBehav = 0;% Force extracting onset/offset time of other behaviors
 close all
 
 % Get the recording date
@@ -185,7 +185,7 @@ if contains(Path2RecordingTable, 'BatmanData')
     end
 end
 
-% Alligning TTL pulses between soundmexpro and Deuteron
+%% Alligning TTL pulses between soundmexpro and Deuteron
 % for the RecOnly session
 
 TTL_dir = dir(fullfile(AudioDataPath,sprintf( '%s_%s_TTLPulseTimes.mat', Date, ExpStartTime)));
@@ -201,6 +201,8 @@ if isempty(TTL_dir) || ForceAllign
 else
     fprintf(1,'\n*** ALREADY DONE: Alligning TTL pulses for the free session ***\n');
 end
+
+%% Extracting voclaizations
 if ManData && (isempty(VocExt_dir) || ForceVocExt1)
     fprintf(1,'\n*** Localizing and extracting vocalizations that were manually extracted ***\n');
     voc_localize(VocManExtDir, AudioDataPath,Date, ExpStartTime)

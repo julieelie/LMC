@@ -81,18 +81,15 @@ end
 
 %% RUN audio data and other behavior extraction for the reconly sessions
 List2RecOnlyPath = gather_reconly_datapath(BasePath);
+%%
 Path2RunRecOnly = find(contains(List2RecOnlyPath, 'CoEd'));
- Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190703'))=[];
- Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190709'))=[];
- Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '190701_0951'))=[];
- Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '2020'))=[];
- Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '201905'))=[];% No neural data
- Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '190605_1406'))=[]; % No vocalization
- Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '190603_1039'))=[]; % No vocalization
- Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '190606_1540'))=[]; % This is not operant but free session, error in choosing the right expe
- Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190712'))=[]; % No neural data
-for pp=1:length(List2RecOnlyPath)
-    Path2ParamFile = List2RecOnlyPath{pp};
+Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '201905'))=[];% No neural data
+Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '190605_1553'))=[]; % Clock jump, no data to extract
+Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190703'))=[];% No TTL Pulses
+Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190709'))=[];% No TTL Pulses
+ 
+for pp=1:length(Path2RunRecOnly)
+    Path2ParamFile = List2RecOnlyPath{Path2RunRecOnly(pp)};
     fprintf(1,'\n\n\n\nRunning result_reconly_bat on %s\n\n', Path2ParamFile)
     result_reconly_bat(Path2ParamFile)
 end
