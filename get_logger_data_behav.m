@@ -24,6 +24,10 @@ function get_logger_data_behav(Audio_dir, Loggers_dir, Date, ExpStartTime)
 %% Load the manual coding of behavior
 InputFiles = dir(fullfile(Audio_dir,'*RecOnly_behav.txt'));
 NF = length(InputFiles);
+if isempty(InputFiles)
+    fprintf(1,'NO NON-VOCAL BEHAVIOR DATA FOR THAT DAY\n')
+    return
+end
 Type = cell(NF,1); % Type of annotation (vocalization, licking_start, chewing....)
 Stamp = cell(NF,1); % Time stamp in computer time of the form yyyymmddThhmmssmmm
 BatID = cell(NF,1); % ID of the bat for licking, quiet, chewing
@@ -140,10 +144,18 @@ TTL = load(fullfile(TTL_dir.folder, TTL_dir.name));
      % Extract the transceiver time
      % zscore the sample stamps
      TTL_idx = find(unique(TTL.File_number) == Event_AudioFileID(ee));
+     if isempty(TTL_idx)
+         warning('No TTL info, no allignment possible for behavioral event %d/%d\n',ee,NE)
+         continue
+     end
      Event_AudioStamp_zs = (Event_AudioStamp(ee) - TTL.Mean_std_Pulse_samp_audio(TTL_idx,1))/TTL.Mean_std_Pulse_samp_audio(TTL_idx,2);
      % calculate the transceiver times
      Event_TranscTime(ee) = TTL.Mean_std_Pulse_TimeStamp_Transc(TTL_idx,2) .* polyval(TTL.Slope_and_intercept{TTL_idx},Event_AudioStamp_zs,[], TTL.Mean_std_x{TTL_idx}) + TTL.Mean_std_Pulse_TimeStamp_Transc(TTL_idx,1);
  end
+ValidEvents = ~isnan(Event_TranscTime);
+Event_TranscTime = Event_TranscTime(ValidEvents);
+BatID = BatID(ValidEvents);
+Type = Type(ValidEvents);
 
 
 %% Identify individual actions and gather onset and offset times of each behavior
