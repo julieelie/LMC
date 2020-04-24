@@ -1,20 +1,17 @@
 addpath(genpath('/Users/elie/Documents/CODE/SoundAnalysisBats'));
 addpath(genpath('/Users/elie/Documents/CODE/LoggerDataProcessing'));
 %% Data Info
-Filename = '190129_1023_VocExtractData_200.mat';
-Path = '/Users/elie/Documents/ManipBats/LMC/190110_59882_11689_HoHa/20190129_data';
-D1=load(fullfile(Path,[Filename(1:(end-8)) '.mat']));
-D2 = load(fullfile(Path,Filename));
+Filename = '59834_20190611_SSS_1-97.mat';
+Path = '/Users/elie/Documents/LMCResults/';
+load(fullfile(Path,Filename));
 
-% Cell #
-CellNum = 5;
 
 % Delay inherited from the extraction and the merge threshold of
 % vocalization in who_calls.m
-Delay = str2double(Filename(end-6 : end-4));
+Delay = 200;
 
-% Number of stimuli in the dataset
-NStims = length(D2.SpikeTimesVoc.Logger16.VocDuration);
+% Number of vocalizations in the dataset
+NStims = sum(contains(What, Voc));
 %% Model parameters
 % Assumption of stationarity over time
 ParamModel.LAMBDARATIO=1e-4;
