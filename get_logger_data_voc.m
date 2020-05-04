@@ -457,7 +457,7 @@ else
             end
         end
         % Save data
-        fprintf(1,'Save the Data in %s\n',fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date, ExpStartTime)))
+        fprintf(1,'Save the Data in %s\n',fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData%d.mat', Date, ExpStartTime,NVOC_i)))
         VocFilename = VocExt.Voc_filename;
         % Check the size of variables
         OP = whos('Piezo_wave');
