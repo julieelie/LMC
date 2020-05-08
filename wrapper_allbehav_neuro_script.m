@@ -176,7 +176,7 @@ id = 'MATLAB:Python:UnsupportedLoad';
 warning('off',id)
 
 
-for ss=312:length(GoodCellIndices)
+for ss=42:56 %length(GoodCellIndices)
     fprintf(1,'File %d/%d\n',ss,length(GoodCellIndices))
     neuralData_compile_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath, NeuralBuffer)
 end
@@ -186,7 +186,7 @@ fprintf(' DONE \n')
 %% Calculating the average spike rate during various types of behaviors including vocalizations
 fprintf(' CALCULATING SPIKE RATE CORRESPONDING TO ALL BEHAVIORS.... ')
 
-for ss=1:length(GoodCellIndices)
+for ss=42:56%length(GoodCellIndices)
     fprintf(1,'File %d/%d\n',ss,length(GoodCellIndices))
     cal_spikerate_perfile(ListSSU{Files2Run(GoodCellIndices(ss))},OutputPath)
 end
@@ -195,7 +195,7 @@ fprintf(' DONE \n')
 %% calculate the KDE SPIKE RATE of vocalizations
 fprintf(1,' CALCULATING KDE OF THE TIME-VARYING SPIKE RATE CORRESPONDING TO VOCALIZATIONS\n');
 Delay = [5000 5000];
-for ss=1:length(GoodCellIndices)
+for ss=42:56%length(GoodCellIndices)
     fprintf(1,'File %d/%d\n',ss,length(GoodCellIndices))
     cal_kderatevoc_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath,Delay)
 end
@@ -461,5 +461,5 @@ for ee=1:length(ExpFolders)
     end
 end
 List2ParamPath = List2ParamPath(1:NF);
-fprintf(1, '\n Files from %d sessions or operant conditioning have been retrieved\n', NF);
+fprintf(1, '\n Files from %d sessions or free recording sessions have been retrieved\n', NF);
 end

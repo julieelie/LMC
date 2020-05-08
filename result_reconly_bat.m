@@ -216,7 +216,7 @@ elseif ~ManData && ~(isempty(VocExt_dir) || ForceVocExt1)
 end
 
 %% Identify the same vocalizations on the piezos and save sound extracts, onset and offset times
-LogVoc_dir = dir(fullfile(Logger_dir, sprintf('%s_%s_VocExtractData.mat', Date, ExpStartTime)));
+LogVoc_dir = dir(fullfile(Logger_dir, sprintf('%s_%s_VocExtractDat*.mat', Date, ExpStartTime)));
 if isempty(LogVoc_dir) || ForceVocExt1 || ForceVocExt2
     fprintf('\n*** Localizing vocalizations on piezo recordings ***\n')
     get_logger_data_voc(AudioDataPath, Logger_dir,Date, ExpStartTime, 'ReAllignment',ReAllignment);

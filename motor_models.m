@@ -1,18 +1,21 @@
 addpath(genpath('/Users/elie/Documents/CODE/SoundAnalysisBats'));
 addpath(genpath('/Users/elie/Documents/CODE/LoggerDataProcessing'));
 DatFig=0; %Set to 1 to see input data figures
-%% Data Info
-Filename = '59834_20190611_SSS_1-97.mat';
-% Path = '/Users/elie/Documents/LMCResults/';
-Path = '/Users/elie/Documents/ManipBats/LMC/ResultsFiles/';
-load(fullfile(Path,Filename));
-FHigh = 50000;
-FLow = 300;
-MeanSpecMean = (FHigh - FLow)/2;
 
-% Number of vocalizations in the dataset
-IndVoc = find(contains(What, 'Voc') .* (Duration>20)); % No saliency calculated when duration <20ms
-NStims = length(IndVoc);
+%% Listing datacells
+%Filename = '59834_20190611_SSS_1-97.mat';
+% Filename = '59834_20190610_SSS_1-130.mat';
+Path = '/Users/elie/Documents/LMCResults/';
+% Path = '/Users/elie/Documents/ManipBats/LMC/ResultsFiles/';
+
+AllFiles = dir(fullfile(Path,'*.mat'));
+Files2run = zeros(length(AllFiles),1);
+for ff=1:length(AllFiles)
+    if length(strfind(AllFiles(ff).name, '_'))==3
+        Files2run(ff) = 1;
+    end
+end
+CellsPath = AllFiles(logical(Files2run));
 %% Model parameters
 % Assumption of stationarity over time
 ParamModel.LAMBDARATIO=1e-4;
@@ -35,344 +38,367 @@ Delay = 100;% ms
 %The neural activity at time t is predicted by a time varying
 % acoustic feature that starts at t-Delay ms
 
-% %% Acoustic feature parameters
-% % Bandpass filter for the enveloppe calculation
-% BandPassFilter = [200 90000];
-% Fhigh_powers =[20 50 100]; % Frequency upper bound for calculating the envelope (time running RMS)
-% Fs_env = 1/Win*10^3; % Sample frequency of the enveloppe such as to have one value per Win
-% % design bandpass filter of raw ambient recording
-% [z,p,k] = butter(6,BandPassFilter/(D1.FS/2),'bandpass');
-% sos_raw_band = zp2sos(z,p,k);
 
-%% Variable organization and running models
-% organize acoustic data as a matrix where each
-% column corresponds to amp env at t-100:Win:t+100, t being
-% time of neural window;
-% neural response is a vector that compile all spike counts starting
-% at -100ms before stim onset and stop at 100ms after
-% stim offset
-BestDevSpecMean = nan(length(TRs),1); % contains the deviance of the spectral mean model
-BestDevSal = nan(length(TRs),1);  % contains the deviance of the saliency model
-BestDevAmp = nan(length(TRs),1);  % contains the deviance of the amplitude model
-% BestDevSpecMed = nan(length(TRs),1); % contains the deviance of the spectral median model
-BestDevNull = nan(length(TRs),1);  % contains the deviance of the null model
-
-BSpecMean = nan(length(TRs),2*Win+1); % contains the Betas of the spectral mean model with the best deviance
-BSal = nan(length(TRs),2*Win+1);  % contains the Betas of the saliency model with the best deviance
-BAmp = nan(length(TRs),Win+1);  % contains the Betas of the amplitude model with the best deviance
-% BestDevSpecMed = nan(length(TRs),1); % contains the Betas of the spectral
-% median model with the best deviance
-% BNull = nan(length(TRs),Win+1);  % contains the Beta of the null model
-BNull = nan(length(TRs),1);  % contains the Beta of the null model
-
-for tr = 1:length(TRs)
-    TR = TRs(tr);
-    fprintf(1,'Models with Time resolution %d ms (%d/%d)\n', TR, tr, length(TRs));
-    %% Gather the data
+%% Running through cells
+NCells = length(CellsPath);
+MotorModels = cell(NCells,1);
+parfor cc=1:NCells
+    Cell = load(fullfile(CellsPath(cc).folder,CellsPath(cc).name));
     
-    % Neural Data loop
-    YPerStim = get_y(SpikesArrivalTimes_Behav(IndVoc), Duration(IndVoc),Win,Delay,TR);
-    Y = [YPerStim{:}]';
     
-    % Acoustic feature loop, first column of biosound is microphone second is
-    % piezo
-    XSpecMeanPerStim = get_x(BioSound(IndVoc,1), Duration(IndVoc), Win, Delay,'SpectralMean');
-    XSpecMean = [XSpecMeanPerStim{:}]';
-    XSpecMean(isnan(XSpecMean))=nanmean(reshape(XSpecMean,numel(XSpecMean),1)); % Change the padding with NaN to the mean for the SpecMean for silence.
-    XSaliencyPerStim = get_x(BioSound(IndVoc,2), Duration(IndVoc), Win, Delay,'sal');
-    XSaliency = [XSaliencyPerStim{:}]';
-    XSaliency(isnan(XSaliency))=0; % Change the padding with NaN to zeros for the Saliency, we know Silence is not harmonic
-    XAmpPerStim = get_x(BioSound(IndVoc,2), Duration(IndVoc), Win, Delay,'amp');
-    XAmp = [XAmpPerStim{:}]';
-    XAmp(isnan(XAmp))=0; % Change the padding with NaN to zeros for the amplitude, we know here that there is no sound
-    %         XSpecMedPerStim = get_x(BioSound(IndVoc,1), Duration(IndVoc), Win, TR, Delay,'Q2t');
-    %         XSpecMed = [XSpecMedPerStim{:}]';
+    % Number of vocalizations in the dataset
+    IndVoc = find(contains(Cell.What, 'Voc') .* (Cell.Duration>20)); % No saliency calculated when duration <20ms
+    NStims = length(IndVoc);
     
-    %% Plot of features and neuronal response if requested (BioSound,YPerStim,XPerStim, TR,Delay,F_high,FeatureName)
-    if DatFig
-        plotxyfeatures(BioSound(IndVoc,1),YPerStim,XSpecMeanPerStim,TR,Win,Delay,Duration(IndVoc), 50000,'Spectral Mean')
-        plotxyfeatures(BioSound(IndVoc,2),YPerStim,XSaliencyPerStim,TR,Win,Delay,Duration(IndVoc), 10000,'Saliency')
-        plotxyfeatures(BioSound(IndVoc,2),YPerStim,XAmpPerStim,TR,Win,Delay,Duration(IndVoc), 10000,'Amp')
-        %         plotxyfeatures(BioSound(IndVoc,1),YPerStim,XSpecMedPerStim,TR,Delay,Duration(IndVoc), 50000,'Spectral Median')
+    %% Variable organization and running models
+    % organize acoustic data as a matrix where each
+    % column corresponds to amp env at t-100:Win:t+100, t being
+    % time of neural window;
+    % neural response is a vector that compile all spike counts starting
+    % at -100ms before stim onset and stop at 100ms after
+    % stim offset
+    BestDevSpecMean = nan(length(TRs),1); % contains the deviance of the spectral mean model
+    BestDevSal = nan(length(TRs),1);  % contains the deviance of the saliency model
+    BestDevAmp = nan(length(TRs),1);  % contains the deviance of the amplitude model
+    % BestDevSpecMed = nan(length(TRs),1); % contains the deviance of the spectral median model
+    BestDevNull = nan(length(TRs),1);  % contains the deviance of the null model
+    
+    BSpecMean = nan(length(TRs),2*Win+1); % contains the Betas of the spectral mean model with the best deviance
+    BSal = nan(length(TRs),2*Win+1);  % contains the Betas of the saliency model with the best deviance
+    BAmp = nan(length(TRs),Win+1);  % contains the Betas of the amplitude model with the best deviance
+    % BestDevSpecMed = nan(length(TRs),1); % contains the Betas of the spectral
+    % median model with the best deviance
+    % BNull = nan(length(TRs),Win+1);  % contains the Beta of the null model
+    BNull = nan(length(TRs),1);  % contains the Beta of the null model
+    
+    for tr = 1:length(TRs)
+        TR = TRs(tr);
+        fprintf(1,'Cell %d/%d Models with Time resolution %d ms (%d/%d)\n', cc,NCells,TR, tr, length(TRs));
+        %% Gather the data
+        
+        % Neural Data loop
+        YPerStim = get_y(Cell.SpikesArrivalTimes_Behav(IndVoc), Cell.Duration(IndVoc),Win,Delay,TR);
+        Y = [YPerStim{:}]';
+        
+        % Acoustic feature loop, first column of biosound is microphone second is
+        % piezo
+        XSpecMeanPerStim = get_x(Cell.BioSound(IndVoc,1), Cell.Duration(IndVoc), Win, Delay,'SpectralMean');
+        XSpecMean = [XSpecMeanPerStim{:}]';
+        XSpecMean(isnan(XSpecMean))=nanmean(reshape(XSpecMean,numel(XSpecMean),1)); % Change the padding with NaN to the mean for the SpecMean for silence.
+        XSaliencyPerStim = get_x(Cell.BioSound(IndVoc,2), Cell.Duration(IndVoc), Win, Delay,'sal');
+        XSaliency = [XSaliencyPerStim{:}]';
+        XSaliency(isnan(XSaliency))=0; % Change the padding with NaN to zeros for the Saliency, we know Silence is not harmonic
+        XAmpPerStim = get_x(Cell.BioSound(IndVoc,2), Cell.Duration(IndVoc), Win, Delay,'amp');
+        XAmp = [XAmpPerStim{:}]';
+        XAmp(isnan(XAmp))=0; % Change the padding with NaN to zeros for the amplitude, we know here that there is no sound
+        %         XSpecMedPerStim = get_x(BioSound(IndVoc,1), Duration(IndVoc), Win, TR, Delay,'Q2t');
+        %         XSpecMed = [XSpecMedPerStim{:}]';
+        
+        %% Plot of features and neuronal response if requested (BioSound,YPerStim,XPerStim, TR,Delay,F_high,FeatureName)
+        if DatFig
+            plotxyfeatures(BioSound(IndVoc,1),YPerStim,XSpecMeanPerStim,TR,Win,Delay,Duration(IndVoc), 50000,'Spectral Mean')
+            plotxyfeatures(BioSound(IndVoc,2),YPerStim,XSaliencyPerStim,TR,Win,Delay,Duration(IndVoc), 10000,'Saliency')
+            plotxyfeatures(BioSound(IndVoc,2),YPerStim,XAmpPerStim,TR,Win,Delay,Duration(IndVoc), 10000,'Amp')
+            %         plotxyfeatures(BioSound(IndVoc,1),YPerStim,XSpecMedPerStim,TR,Delay,Duration(IndVoc), 50000,'Spectral Median')
+        end
+        
+        %% Calculate the model
+        % get rid of Nans
+        Nan_Ind=find(isnan(Y));
+        Y(Nan_Ind) = [];
+        XSpecMean(Nan_Ind,:) =[];
+        XSaliency(Nan_Ind,:) =[];
+        %         XSpecMed(Nan_Ind,:) =[];
+        
+        %% Run ridge GLM Poisson on acoustic features
+        
+        % spectral mean predicting Y
+        [BSpecMean_local, FitInfo_SpecMean]=lassoglm([XAmp XSpecMean],Y,ParamModel.DISTR,'Alpha', ParamModel.Alpha,'Link',ParamModel.LINK,'NumLambda',ParamModel.NUMLAMBDA,'Standardize',1,'LambdaRatio',ParamModel.LAMBDARATIO);
+        % find the model with the minimum of deviance (best lambda)
+        [BestDevSpecMean(tr),BestModSpecMean] = min(FitInfo_SpecMean.Deviance);
+        BSpecMean(tr,2:end) = BSpecMean_local(:,BestModSpecMean);
+        BSpecMean(tr,1) = FitInfo_SpecMean.Intercept(BestModSpecMean);
+        
+        % pitch saliency predicting Y
+        [BSal_local, FitInfo_Sal]=lassoglm([XAmp XSaliency],Y,ParamModel.DISTR,'Alpha', ParamModel.Alpha,'Link',ParamModel.LINK,'NumLambda',ParamModel.NUMLAMBDA,'Standardize',1,'LambdaRatio',ParamModel.LAMBDARATIO);
+        % find the model with the minimum of deviance (best lambda)
+        [BestDevSal(tr),BestModSal] = min(FitInfo_Sal.Deviance);
+        BSal(tr,2:end) = BSal_local(:,BestModSal);
+        BSal(tr,1) = FitInfo_Sal.Intercept(BestModSal);
+        
+        
+        %         % spectral median predicting Y
+        %         [BSpecMed, FitInfo_SpecMed]=lassoglm(XSpecMed,Y,ParamModel.DISTR,'Alpha', ParamModel.Alpha,'Link',ParamModel.LINK,'NumLambda',ParamModel.NUMLAMBDA,'Standardize',0,'LambdaRatio',ParamModel.LAMBDARATIO);
+        %         % find the model with the minimum of deviance (best lambda)
+        %         [BestDevSpecMed(tr,dd),BestModSpecMed] = min(FitInfo_SpecMean.Deviance);
+        
+        % amplitude predicting Y, is a null model for the former 2 models
+        [BAmp_local, FitInfo_Amp]=lassoglm(XAmp,Y,ParamModel.DISTR,'Alpha', ParamModel.Alpha,'Link',ParamModel.LINK,'NumLambda',ParamModel.NUMLAMBDA,'Standardize',1,'LambdaRatio',ParamModel.LAMBDARATIO);
+        % find the model with the minimum of deviance (best lambda)
+        [BestDevAmp(tr),BestModAmp] = min(FitInfo_Amp.Deviance);
+        
+        BAmp(tr,2:end) = BAmp_local(:,BestModAmp);
+        BAmp(tr,1) = FitInfo_Amp.Intercept(BestModAmp);
+        
+        % null model
+        MDL_null=fitglm(ones(size(XAmp,1),1),Y,'Distribution',ParamModel.DISTR,'Link',ParamModel.LINK,'Intercept',false);
+        % find the model with the minimum of deviance (best lambda)
+        %     [BestDevNull(tr),BestModNull] = min(FitInfo_Amp.Deviance);
+        %
+        %     BNull(tr,2:end) = Bnull_local(:,BestModNull);
+        %     BNull(tr,1) = FitInfo_null.Intercept(BestModNull);
+        
+        BestDevNull(tr) = MDL_null.Deviance;
+        BNull(tr) = MDL_null.Coefficients.Estimate;
+        
+        if DatFig
+            TimeBinsX = -Delay : (Win-Delay);
+            figure()
+            plot(TimeBinsX,BSpecMean(:,BestModSpecMean),'LineStyle','-', 'LineWidth',2,'DisplayName', sprintf('Spectral Mean Dev = %.1f',BestDevSpecMean(tr)))
+            hold on
+            plot(TimeBinsX,BSal(:,BestModSal),'LineStyle','-', 'LineWidth',2,'DisplayName', sprintf('Saliency Dev = %.1f',BestDevSal(tr)))
+            hold on
+            %         plot(TimeBinsX,BSpecMed(:,BestModSpecMed),'LineStyle','-', 'LineWidth',2,'DisplayName', sprintf('Spectral Median Dev = %.1f',BestDevSpecMed(tr,dd)))
+            hold on
+            plot(TimeBinsX,BAmp(:,BestModAmp),'LineStyle','-', 'LineWidth',2,'DisplayName', sprintf('Amp Dev = %.1f',BestDevAmp(tr)))
+            
+            
+            legend('show')
+            % XTick = get(gca, 'XTickLabel');
+            % XTick = cellfun(@str2double, XTick) * Win;
+            % set(gca,'XTickLabel',XTick)
+            xlabel('Time (ms)')
+            title(sprintf('Poisson Ridge regression on Acoustic Features Delay = %dms Time resolution=%dms', Delay, TR))
+            hold off
+            pause(1)
+        end
     end
-    
-    %% Calculate the model
-    % get rid of Nans
-    Nan_Ind=find(isnan(Y));
-    Y(Nan_Ind) = [];
-    XSpecMean(Nan_Ind,:) =[];
-    XSaliency(Nan_Ind,:) =[];
-    %         XSpecMed(Nan_Ind,:) =[];
-    
-    %% Run ridge GLM Poisson on acoustic features
-    
-    % spectral mean predicting Y
-    [BSpecMean_local, FitInfo_SpecMean]=lassoglm([XAmp XSpecMean],Y,ParamModel.DISTR,'Alpha', ParamModel.Alpha,'Link',ParamModel.LINK,'NumLambda',ParamModel.NUMLAMBDA,'Standardize',1,'LambdaRatio',ParamModel.LAMBDARATIO);
-    % find the model with the minimum of deviance (best lambda)
-    [BestDevSpecMean(tr),BestModSpecMean] = min(FitInfo_SpecMean.Deviance);
-    BSpecMean(tr,2:end) = BSpecMean_local(:,BestModSpecMean);
-    BSpecMean(tr,1) = FitInfo_SpecMean.Intercept(BestModSpecMean);
-    
-    % pitch saliency predicting Y
-    [BSal_local, FitInfo_Sal]=lassoglm([XAmp XSaliency],Y,ParamModel.DISTR,'Alpha', ParamModel.Alpha,'Link',ParamModel.LINK,'NumLambda',ParamModel.NUMLAMBDA,'Standardize',1,'LambdaRatio',ParamModel.LAMBDARATIO);
-    % find the model with the minimum of deviance (best lambda)
-    [BestDevSal(tr),BestModSal] = min(FitInfo_Sal.Deviance);
-    BSal(tr,2:end) = BSal_local(:,BestModSal);
-    BSal(tr,1) = FitInfo_Sal.Intercept(BestModSal);
-    
-    
-    %         % spectral median predicting Y
-    %         [BSpecMed, FitInfo_SpecMed]=lassoglm(XSpecMed,Y,ParamModel.DISTR,'Alpha', ParamModel.Alpha,'Link',ParamModel.LINK,'NumLambda',ParamModel.NUMLAMBDA,'Standardize',0,'LambdaRatio',ParamModel.LAMBDARATIO);
-    %         % find the model with the minimum of deviance (best lambda)
-    %         [BestDevSpecMed(tr,dd),BestModSpecMed] = min(FitInfo_SpecMean.Deviance);
-    
-    % amplitude predicting Y, is a null model for the former 2 models
-    [BAmp_local, FitInfo_Amp]=lassoglm(XAmp,Y,ParamModel.DISTR,'Alpha', ParamModel.Alpha,'Link',ParamModel.LINK,'NumLambda',ParamModel.NUMLAMBDA,'Standardize',1,'LambdaRatio',ParamModel.LAMBDARATIO);
-    % find the model with the minimum of deviance (best lambda)
-    [BestDevAmp(tr),BestModAmp] = min(FitInfo_Amp.Deviance);
-    
-    BAmp(tr,2:end) = BAmp_local(:,BestModAmp);
-    BAmp(tr,1) = FitInfo_Amp.Intercept(BestModAmp);
-    
-    % null model
-    MDL_null=fitglm(ones(size(XAmp,1),1),Y,'Distribution',ParamModel.DISTR,'Link',ParamModel.LINK,'Intercept',false);
-    % find the model with the minimum of deviance (best lambda)
-%     [BestDevNull(tr),BestModNull] = min(FitInfo_Amp.Deviance);
-%     
-%     BNull(tr,2:end) = Bnull_local(:,BestModNull);
-%     BNull(tr,1) = FitInfo_null.Intercept(BestModNull);
-    
-    BestDevNull(tr) = MDL_null.Deviance;
-    BNull(tr) = MDL_null.Coefficients.Estimate;
-    
     if DatFig
-        TimeBinsX = -Delay : (Win-Delay);
+        
         figure()
-        plot(TimeBinsX,BSpecMean(:,BestModSpecMean),'LineStyle','-', 'LineWidth',2,'DisplayName', sprintf('Spectral Mean Dev = %.1f',BestDevSpecMean(tr)))
+        ColorCode = get(groot, 'DefaultAxesColorOrder');
+        subplot(1,2,1)
+        plot(TRs,BestDevSpecMean', 'Color',ColorCode(1,:), 'LineWidth',2)
         hold on
-        plot(TimeBinsX,BSal(:,BestModSal),'LineStyle','-', 'LineWidth',2,'DisplayName', sprintf('Saliency Dev = %.1f',BestDevSal(tr)))
+        plot(TRs,BestDevSal,'Color', ColorCode(2,:), 'LineWidth',2)
         hold on
-        %         plot(TimeBinsX,BSpecMed(:,BestModSpecMed),'LineStyle','-', 'LineWidth',2,'DisplayName', sprintf('Spectral Median Dev = %.1f',BestDevSpecMed(tr,dd)))
+        plot(TRs,BestDevAmp, 'Color', ColorCode(3,:),'LineWidth',2)
         hold on
-        plot(TimeBinsX,BAmp(:,BestModAmp),'LineStyle','-', 'LineWidth',2,'DisplayName', sprintf('Amp Dev = %.1f',BestDevAmp(tr)))
+        plot(TRs,BestDevNull, 'Color',ColorCode(4,:),'LineWidth',2, 'LineStyle','--')
+        legend({'Amp + SpecMean' 'Amp + Sal' 'Amp' 'Null'})
+        legend('Autoupdate','off')
+        ylabel('Deviance')
+        xlabel('Time resolution in ms')
+        YLim = get(gca,'YLim');
         
-        
-        legend('show')
-        % XTick = get(gca, 'XTickLabel');
-        % XTick = cellfun(@str2double, XTick) * Win;
-        % set(gca,'XTickLabel',XTick)
-        xlabel('Time (ms)')
-        title(sprintf('Poisson Ridge regression on Acoustic Features Delay = %dms Time resolution=%dms', Delay, TR))
+        subplot(1,2,2)
+        plot(TRs,BestDevSpecMean', 'Color',ColorCode(1,:), 'LineWidth',2)
+        hold on
+        plot(TRs,BestDevSal,'Color', ColorCode(2,:), 'LineWidth',2)
+        hold on
+        plot(TRs,BestDevAmp, 'Color', ColorCode(3,:),'LineWidth',2)
+        hold on
+        plot(TRs,BestDevNull, 'Color',ColorCode(4,:),'LineWidth',2, 'LineStyle','--')
+        ylabel('Deviance')
+        xlabel('Time resolution in ms')
+        xlim([0 2])
+        ylim([0.9*YLim(2) YLim(2)])
         hold off
-        pause(1)
+        
+        
+        figure()
+        subplot(1,2,1)
+        plot(TRs, BestDevAmp-BestDevSpecMean , 'Color',ColorCode(1,:), 'LineWidth',2)
+        hold on
+        plot(TRs,BestDevAmp - BestDevSal,'Color', ColorCode(2,:), 'LineWidth',2)
+        hold on
+        plot(TRs,BestDevNull -BestDevAmp, 'Color', ColorCode(3,:),'LineWidth',2)
+        legend({'SpecMean contribution' 'Sal contribution' 'Amp contribution'})
+        ylabel('Difference of Deviance')
+        xlabel('Time resolution in ms')
+        
+        subplot(1,2,2)
+        plot(TRs, (BestDevAmp-BestDevSpecMean)./BestDevAmp , 'Color',ColorCode(1,:), 'LineWidth',2)
+        hold on
+        plot(TRs,(BestDevAmp - BestDevSal)./BestDevAmp,'Color', ColorCode(2,:), 'LineWidth',2)
+        hold on
+        plot(TRs,(BestDevNull -BestDevAmp)./BestDevAmp, 'Color', ColorCode(3,:),'LineWidth',2)
+        legend({'SpecMean contribution' 'Sal contribution' 'Amp contribution'})
+        ylabel('R2')
+        xlabel('Time resolution in ms')
+        
+        % Plotting betas
+        figure()
+        subplot(2,3,1:3)
+        bar(TRs,exp([BNull BAmp(:,1) BSpecMean(:,1) BSal(:,1)])*1000)
+        xlabel('Time resolution in ms')
+        ylabel('exp(intercept) Hz')
+        legend({'Null' 'Amp' 'Amp + SpecMean' 'Amp + Sal'},'Location','southoutside','NumColumns',4)
+        subplot(2,3,4)
+        imagesc(BAmp(:,2:end))
+        set(gca,'YTick',1:length(TRs),'YTickLabel',TRs)
+        ylabel('Time resolution in ms')
+        xlabel('Time alligned to predicted Y (ms)')
+        set(gca,'XTick',1:50:Win,'XTickLabel',-Delay:50:(Win-Delay-1))
+        title('Amplitude Model')
+        colorbar()
+        subplot(2,3,5)
+        imagesc(BSpecMean(:,2:end))
+        set(gca,'YTick',1:length(TRs),'YTickLabel',TRs)
+        ylabel('Time resolution in ms')
+        xlabel('Time alligned to predicted Y (ms)')
+        set(gca,'XTick',1:100:2*Win,'XTickLabel',[-Delay:100:(Win-Delay-1) -Delay:100:(Win-Delay-1)])
+        title('Amplitude + SpecMean')
+        colorbar()
+        subplot(2,3,6)
+        imagesc(BSal(:,2:end))
+        set(gca,'YTick',1:length(TRs),'YTickLabel',TRs)
+        ylabel('Time resolution in ms')
+        xlabel('Time alligned to predicted Y (ms)')
+        set(gca,'XTick',1:100:2*Win,'XTickLabel',[-Delay:100:(Win-Delay-1) -Delay:100:(Win-Delay-1)])
+        title('Amplitude + Saliency')
+        colorbar()
     end
+    
+    
+    MotorModels{cc}.TRs = TRs;
+    MotorModels{cc}.DevAmp = BestDevAmp;
+    MotorModels{cc}.DevAmpSpecMean = BestDevSpecMean;
+    MotorModels{cc}.DevAmpSal = BestDevSal;
+    MotorModels{cc}.DevNull = BestDevNull;
+    MotorModels{cc}.BAmp = BAmp;
+    MotorModels{cc}.BAmpSpecMean = BSpecMean;
+    MotorModels{cc}.BAmpSal = BSal;
+    MotorModels{cc}.BNull = BNull;
+        
 end
 
-
+save(fullfile(Path,'MotorModelsAllCells'),'MotorModels','CellsPath');
 %% Plot
-CLIM = nan(4,2);
-figure(1)
-subplot(1,2,1)
-plot(TRs,BestDevSpecMean', 'Color',ColorCode(1,:), 'LineWidth',2)
-hold on
-plot(TRs,BestDevSal,'Color', ColorCode(2,:), 'LineWidth',2)
-hold on
-plot(TRs,BestDevAmp, 'Color', ColorCode(3,:),'LineWidth',2)
-hold on
-plot(TRs,BestDevNull, 'Color',ColorCode(4,:),'LineWidth',2, 'LineStyle','--')
-legend({'Amp + SpecMean' 'Amp + Sal' 'Amp' 'Null'})
-legend('Autoupdate','off')
-ylabel('Deviance')
-xlabel('Time resolution in ms')
-
-subplot(1,2,2)
-plot(TRs,BestDevSpecMean', 'Color',ColorCode(1,:), 'LineWidth',2)
-hold on
-plot(TRs,BestDevSal,'Color', ColorCode(2,:), 'LineWidth',2)
-hold on
-plot(TRs,BestDevAmp, 'Color', ColorCode(3,:),'LineWidth',2)
-hold on
-plot(TRs,BestDevNull, 'Color',ColorCode(4,:),'LineWidth',2, 'LineStyle','--')
-ylabel('Deviance')
-xlabel('Time resolution in ms')
-xlim([0 2])
-ylim([12000 12600])
-hold off
-
-
-figure()
-subplot(1,2,1)
-plot(TRs, BestDevAmp-BestDevSpecMean , 'Color',ColorCode(1,:), 'LineWidth',2)
-hold on
-plot(TRs,BestDevAmp - BestDevSal,'Color', ColorCode(2,:), 'LineWidth',2)
-hold on
-plot(TRs,BestDevNull -BestDevAmp, 'Color', ColorCode(3,:),'LineWidth',2)
-legend({'SpecMean contribution' 'Sal contribution' 'Amp contribution'})
-ylabel('Difference of Deviance')
-xlabel('Time resolution in ms')
-
-subplot(1,2,2)
-plot(TRs, (BestDevAmp-BestDevSpecMean)./BestDevAmp , 'Color',ColorCode(1,:), 'LineWidth',2)
-hold on
-plot(TRs,(BestDevAmp - BestDevSal)./BestDevAmp,'Color', ColorCode(2,:), 'LineWidth',2)
-hold on
-plot(TRs,(BestDevNull -BestDevAmp)./BestDevAmp, 'Color', ColorCode(3,:),'LineWidth',2)
-legend({'SpecMean contribution' 'Sal contribution' 'Amp contribution'})
-ylabel('R2')
-xlabel('Time resolution in ms')
-
-% Plotting betas
-figure()
-subplot(2,3,1:3)
-bar(TRs,exp([BNull BAmp(:,1) BSpecMean(:,1) BSal(:,1)])*1000)
-xlabel('Time resolution in ms')
-ylabel('exp(intercept) Hz')
-legend({'Null' 'Amp' 'Amp + SpecMean' 'Amp + Sal'},'Location','southoutside','NumColumns',4)
-subplot(2,3,4)
-imagesc(BAmp(:,2:end))
-set(gca,'YTick',1:length(TRs),'YTickLabel',TRs)
-ylabel('Time resolution in ms')
-xlabel('Time alligned to predicted Y (ms)')
-set(gca,'XTick',1:50:Win,'XTickLabel',-Delay:50:(Win-Delay-1))
-title('Amplitude Model')
-colorbar()
-subplot(2,3,5)
-imagesc(BSpecMean(:,2:end))
-set(gca,'YTick',1:length(TRs),'YTickLabel',TRs)
-ylabel('Time resolution in ms')
-xlabel('Time alligned to predicted Y (ms)')
-set(gca,'XTick',1:100:2*Win,'XTickLabel',[-Delay:100:(Win-Delay-1) -Delay:100:(Win-Delay-1)])
-title('Amplitude + SpecMean')
-colorbar()
-subplot(2,3,6)
-imagesc(BSal(:,2:end))
-set(gca,'YTick',1:length(TRs),'YTickLabel',TRs)
-ylabel('Time resolution in ms')
-xlabel('Time alligned to predicted Y (ms)')
-set(gca,'XTick',1:100:2*Win,'XTickLabel',[-Delay:100:(Win-Delay-1) -Delay:100:(Win-Delay-1)])
-title('Amplitude + Saliency')
-colorbar()
 
 
 
-figure()
-imagesc(Delay,TRs,BestDevSal)
-xlabel('Delays to voc onset in ms')
-ylabel('Time resolution in ms')
-title('Deviance pitch saliency model')
-colorbar()
-CLIM(2,:) = get(gca, 'clim');
 
+% %% Old plots of deviances
+% CLIM = nan(4,2);
 % figure()
-% imagesc(Delays,TRs,BestDevSpecMed)
+% imagesc(Delay,TRs,BestDevSal)
 % xlabel('Delays to voc onset in ms')
 % ylabel('Time resolution in ms')
-% title('Deviance spectral median model')
-
-figure()
-imagesc(Delay,TRs,BestDevAmp)
-xlabel('Delays to voc onset in ms')
-ylabel('Time resolution in ms')
-title('Deviance Amplitude model')
-colorbar()
-CLIM(3,:) = get(gca, 'clim');
-
-figure()
-imagesc(Delay,TRs,BestDevNull)
-xlabel('Delays to voc onset in ms')
-ylabel('Time resolution in ms')
-title('Deviance Null model')
-colorbar()
-CLIM(4,:) = get(gca, 'clim');
-
-
-figure()
-subplot(2,3,1)
-imagesc(BestDevSpecMean)
-set(gca, 'XTick',1:length(Delay),'XTickLabel',Delay)
-set(gca, 'YTick',1:length(TRs),'YTickLabel',TRs)
-xlabel('Delays to voc onset in ms')
-ylabel('Time resolution in ms')
-title('Deviance spectral mean model')
-colorbar()
-%caxis([0 1000])
-caxis([min(CLIM(:,1)) max(CLIM(:,2))])
-
-subplot(2,3,2)
-imagesc(BestDevSal)
-set(gca, 'XTick',1:length(Delay),'XTickLabel',Delay)
-set(gca, 'YTick',1:length(TRs),'YTickLabel',TRs)
-xlabel('Delays to voc onset in ms')
-ylabel('Time resolution in ms')
-title('Deviance pitch saliency model')
-colorbar()
-caxis([min(CLIM(:,1)) max(CLIM(:,2))])
-%caxis([0 1000])
-
+% title('Deviance pitch saliency model')
+% colorbar()
+% CLIM(2,:) = get(gca, 'clim');
+% 
+% % figure()
+% % imagesc(Delays,TRs,BestDevSpecMed)
+% % xlabel('Delays to voc onset in ms')
+% % ylabel('Time resolution in ms')
+% % title('Deviance spectral median model')
+% 
 % figure()
-% imagesc(Delays,TRs,BestDevSpecMed)
+% imagesc(Delay,TRs,BestDevAmp)
 % xlabel('Delays to voc onset in ms')
 % ylabel('Time resolution in ms')
-% title('Deviance spectral median model')
-
-subplot(2,3,3)
-imagesc(BestDevAmp)
-set(gca, 'XTick',1:length(Delay),'XTickLabel',Delay)
-set(gca, 'YTick',1:length(TRs),'YTickLabel',TRs)
-xlabel('Delays to voc onset in ms')
-ylabel('Time resolution in ms')
-title('Deviance Amplitude model')
-colorbar()
-caxis([min(CLIM(:,1)) max(CLIM(:,2))])
-%caxis([0 1000])
-
-subplot(2,3,5)
-imagesc(BestDevNull)
-set(gca, 'XTick',1:length(Delay),'XTickLabel',Delay)
-set(gca, 'YTick',1:length(TRs),'YTickLabel',TRs)
-xlabel('Delays to voc onset in ms')
-ylabel('Time resolution in ms')
-title('Deviance Null model')
-colorbar()
-caxis([min(CLIM(:,1)) max(CLIM(:,2))])
-
-figure()
-subplot(1,3,1)
-imagesc(BestDevAmp - BestDevSpecMean)
-set(gca, 'XTick',1:length(Delay),'XTickLabel',Delay)
-set(gca, 'YTick',1:length(TRs),'YTickLabel',TRs)
-xlabel('Delays to voc onset in ms')
-ylabel('Time resolution in ms')
-title('Goodness of fit: Deviance Amp - SpecMean')
-colorbar()
-% caxis([0 1000])
-% %caxis([min(CLIM(:,1)) max(CLIM(:,2))])
-
-subplot(1,3,2)
-imagesc(BestDevAmp - BestDevSal)
-set(gca, 'XTick',1:length(Delay),'XTickLabel',Delay)
-set(gca, 'YTick',1:length(TRs),'YTickLabel',TRs)
-xlabel('Delays to voc onset in ms')
-ylabel('Time resolution in ms')
-title('Goodness of fit: Deviance Amp - pitch saliency')
-colorbar()
-% %caxis([min(CLIM(:,1)) max(CLIM(:,2))])
-% caxis([0 1000])
-
+% title('Deviance Amplitude model')
+% colorbar()
+% CLIM(3,:) = get(gca, 'clim');
+% 
 % figure()
-% imagesc(Delays,TRs,BestDevSpecMed)
+% imagesc(Delay,TRs,BestDevNull)
 % xlabel('Delays to voc onset in ms')
 % ylabel('Time resolution in ms')
-% title('Deviance spectral median model')
-
-subplot(1,3,3)
-imagesc(BestDevNull - BestDevAmp)
-set(gca, 'XTick',1:length(Delay),'XTickLabel',Delay)
-set(gca, 'YTick',1:length(TRs),'YTickLabel',TRs)
-xlabel('Delays to voc onset in ms')
-ylabel('Time resolution in ms')
-title('Goodness of fit: Deviance Null -  Amplitude')
-colorbar()
+% title('Deviance Null model')
+% colorbar()
+% CLIM(4,:) = get(gca, 'clim');
+% 
+% 
+% figure()
+% subplot(2,3,1)
+% imagesc(BestDevSpecMean)
+% set(gca, 'XTick',1:length(Delay),'XTickLabel',Delay)
+% set(gca, 'YTick',1:length(TRs),'YTickLabel',TRs)
+% xlabel('Delays to voc onset in ms')
+% ylabel('Time resolution in ms')
+% title('Deviance spectral mean model')
+% colorbar()
+% %caxis([0 1000])
+% caxis([min(CLIM(:,1)) max(CLIM(:,2))])
+% 
+% subplot(2,3,2)
+% imagesc(BestDevSal)
+% set(gca, 'XTick',1:length(Delay),'XTickLabel',Delay)
+% set(gca, 'YTick',1:length(TRs),'YTickLabel',TRs)
+% xlabel('Delays to voc onset in ms')
+% ylabel('Time resolution in ms')
+% title('Deviance pitch saliency model')
+% colorbar()
+% caxis([min(CLIM(:,1)) max(CLIM(:,2))])
+% %caxis([0 1000])
+% 
+% % figure()
+% % imagesc(Delays,TRs,BestDevSpecMed)
+% % xlabel('Delays to voc onset in ms')
+% % ylabel('Time resolution in ms')
+% % title('Deviance spectral median model')
+% 
+% subplot(2,3,3)
+% imagesc(BestDevAmp)
+% set(gca, 'XTick',1:length(Delay),'XTickLabel',Delay)
+% set(gca, 'YTick',1:length(TRs),'YTickLabel',TRs)
+% xlabel('Delays to voc onset in ms')
+% ylabel('Time resolution in ms')
+% title('Deviance Amplitude model')
+% colorbar()
+% caxis([min(CLIM(:,1)) max(CLIM(:,2))])
+% %caxis([0 1000])
+% 
+% subplot(2,3,5)
+% imagesc(BestDevNull)
+% set(gca, 'XTick',1:length(Delay),'XTickLabel',Delay)
+% set(gca, 'YTick',1:length(TRs),'YTickLabel',TRs)
+% xlabel('Delays to voc onset in ms')
+% ylabel('Time resolution in ms')
+% title('Deviance Null model')
+% colorbar()
+% caxis([min(CLIM(:,1)) max(CLIM(:,2))])
+% 
+% figure()
+% subplot(1,3,1)
+% imagesc(BestDevAmp - BestDevSpecMean)
+% set(gca, 'XTick',1:length(Delay),'XTickLabel',Delay)
+% set(gca, 'YTick',1:length(TRs),'YTickLabel',TRs)
+% xlabel('Delays to voc onset in ms')
+% ylabel('Time resolution in ms')
+% title('Goodness of fit: Deviance Amp - SpecMean')
+% colorbar()
+% % caxis([0 1000])
+% % %caxis([min(CLIM(:,1)) max(CLIM(:,2))])
+% 
+% subplot(1,3,2)
+% imagesc(BestDevAmp - BestDevSal)
+% set(gca, 'XTick',1:length(Delay),'XTickLabel',Delay)
+% set(gca, 'YTick',1:length(TRs),'YTickLabel',TRs)
+% xlabel('Delays to voc onset in ms')
+% ylabel('Time resolution in ms')
+% title('Goodness of fit: Deviance Amp - pitch saliency')
+% colorbar()
+% % %caxis([min(CLIM(:,1)) max(CLIM(:,2))])
+% % caxis([0 1000])
+% 
+% % figure()
+% % imagesc(Delays,TRs,BestDevSpecMed)
+% % xlabel('Delays to voc onset in ms')
+% % ylabel('Time resolution in ms')
+% % title('Deviance spectral median model')
+% 
+% subplot(1,3,3)
+% imagesc(BestDevNull - BestDevAmp)
+% set(gca, 'XTick',1:length(Delay),'XTickLabel',Delay)
+% set(gca, 'YTick',1:length(TRs),'YTickLabel',TRs)
+% xlabel('Delays to voc onset in ms')
+% ylabel('Time resolution in ms')
+% title('Goodness of fit: Deviance Null -  Amplitude')
+% colorbar()
 % %caxis([min(CLIM(:,1)) max(CLIM(:,2))])
 % caxis([0 1000])
 
