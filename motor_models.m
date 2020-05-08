@@ -6,7 +6,9 @@ Filename = '59834_20190611_SSS_1-97.mat';
 % Path = '/Users/elie/Documents/LMCResults/';
 Path = '/Users/elie/Documents/ManipBats/LMC/ResultsFiles/';
 load(fullfile(Path,Filename));
-
+FHigh = 50000;
+FLow = 300;
+MeanSpecMean = (FHigh - FLow)/2;
 
 % Number of vocalizations in the dataset
 IndVoc = find(contains(What, 'Voc') .* (Duration>20)); % No saliency calculated when duration <20ms
@@ -21,16 +23,17 @@ ParamModel.DISTR='poisson';
 % betweeen ridge (L2, alpha=0) and lasso (L1, alpha =1))
 ParamModel.Alpha=0.001; % STRFs are easier to interpret using ridge than using Lasso and deviances are similar.
 
-% Define the time resolution at which analysis should be done
-TRs = [1 5 10]; % time in ms
+% Define the time resolution at which neural density estimates should be calculated
+TRs = [1 5 10 15 20 25 30 35 40 45 50]; % time in ms
+% TRs = [5 10]; % time in ms
 
-Win =200;%value in ms for the duration of the snippet of sound which
+Win =300;%value in ms for the duration of the snippet of sound which
 % acoustic features are used to predict the neural response at a given time
 % t. This will be the size of the xaxis of the MRF.
 
-Delays = [0 5 10 25 50 75 100];% ms
+Delay = 100;% ms
 %The neural activity at time t is predicted by a time varying
-% acoustic feature that starts at t+Delay ms
+% acoustic feature that starts at t-Delay ms
 
 % %% Acoustic feature parameters
 % % Bandpass filter for the enveloppe calculation
@@ -41,108 +44,337 @@ Delays = [0 5 10 25 50 75 100];% ms
 % [z,p,k] = butter(6,BandPassFilter/(D1.FS/2),'bandpass');
 % sos_raw_band = zp2sos(z,p,k);
 
-%% Variable initialization
+%% Variable organization and running models
 % organize acoustic data as a matrix where each
 % column corresponds to amp env at t-100:Win:t+100, t being
 % time of neural window;
 % neural response is a vector that compile all spike counts starting
 % at -100ms before stim onset and stop at 100ms after
 % stim offset
-BestDevSpecMean = nan(length(TRs),length(Delays)); % contains the deviance of the spectral model
-BestDevSal = nan(length(TRs),length(Delays));  % contains the deviance of the saliency model
-% BestDevSpecMed = nan(length(TRs),length(Delays)); % contains the deviance of the spectral model
+BestDevSpecMean = nan(length(TRs),1); % contains the deviance of the spectral mean model
+BestDevSal = nan(length(TRs),1);  % contains the deviance of the saliency model
+BestDevAmp = nan(length(TRs),1);  % contains the deviance of the amplitude model
+% BestDevSpecMed = nan(length(TRs),1); % contains the deviance of the spectral median model
+BestDevNull = nan(length(TRs),1);  % contains the deviance of the null model
+
+BSpecMean = nan(length(TRs),2*Win+1); % contains the Betas of the spectral mean model with the best deviance
+BSal = nan(length(TRs),2*Win+1);  % contains the Betas of the saliency model with the best deviance
+BAmp = nan(length(TRs),Win+1);  % contains the Betas of the amplitude model with the best deviance
+% BestDevSpecMed = nan(length(TRs),1); % contains the Betas of the spectral
+% median model with the best deviance
+% BNull = nan(length(TRs),Win+1);  % contains the Beta of the null model
+BNull = nan(length(TRs),1);  % contains the Beta of the null model
 
 for tr = 1:length(TRs)
     TR = TRs(tr);
     fprintf(1,'Models with Time resolution %d ms (%d/%d)\n', TR, tr, length(TRs));
-    for dd = 1:length(Delays)
-        Delay = Delays(dd);
-        fprintf(1,'Models with Delay= %d ms (%d/%d)\n', Delay,dd,length(Delays));
-        %% Gather the data
-
-        % Neural Data loop
-        YPerStim = get_y(SpikesArrivalTimes_Behav(IndVoc), Duration(IndVoc),Delay,TR);
-        Y = [YPerStim{:}]'; 
-
-        % Acoustic feature loop, first column of biosound is microphone second is
-        % piezo
-        XSpecMeanPerStim = get_x(BioSound(IndVoc,1), Duration(IndVoc), Win, TR, Delay,'SpectralMean');
-        XSpecMean = [XSpecMeanPerStim{:}]';
-        XSaliencyPerStim = get_x(BioSound(IndVoc,2), Duration(IndVoc), Win, TR, Delay,'sal');
-        XSaliency = [XSaliencyPerStim{:}]';
-%         XSpecMedPerStim = get_x(BioSound(IndVoc,1), Duration(IndVoc), Win, TR, Delay,'Q2t');
-%         XSpecMed = [XSpecMedPerStim{:}]';
-
-        %% Plot of features and neuronal response if requested (BioSound,YPerStim,XPerStim, TR,Delay,F_high,FeatureName)
-        if DatFig
-            plotxyfeatures(BioSound(IndVoc,1),YPerStim,XSpecMeanPerStim,TR,Delay,Duration(IndVoc), 50000,'Spectral Mean')
-            plotxyfeatures(BioSound(IndVoc,2),YPerStim,XSaliencyPerStim,TR,Delay,Duration(IndVoc), 10000,'Saliency')
-%         plotxyfeatures(BioSound(IndVoc,1),YPerStim,XSpecMedPerStim,TR,Delay,Duration(IndVoc), 50000,'Spectral Median')
-        end
-        
-        %% Calculate the model
-        % get rid of Nans
-        Nan_Ind=find(isnan(Y));
-        Y(Nan_Ind) = [];
-        XSpecMean(Nan_Ind,:) =[];
-        XSaliency(Nan_Ind,:) =[];
-%         XSpecMed(Nan_Ind,:) =[];
-        
-        %% Run ridge GLM Poisson on acoustic features
-
-        % spectral mean predicting Y
-        [BSpecMean, FitInfo_SpecMean]=lassoglm(XSpecMean,Y,ParamModel.DISTR,'Alpha', ParamModel.Alpha,'Link',ParamModel.LINK,'NumLambda',ParamModel.NUMLAMBDA,'Standardize',0,'LambdaRatio',ParamModel.LAMBDARATIO);
-        % find the model with the minimum of deviance (best lambda)
-        [BestDevSpecMean(tr,dd),BestModSpecMean] = min(FitInfo_SpecMean.Deviance);
-
-        % pitch saliency predicting Y
-        [BSal, FitInfo_Sal]=lassoglm(XSaliency,Y,ParamModel.DISTR,'Alpha', ParamModel.Alpha,'Link',ParamModel.LINK,'NumLambda',ParamModel.NUMLAMBDA,'Standardize',0,'LambdaRatio',ParamModel.LAMBDARATIO);
-        % find the model with the minimum of deviance (best lambda)
-        [BestDevSal(tr,dd),BestModSal] = min(FitInfo_Sal.Deviance);
-        
-%         % spectral median predicting Y
-%         [BSpecMed, FitInfo_SpecMed]=lassoglm(XSpecMed,Y,ParamModel.DISTR,'Alpha', ParamModel.Alpha,'Link',ParamModel.LINK,'NumLambda',ParamModel.NUMLAMBDA,'Standardize',0,'LambdaRatio',ParamModel.LAMBDARATIO);
-%         % find the model with the minimum of deviance (best lambda)
-%         [BestDevSpecMed(tr,dd),BestModSpecMed] = min(FitInfo_SpecMean.Deviance);
-
-        TimeBinsX = 0 : TR : Win;
+    %% Gather the data
+    
+    % Neural Data loop
+    YPerStim = get_y(SpikesArrivalTimes_Behav(IndVoc), Duration(IndVoc),Win,Delay,TR);
+    Y = [YPerStim{:}]';
+    
+    % Acoustic feature loop, first column of biosound is microphone second is
+    % piezo
+    XSpecMeanPerStim = get_x(BioSound(IndVoc,1), Duration(IndVoc), Win, Delay,'SpectralMean');
+    XSpecMean = [XSpecMeanPerStim{:}]';
+    XSpecMean(isnan(XSpecMean))=nanmean(reshape(XSpecMean,numel(XSpecMean),1)); % Change the padding with NaN to the mean for the SpecMean for silence.
+    XSaliencyPerStim = get_x(BioSound(IndVoc,2), Duration(IndVoc), Win, Delay,'sal');
+    XSaliency = [XSaliencyPerStim{:}]';
+    XSaliency(isnan(XSaliency))=0; % Change the padding with NaN to zeros for the Saliency, we know Silence is not harmonic
+    XAmpPerStim = get_x(BioSound(IndVoc,2), Duration(IndVoc), Win, Delay,'amp');
+    XAmp = [XAmpPerStim{:}]';
+    XAmp(isnan(XAmp))=0; % Change the padding with NaN to zeros for the amplitude, we know here that there is no sound
+    %         XSpecMedPerStim = get_x(BioSound(IndVoc,1), Duration(IndVoc), Win, TR, Delay,'Q2t');
+    %         XSpecMed = [XSpecMedPerStim{:}]';
+    
+    %% Plot of features and neuronal response if requested (BioSound,YPerStim,XPerStim, TR,Delay,F_high,FeatureName)
+    if DatFig
+        plotxyfeatures(BioSound(IndVoc,1),YPerStim,XSpecMeanPerStim,TR,Win,Delay,Duration(IndVoc), 50000,'Spectral Mean')
+        plotxyfeatures(BioSound(IndVoc,2),YPerStim,XSaliencyPerStim,TR,Win,Delay,Duration(IndVoc), 10000,'Saliency')
+        plotxyfeatures(BioSound(IndVoc,2),YPerStim,XAmpPerStim,TR,Win,Delay,Duration(IndVoc), 10000,'Amp')
+        %         plotxyfeatures(BioSound(IndVoc,1),YPerStim,XSpecMedPerStim,TR,Delay,Duration(IndVoc), 50000,'Spectral Median')
+    end
+    
+    %% Calculate the model
+    % get rid of Nans
+    Nan_Ind=find(isnan(Y));
+    Y(Nan_Ind) = [];
+    XSpecMean(Nan_Ind,:) =[];
+    XSaliency(Nan_Ind,:) =[];
+    %         XSpecMed(Nan_Ind,:) =[];
+    
+    %% Run ridge GLM Poisson on acoustic features
+    
+    % spectral mean predicting Y
+    [BSpecMean_local, FitInfo_SpecMean]=lassoglm([XAmp XSpecMean],Y,ParamModel.DISTR,'Alpha', ParamModel.Alpha,'Link',ParamModel.LINK,'NumLambda',ParamModel.NUMLAMBDA,'Standardize',1,'LambdaRatio',ParamModel.LAMBDARATIO);
+    % find the model with the minimum of deviance (best lambda)
+    [BestDevSpecMean(tr),BestModSpecMean] = min(FitInfo_SpecMean.Deviance);
+    BSpecMean(tr,2:end) = BSpecMean_local(:,BestModSpecMean);
+    BSpecMean(tr,1) = FitInfo_SpecMean.Intercept(BestModSpecMean);
+    
+    % pitch saliency predicting Y
+    [BSal_local, FitInfo_Sal]=lassoglm([XAmp XSaliency],Y,ParamModel.DISTR,'Alpha', ParamModel.Alpha,'Link',ParamModel.LINK,'NumLambda',ParamModel.NUMLAMBDA,'Standardize',1,'LambdaRatio',ParamModel.LAMBDARATIO);
+    % find the model with the minimum of deviance (best lambda)
+    [BestDevSal(tr),BestModSal] = min(FitInfo_Sal.Deviance);
+    BSal(tr,2:end) = BSal_local(:,BestModSal);
+    BSal(tr,1) = FitInfo_Sal.Intercept(BestModSal);
+    
+    
+    %         % spectral median predicting Y
+    %         [BSpecMed, FitInfo_SpecMed]=lassoglm(XSpecMed,Y,ParamModel.DISTR,'Alpha', ParamModel.Alpha,'Link',ParamModel.LINK,'NumLambda',ParamModel.NUMLAMBDA,'Standardize',0,'LambdaRatio',ParamModel.LAMBDARATIO);
+    %         % find the model with the minimum of deviance (best lambda)
+    %         [BestDevSpecMed(tr,dd),BestModSpecMed] = min(FitInfo_SpecMean.Deviance);
+    
+    % amplitude predicting Y, is a null model for the former 2 models
+    [BAmp_local, FitInfo_Amp]=lassoglm(XAmp,Y,ParamModel.DISTR,'Alpha', ParamModel.Alpha,'Link',ParamModel.LINK,'NumLambda',ParamModel.NUMLAMBDA,'Standardize',1,'LambdaRatio',ParamModel.LAMBDARATIO);
+    % find the model with the minimum of deviance (best lambda)
+    [BestDevAmp(tr),BestModAmp] = min(FitInfo_Amp.Deviance);
+    
+    BAmp(tr,2:end) = BAmp_local(:,BestModAmp);
+    BAmp(tr,1) = FitInfo_Amp.Intercept(BestModAmp);
+    
+    % null model
+    MDL_null=fitglm(ones(size(XAmp,1),1),Y,'Distribution',ParamModel.DISTR,'Link',ParamModel.LINK,'Intercept',false);
+    % find the model with the minimum of deviance (best lambda)
+%     [BestDevNull(tr),BestModNull] = min(FitInfo_Amp.Deviance);
+%     
+%     BNull(tr,2:end) = Bnull_local(:,BestModNull);
+%     BNull(tr,1) = FitInfo_null.Intercept(BestModNull);
+    
+    BestDevNull(tr) = MDL_null.Deviance;
+    BNull(tr) = MDL_null.Coefficients.Estimate;
+    
+    if DatFig
+        TimeBinsX = -Delay : (Win-Delay);
         figure()
-        plot(TimeBinsX,BSpecMean(:,BestModSpecMean),'LineStyle','-', 'LineWidth',2,'DisplayName', sprintf('Spectral Mean Dev = %.1f',BestDevSpecMean(tr,dd)))
+        plot(TimeBinsX,BSpecMean(:,BestModSpecMean),'LineStyle','-', 'LineWidth',2,'DisplayName', sprintf('Spectral Mean Dev = %.1f',BestDevSpecMean(tr)))
         hold on
-        plot(TimeBinsX,BSal(:,BestModSal),'LineStyle','-', 'LineWidth',2,'DisplayName', sprintf('Saliency Dev = %.1f',BestDevSal(tr,dd)))
+        plot(TimeBinsX,BSal(:,BestModSal),'LineStyle','-', 'LineWidth',2,'DisplayName', sprintf('Saliency Dev = %.1f',BestDevSal(tr)))
         hold on
-%         plot(TimeBinsX,BSpecMed(:,BestModSpecMed),'LineStyle','-', 'LineWidth',2,'DisplayName', sprintf('Spectral Median Dev = %.1f',BestDevSpecMed(tr,dd)))
-
+        %         plot(TimeBinsX,BSpecMed(:,BestModSpecMed),'LineStyle','-', 'LineWidth',2,'DisplayName', sprintf('Spectral Median Dev = %.1f',BestDevSpecMed(tr,dd)))
+        hold on
+        plot(TimeBinsX,BAmp(:,BestModAmp),'LineStyle','-', 'LineWidth',2,'DisplayName', sprintf('Amp Dev = %.1f',BestDevAmp(tr)))
+        
+        
         legend('show')
         % XTick = get(gca, 'XTickLabel');
         % XTick = cellfun(@str2double, XTick) * Win;
         % set(gca,'XTickLabel',XTick)
         xlabel('Time (ms)')
-        title(sprintf('Poisson Ridge regression on Acoustic Features Delay = %dms Win=%dms', Delay, TR))
+        title(sprintf('Poisson Ridge regression on Acoustic Features Delay = %dms Time resolution=%dms', Delay, TR))
         hold off
         pause(1)
     end
 end
 
-figure()
-imagesc(Delays,TRs,BestDevSpecMean)
-xlabel('Delays to voc onset in ms')
-ylabel('Time resolution in ms')
-title('Deviance spectral mean model')
-colorbar()
+
+%% Plot
+CLIM = nan(4,2);
+figure(1)
+subplot(1,2,1)
+plot(TRs,BestDevSpecMean', 'Color',ColorCode(1,:), 'LineWidth',2)
+hold on
+plot(TRs,BestDevSal,'Color', ColorCode(2,:), 'LineWidth',2)
+hold on
+plot(TRs,BestDevAmp, 'Color', ColorCode(3,:),'LineWidth',2)
+hold on
+plot(TRs,BestDevNull, 'Color',ColorCode(4,:),'LineWidth',2, 'LineStyle','--')
+legend({'Amp + SpecMean' 'Amp + Sal' 'Amp' 'Null'})
+legend('Autoupdate','off')
+ylabel('Deviance')
+xlabel('Time resolution in ms')
+
+subplot(1,2,2)
+plot(TRs,BestDevSpecMean', 'Color',ColorCode(1,:), 'LineWidth',2)
+hold on
+plot(TRs,BestDevSal,'Color', ColorCode(2,:), 'LineWidth',2)
+hold on
+plot(TRs,BestDevAmp, 'Color', ColorCode(3,:),'LineWidth',2)
+hold on
+plot(TRs,BestDevNull, 'Color',ColorCode(4,:),'LineWidth',2, 'LineStyle','--')
+ylabel('Deviance')
+xlabel('Time resolution in ms')
+xlim([0 2])
+ylim([12000 12600])
+hold off
+
 
 figure()
-imagesc(Delays,TRs,BestDevSal)
+subplot(1,2,1)
+plot(TRs, BestDevAmp-BestDevSpecMean , 'Color',ColorCode(1,:), 'LineWidth',2)
+hold on
+plot(TRs,BestDevAmp - BestDevSal,'Color', ColorCode(2,:), 'LineWidth',2)
+hold on
+plot(TRs,BestDevNull -BestDevAmp, 'Color', ColorCode(3,:),'LineWidth',2)
+legend({'SpecMean contribution' 'Sal contribution' 'Amp contribution'})
+ylabel('Difference of Deviance')
+xlabel('Time resolution in ms')
+
+subplot(1,2,2)
+plot(TRs, (BestDevAmp-BestDevSpecMean)./BestDevAmp , 'Color',ColorCode(1,:), 'LineWidth',2)
+hold on
+plot(TRs,(BestDevAmp - BestDevSal)./BestDevAmp,'Color', ColorCode(2,:), 'LineWidth',2)
+hold on
+plot(TRs,(BestDevNull -BestDevAmp)./BestDevAmp, 'Color', ColorCode(3,:),'LineWidth',2)
+legend({'SpecMean contribution' 'Sal contribution' 'Amp contribution'})
+ylabel('R2')
+xlabel('Time resolution in ms')
+
+% Plotting betas
+figure()
+subplot(2,3,1:3)
+bar(TRs,exp([BNull BAmp(:,1) BSpecMean(:,1) BSal(:,1)])*1000)
+xlabel('Time resolution in ms')
+ylabel('exp(intercept) Hz')
+legend({'Null' 'Amp' 'Amp + SpecMean' 'Amp + Sal'},'Location','southoutside','NumColumns',4)
+subplot(2,3,4)
+imagesc(BAmp(:,2:end))
+set(gca,'YTick',1:length(TRs),'YTickLabel',TRs)
+ylabel('Time resolution in ms')
+xlabel('Time alligned to predicted Y (ms)')
+set(gca,'XTick',1:50:Win,'XTickLabel',-Delay:50:(Win-Delay-1))
+title('Amplitude Model')
+colorbar()
+subplot(2,3,5)
+imagesc(BSpecMean(:,2:end))
+set(gca,'YTick',1:length(TRs),'YTickLabel',TRs)
+ylabel('Time resolution in ms')
+xlabel('Time alligned to predicted Y (ms)')
+set(gca,'XTick',1:100:2*Win,'XTickLabel',[-Delay:100:(Win-Delay-1) -Delay:100:(Win-Delay-1)])
+title('Amplitude + SpecMean')
+colorbar()
+subplot(2,3,6)
+imagesc(BSal(:,2:end))
+set(gca,'YTick',1:length(TRs),'YTickLabel',TRs)
+ylabel('Time resolution in ms')
+xlabel('Time alligned to predicted Y (ms)')
+set(gca,'XTick',1:100:2*Win,'XTickLabel',[-Delay:100:(Win-Delay-1) -Delay:100:(Win-Delay-1)])
+title('Amplitude + Saliency')
+colorbar()
+
+
+
+figure()
+imagesc(Delay,TRs,BestDevSal)
 xlabel('Delays to voc onset in ms')
 ylabel('Time resolution in ms')
 title('Deviance pitch saliency model')
 colorbar()
+CLIM(2,:) = get(gca, 'clim');
 
 % figure()
 % imagesc(Delays,TRs,BestDevSpecMed)
 % xlabel('Delays to voc onset in ms')
 % ylabel('Time resolution in ms')
 % title('Deviance spectral median model')
+
+figure()
+imagesc(Delay,TRs,BestDevAmp)
+xlabel('Delays to voc onset in ms')
+ylabel('Time resolution in ms')
+title('Deviance Amplitude model')
+colorbar()
+CLIM(3,:) = get(gca, 'clim');
+
+figure()
+imagesc(Delay,TRs,BestDevNull)
+xlabel('Delays to voc onset in ms')
+ylabel('Time resolution in ms')
+title('Deviance Null model')
+colorbar()
+CLIM(4,:) = get(gca, 'clim');
+
+
+figure()
+subplot(2,3,1)
+imagesc(BestDevSpecMean)
+set(gca, 'XTick',1:length(Delay),'XTickLabel',Delay)
+set(gca, 'YTick',1:length(TRs),'YTickLabel',TRs)
+xlabel('Delays to voc onset in ms')
+ylabel('Time resolution in ms')
+title('Deviance spectral mean model')
+colorbar()
+%caxis([0 1000])
+caxis([min(CLIM(:,1)) max(CLIM(:,2))])
+
+subplot(2,3,2)
+imagesc(BestDevSal)
+set(gca, 'XTick',1:length(Delay),'XTickLabel',Delay)
+set(gca, 'YTick',1:length(TRs),'YTickLabel',TRs)
+xlabel('Delays to voc onset in ms')
+ylabel('Time resolution in ms')
+title('Deviance pitch saliency model')
+colorbar()
+caxis([min(CLIM(:,1)) max(CLIM(:,2))])
+%caxis([0 1000])
+
+% figure()
+% imagesc(Delays,TRs,BestDevSpecMed)
+% xlabel('Delays to voc onset in ms')
+% ylabel('Time resolution in ms')
+% title('Deviance spectral median model')
+
+subplot(2,3,3)
+imagesc(BestDevAmp)
+set(gca, 'XTick',1:length(Delay),'XTickLabel',Delay)
+set(gca, 'YTick',1:length(TRs),'YTickLabel',TRs)
+xlabel('Delays to voc onset in ms')
+ylabel('Time resolution in ms')
+title('Deviance Amplitude model')
+colorbar()
+caxis([min(CLIM(:,1)) max(CLIM(:,2))])
+%caxis([0 1000])
+
+subplot(2,3,5)
+imagesc(BestDevNull)
+set(gca, 'XTick',1:length(Delay),'XTickLabel',Delay)
+set(gca, 'YTick',1:length(TRs),'YTickLabel',TRs)
+xlabel('Delays to voc onset in ms')
+ylabel('Time resolution in ms')
+title('Deviance Null model')
+colorbar()
+caxis([min(CLIM(:,1)) max(CLIM(:,2))])
+
+figure()
+subplot(1,3,1)
+imagesc(BestDevAmp - BestDevSpecMean)
+set(gca, 'XTick',1:length(Delay),'XTickLabel',Delay)
+set(gca, 'YTick',1:length(TRs),'YTickLabel',TRs)
+xlabel('Delays to voc onset in ms')
+ylabel('Time resolution in ms')
+title('Goodness of fit: Deviance Amp - SpecMean')
+colorbar()
+% caxis([0 1000])
+% %caxis([min(CLIM(:,1)) max(CLIM(:,2))])
+
+subplot(1,3,2)
+imagesc(BestDevAmp - BestDevSal)
+set(gca, 'XTick',1:length(Delay),'XTickLabel',Delay)
+set(gca, 'YTick',1:length(TRs),'YTickLabel',TRs)
+xlabel('Delays to voc onset in ms')
+ylabel('Time resolution in ms')
+title('Goodness of fit: Deviance Amp - pitch saliency')
+colorbar()
+% %caxis([min(CLIM(:,1)) max(CLIM(:,2))])
+% caxis([0 1000])
+
+% figure()
+% imagesc(Delays,TRs,BestDevSpecMed)
+% xlabel('Delays to voc onset in ms')
+% ylabel('Time resolution in ms')
+% title('Deviance spectral median model')
+
+subplot(1,3,3)
+imagesc(BestDevNull - BestDevAmp)
+set(gca, 'XTick',1:length(Delay),'XTickLabel',Delay)
+set(gca, 'YTick',1:length(TRs),'YTickLabel',TRs)
+xlabel('Delays to voc onset in ms')
+ylabel('Time resolution in ms')
+title('Goodness of fit: Deviance Null -  Amplitude')
+colorbar()
+% %caxis([min(CLIM(:,1)) max(CLIM(:,2))])
+% caxis([0 1000])
 
 % %% Run ridge GLM Poisson on change of power
 % B = cell(length(Fhigh_powers),1);
@@ -164,8 +396,8 @@ colorbar()
 % % set(gca,'XTickLabel',XTick)
 % xlabel('Time (ms)')
 % title('Poisson Ridge regression on change of Power')
-% 
-% 
+%
+%
 % %% run logistic model
 % Y01 = Y>0;
 % B_Env01 = cell(length(Fhigh_powers),1);
@@ -187,50 +419,77 @@ colorbar()
 % xlabel('Time (ms)')
 % title('Logistic Ridge regression on Power')
 % %     [B_Env{ff}, FitInfo_Env]=lassoglm(X,Y,ParamModel.DISTR,'Alpha', ParamModel.Alpha,'Link',ParamModel.LINK,'NumLambda',ParamModel.NUMLAMBDA,'Standardize',0,'LambdaRatio',ParamModel.LAMBDARATIO);
-% 
+%
 % % lassoPlot(B_Env,FitInfo_Env,'PlotType','Lambda','XScale','log')
-%     
-    
-   
+%
+
+
 
 %% INTERNAL FUNCTIONS
 
-function [XPerStim] = get_x(BioSound, Duration, Win, TR,Delay,Feature)
-    % Time slots of the acoustic features
-    TimeBinsX = 0 : TR : Win;
-    NTimeBinsX =length(TimeBinsX);
-    XPerStim = cell(1,length(Duration));
-    for stim = 1:length(Duration)
-        % Time slots of the corresponding neural response
-        TimeBinsY = -(Delay) : TR : (Delay + Duration(stim));
-        
-        % Get ready the stim acoustic features that was sampled at 1000Hz
-        FeatureVal = BioSound{stim}.(sprintf('%s',Feature));
-        FeatureValResampled = resample(FeatureVal,1,TR); % Win in ms so resampling from 1 value per ms to 1/Win value per ms or 1 value per win ms
-        ZPaddFeature = zeros(1,NTimeBinsX+length(TimeBinsY)-1);
-        ZPaddFeature(1:length(FeatureValResampled))=FeatureValResampled;
-        
-        XPerStim{stim} = zeros(length(TimeBinsX),length(TimeBinsY)-1);
-        for tt=1:(length(TimeBinsY)-1)
-            XPerStim{stim}(:,tt) = ZPaddFeature((1:NTimeBinsX) + tt-1);
-        end
+function [XPerStim] = get_x(BioSound, Duration, Win,Delay,Feature)
+% calculate the cell array of acoustic data for each vocalization. For each
+% voc, XPerStim is a matrix where each column correspond to the values of
+% the acoustic feature in the window Win starting Delay ms before time t of
+% the neural response Y. Same as the neural response, the window slides by
+% a pace of 1ms from one column of the matrix to the next, starting
+% Win-Delay before the vocalization onset.
+
+% Matrix of the acoustic features
+XPerStim = cell(1,length(Duration));
+for stim = 1:length(Duration)
+    % Time points of the corresponding neural response
+    TimeBinsY = -(Win-Delay) : 1 : (Delay + Duration(stim));
+    
+    % Get ready the stim acoustic features that was sampled at 1000Hz
+    FeatureVal = BioSound{stim}.(sprintf('%s',Feature));
+    %         FeatureValResampled = resample(FeatureVal,1,TR); % Win in ms so resampling from 1 value per ms to 1/Win value per ms or 1 value per win ms
+    %         PadFeature4Conv = nanmean(FeatureVal)*ones(1,(length(Expwav)-1)/2);
+    %         FeatureValResampled = conv([PadFeature4Conv FeatureVal PadFeature4Conv], Expwav, 'valid');
+    ZPaddFeature = nan(1,Win + Duration(stim) + Win);
+    ZPaddFeature(Win+(1:length(FeatureVal)))=FeatureVal;
+    
+    XPerStim{stim} = zeros(Win,length(TimeBinsY)-1);
+    for tt=1:(length(TimeBinsY)-1)
+        XPerStim{stim}(:,tt) = ZPaddFeature((1:Win) + tt-1);
     end
+end
 
 end
 
-function [YPerStim] = get_y(SAT, Duration, Delay,TR)
-    YPerStim = cell(1,length(Duration));
-    % Loop through the stimuli and fill in the matrix
-    for stim=1:length(Duration)
-        % Time slots for the neural response
-        TimeBinsY = -(Delay) : TR : (Delay + Duration(stim));
-        YPerStim{stim} = nan(1,length(TimeBinsY)-1);
-    
-        for tt=1:(length(TimeBinsY)-1)
-            % Find the number of spikes
-            YPerStim{stim}(tt) = sum( (SAT{stim}>=TimeBinsY(tt)) .* (SAT{stim}<TimeBinsY(tt+1)));
+function [YPerStim] = get_y(SAT, Duration, Win,Delay,TR)
+% Calculate the time varying rate applying a gaussian window TR on the
+% spike pattern. The spike pattern considered starts Win-Delay ms
+% before the onset of the vocalization and stops Delay ms after the
+% offset of the vocalization
+YPerStim = cell(1,length(Duration));
+% Gaussian window of 2*std equal to TR (68% of Gaussian centered in TR)
+nStd =4;
+Tau = (TR/2);
+T_pts = (0:2*nStd*Tau) -nStd*Tau; % centered tpoints around the mean = 0 and take data into account up to 4 std away on each side
+Expwav = exp(-0.5*(T_pts).^2./Tau^2)/(Tau*(2*pi)^0.5);
+Expwav = Expwav./sum(Expwav);
+
+% Loop through the stimuli and fill in the matrix
+for stim=1:length(Duration)
+    % Time slots for the neural response
+    TimeBinsY = -(Win-Delay) : (Delay + Duration(stim));
+    SpikePattern = zeros(1,length(TimeBinsY)-1);
+    for isp = 1:length(SAT{stim})
+        SpikeInd = round(SAT{stim}(isp));
+        if (SpikeInd>=-(Win-Delay)) && (SpikeInd<(Delay + Duration(stim)))
+            SpikePattern(SpikeInd + (Win-Delay) +1) = SpikePattern(SpikeInd + (Win-Delay) +1) +1;
         end
     end
+    YPerStim{stim} = conv(SpikePattern, Expwav,'same');
+    %         % Time slots for the neural response
+    %         TimeBinsY = -(Delay) : TR: (Delay + Duration(stim));
+    %         YPerStim{stim} = nan(1,length(TimeBinsY)-1);
+    %         for tt=1:(length(TimeBinsY)-1)
+    %             % Find the number of spikes
+    %             YPerStim{stim}(tt) = sum( (SAT{stim}>=TimeBinsY(tt)) .* (SAT{stim}<TimeBinsY(tt+1)));
+    %         end
+end
 
 end
 
@@ -243,12 +502,12 @@ end
 %     for ff=1:length(Fhigh_powers)
 %         [Amp_env_Mic{stim}{ff}, Power_env_Mic{stim}{ff}] = running_rms(Filt_RawVoc, D1.FS, Fhigh_powers(ff), Fs_env);
 %     end
- 
-function plotxyfeatures(BioSound,YPerStim,XPerStim, TR,Delay,Duration,F_high,FeatureName)
+
+function plotxyfeatures(BioSound,YPerStim,XPerStim,TR,Win,Delay,Duration,F_high,FeatureName)
 if nargin<6
     FeatureName = 'Acoustic Feature';
 end
-DBNOISE =12;
+DBNOISE =60;
 f_low = 0;
 close all
 for stim =1:length(BioSound)
@@ -258,7 +517,7 @@ for stim =1:length(BioSound)
     subplot(2,1,1)
     title(sprintf('vocalization %d/%d', stim,length(BioSound)))
     yyaxis left
-    logB = - 20*log10(abs(double(BioSound{stim}.spectro)));
+    logB = BioSound{stim}.spectro;
     maxB = max(max(logB));
     minB = maxB-DBNOISE;
     imagesc(double(BioSound{stim}.to)*1000,double(BioSound{stim}.fo),logB);          % to is in seconds
@@ -274,34 +533,43 @@ for stim =1:length(BioSound)
     axis(v_axis);
     xlabel('time (ms)'), ylabel('Frequency');
     
+    
     hold on
     yyaxis right
-    StimFeature = [XPerStim{stim}(1,:) XPerStim{stim}(2:end,end)'];
-    IndMax = floor(max(double(BioSound{stim}.to)*1000)/TR);
-    plot(TR/2 + (0:TR:((IndMax-1)*TR)), StimFeature(1:IndMax), 'Color',ColorCode(2,:),'LineStyle','-', 'LineWidth',2)
+    StimFeature = [XPerStim{stim}(:,1)' XPerStim{stim}(end,2:end)];
+    MaxT = floor(max(double(BioSound{stim}.to)*1000));
+    XStimFeature = [-Win:-1 double(BioSound{stim}.to)*1000 MaxT+(1:(Win))];
+    plot(XStimFeature(1:length(StimFeature)), StimFeature, 'Color',ColorCode(2,:),'LineStyle','-', 'LineWidth',2)
+    %     IndMax = floor(max(double(BioSound{stim}.to)*1000)/TR);
+    %     plot(TR/2 + (0:TR:((IndMax-1)*TR)), StimFeature(1:IndMax), 'Color',ColorCode(2,:),'LineStyle','-', 'LineWidth',2)
     ylabel(sprintf('%s', FeatureName))
     if strcmp(FeatureName,'Spectral Mean')
         ylim(v_axis(3:4))
     end
+    xlim([-Win Win+Duration(stim)])
     hold off
     
     subplot(2,1,2)
     yyaxis left
-    bar(TR/2+(-(Delay) : TR : (Delay + Duration(stim)-TR)),YPerStim{stim})
-    ylabel(sprintf('Number of spikes per %d ms bin', TR))
-    ylim([0 TR])
+    bar(-(Win-Delay) : (Delay + Duration(stim)-1),YPerStim{stim})
+    %     bar(TR/2+(-(Delay) : TR : (Delay + Duration(stim)-TR)),YPerStim{stim})
+    ylabel(sprintf('Spikes/ms (%d ms Gauss win)', TR))
+    ylim([0 1])
     xlabel('Time (ms)')
     hold on
+    line([-(Win-Delay) Duration(stim)+Delay], [0.975 0.975], 'Color',[0 0.4470 0.7410], 'LineWidth',12)
+    hold on
+    text(0,0.975,'Neural response', 'Color', [1 1 1])
+    hold on
     yyaxis right
-    plot(TR/2 + (0:TR:((IndMax-1)*TR)), StimFeature(1:IndMax), 'Color',ColorCode(2,:),'LineStyle','-', 'LineWidth',2)
+    plot(XStimFeature(1:length(StimFeature)), StimFeature, 'Color',ColorCode(2,:),'LineStyle','-', 'LineWidth',2)
+    %     plot(TR/2 + (0:TR:((IndMax-1)*TR)), StimFeature(1:IndMax), 'Color',ColorCode(2,:),'LineStyle','-', 'LineWidth',2)
     ylabel(sprintf('%s', FeatureName))
-    XLIM = get(gca,'XLim');
+    xlim([-Win Win+Duration(stim)])
     hold off
-    subplot(2,1,1)
-    set(gca,'XLim',XLIM)
     pause(1)
 end
 end
 
- 
+
 
