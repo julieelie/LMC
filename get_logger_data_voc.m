@@ -69,7 +69,7 @@ else
         Voc_i_start = Nvocs(NVOC_i)+1;
         Voc_i_stop = Nvocs(NVOC_i+1);
         Nvoc = Voc_i_stop-Voc_i_start+1;
-        fprintf('****** Extracting logger data for set %d/%d of %d vocalizations. ******\n', NVOC_i,length(Nvocs), Nvoc);
+        fprintf('****** Extracting logger data for set %d/%d of %d vocalizations. ******\n', NVOC_i,length(Nvocs)-1, Nvoc);
         %% Initialize variables
         for ll=1:NLogger
             if strcmp(LoggerType{ll}, 'Audi') && SerialNumber_of_interest(ll)
