@@ -20,6 +20,7 @@ pnames = {'SerialNumber', 'ReAllignment'};
 dflts  = {[],1};
 [SerialNumber, ReAllignment] = internal.stats.parseArgs(pnames,dflts,varargin{:});
 
+VocMaxNum = 100; % max number of vocalizations per file output used to be 1000
 Buffer = 2000; % Let's cut the audio extracts Buffer ms before and after the predicted time according to audio/transceiver allignment to better allign
 BandPassFilter = [1000 5000 9000];
 %Parameter for detecting who is vocalizing:
@@ -60,8 +61,8 @@ else
     
     
     
-    if Nvoc_all>1000
-        Nvocs = [0 1000:1000:Nvoc_all (floor(Nvoc_all/1000)*1000+rem(Nvoc_all,1000))];
+    if Nvoc_all>VocMaxNum
+        Nvocs = [0 VocMaxNum:VocMaxNum:Nvoc_all (floor(Nvoc_all/VocMaxNum)*VocMaxNum+rem(Nvoc_all,VocMaxNum))];
     else
         Nvocs = [0 Nvoc_all];
     end
@@ -476,9 +477,9 @@ else
         OP = whos('Piezo_wave');
         OW = whos('Raw_wave');
         if ((OP.bytes/10^9)>=2) || ((OW.bytes/10^9)>=2)
-            save(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData%d.mat', Date, ExpStartTime,NVOC_i)), 'Piezo_wave', 'Piezo_FS',  'Raw_wave','FS', 'RatioRMS', 'DiffRMS','BandPassFilter', 'AudioLogs', 'RMSHigh', 'RMSLow','VocFilename','Voc_transc_time_refined','LoggerType', 'ReAllignment','-v7.3');
+            save(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData%d.mat', Date, ExpStartTime,NVOC_i)), 'Piezo_wave', 'Piezo_FS',  'Raw_wave','FS', 'RatioRMS', 'DiffRMS','BandPassFilter', 'AudioLogs', 'RMSHigh', 'RMSLow','VocFilename','Voc_transc_time_refined','LoggerType', 'ReAllignment','VocMaxNum','-v7.3');
         else
-            save(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData%d.mat', Date, ExpStartTime,NVOC_i)), 'Piezo_wave', 'Piezo_FS',  'Raw_wave','FS', 'RatioRMS', 'DiffRMS','BandPassFilter', 'AudioLogs', 'RMSHigh', 'RMSLow','VocFilename','Voc_transc_time_refined','LoggerType', 'ReAllignment');
+            save(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData%d.mat', Date, ExpStartTime,NVOC_i)), 'Piezo_wave', 'Piezo_FS',  'Raw_wave','FS', 'RatioRMS', 'DiffRMS','BandPassFilter', 'AudioLogs', 'RMSHigh', 'RMSLow','VocFilename','Voc_transc_time_refined','LoggerType', 'ReAllignment','VocMaxNum');
         end
     end
 end
