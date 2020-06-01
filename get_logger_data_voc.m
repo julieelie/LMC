@@ -180,9 +180,12 @@ else
                     %         Piezo_wave.(sprintf('Logger%s', LData.logger_serial_number)){vv} = double(LData.AD_count_int16(IndSampOn:IndSampOff) - mean(LData.AD_count_int16))/std(LData.AD_count_int16);
                     if IndSampOff<length(LData.AD_count_int16)
                         Piezo_wave.(sprintf('Logger%s', LData.logger_serial_number)){vv_out} = double(LData.AD_count_int16(IndSampOn:IndSampOff));
-                    else % The piezo recording ended before the end of the call section requested
+                    elseif IndSampOn<length(LData.AD_count_int16)% The piezo recording ended before the end of the call section requested
                         warning('The piezo recording of %s ended before the end of vocalization %d, only extracting up to the end of piezo recording and pading the rest with NaN\n',Logger_dirs(AudioLogs(ll)).name, vv);
                         Piezo_wave.(sprintf('Logger%s', LData.logger_serial_number)){vv_out} = [double(LData.AD_count_int16(IndSampOn:end)) nan(1,IndSampOff-length(LData.AD_count_int16))];
+                    elseif IndSampOn>length(LData.AD_count_int16)% The piezo recording ended before the end of the call section requested
+                        warning('The piezo recording of %s ended before the begining of vocalization %d, no extraction for that logger\n',Logger_dirs(AudioLogs(ll)).name, vv);
+                        Piezo_wave.(sprintf('Logger%s', LData.logger_serial_number)){vv_out} = nan(1,1);
                     end
                     if IndTSOff<=length(LData.Estimated_channelFS_Transceiver)
                         Piezo_FS.(sprintf('Logger%s', LData.logger_serial_number))(vv_out) = nanmean(LData.Estimated_channelFS_Transceiver(IndTSOn:IndTSOff));
