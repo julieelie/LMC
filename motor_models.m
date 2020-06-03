@@ -27,8 +27,10 @@ ParamModel.DISTR='poisson';
 ParamModel.Alpha=0.001; % STRFs are easier to interpret using ridge than using Lasso and deviances are similar.
 
 % Define the time resolution at which neural density estimates should be calculated
-TRs = [1 5 10 15 20 25 30 35 40 45 50]; % time in ms
-% TRs = [5 10]; % time in ms
+% TRs = [1 5 10 15 20 25 30 35 40 45 50]; % time in ms
+% Based on first results of calculations for a subset of cells, I decide to
+% rping down the number of time resolution to explore
+TRs = [1 5 10 15 20]; % time in ms
 
 Win =300;%value in ms for the duration of the snippet of sound which
 % acoustic features are used to predict the neural response at a given time
@@ -41,12 +43,20 @@ Delay = 100;% ms
 
 %% Running through cells
 NCells = length(CellsPath);
-MotorModels = cell(NCells,1);
+%MotorModels = cell(NCells,1);
+load(fullfile(Path,'MotorModelsAllCells'),'MotorModels','CellsPath');
 parfor cc=1:NCells
+    if ~isempty(MotorModels{cc}) % This one was already calculated
+        fprintf(1, 'Cell %d/%d Already calculated\n',cc,NCells)
+        continue
+    end
     Cell = load(fullfile(CellsPath(cc).folder,CellsPath(cc).name));
     
     
     % Number of vocalizations in the dataset
+    if ~isfield(Cell, 'What')
+        fprintf(1,'*** . Problem with Cell %d, no what field!! ****\n', cc)
+    end
     IndVoc = find(contains(Cell.What, 'Voc') .* (Cell.Duration>20)); % No saliency calculated when duration <20ms
     NStims = length(IndVoc);
     
@@ -70,15 +80,25 @@ parfor cc=1:NCells
     % median model with the best deviance
     % BNull = nan(length(TRs),Win+1);  % contains the Beta of the null model
     BNull = nan(length(TRs),1);  % contains the Beta of the null model
+    TicToc = nan(length(TRs),1);  % duration of each loop of models
+    MeanY = nan(length(TRs),1);
     
     for tr = 1:length(TRs)
         TR = TRs(tr);
         fprintf(1,'Cell %d/%d Models with Time resolution %d ms (%d/%d)\n', cc,NCells,TR, tr, length(TRs));
         %% Gather the data
-        
+        TimerLoop =tic;
         % Neural Data loop
         YPerStim = get_y(Cell.SpikesArrivalTimes_Behav(IndVoc), Cell.Duration(IndVoc),Win,Delay,TR);
         Y = [YPerStim{:}]';
+        
+        MeanY(tr)=nanmean(Y);
+        % check that the neural response is high enough
+        if nanmean(Y)<10^-2
+            fprintf(1, 'Cell %d/%d Models with Time resolution %d ms (%d/%d) -> Rate is too low, not calculating models to avoid convergence issues\n',cc,NCells,TR, tr, length(TRs))
+            continue
+        end
+        
         
         % Acoustic feature loop, first column of biosound is microphone second is
         % piezo
@@ -172,6 +192,8 @@ parfor cc=1:NCells
             hold off
             pause(1)
         end
+        TicToc(tr) = toc(TimerLoop);
+        fprintf(1,'Cell %d/%d Models with Time resolution %d ms (%d/%d) => done in %.2f minutes \n', cc,NCells,TR, tr, length(TRs), TicToc(tr)/60);
     end
     if DatFig
         
@@ -270,11 +292,140 @@ parfor cc=1:NCells
     MotorModels{cc}.BAmpSpecMean = BSpecMean;
     MotorModels{cc}.BAmpSal = BSal;
     MotorModels{cc}.BNull = BNull;
+    MotorModels{cc}.TicToc = TicToc;
+    MotorModels{cc}.MeanY = MeanY;
         
 end
-
+%%
 save(fullfile(Path,'MotorModelsAllCells'),'MotorModels','CellsPath');
-%% Plot
+%% Plot issues with no convergence
+load(fullfile(Path,'MotorModelsAllCells'),'MotorModels','CellsPath');
+TicToc = nan(NCells*11,1);
+MeanY = nan(NCells*11,1);
+TRs = nan(NCells*11,1);
+BestDevAmp = nan(NCells*11,1);
+BestDevSpecMean = nan(NCells*11,1);
+BestDevSal = nan(NCells*11,1);
+BestDevNull = nan(NCells*11,1);
+
+F10=figure(10);
+F20 = figure(20);
+ColorCode = get(groot, 'DefaultAxesColorOrder');
+ii=0;
+for cc=1:NCells
+    if ~isempty(MotorModels{cc})
+        for tt=1:length(MotorModels{cc}.TicToc)
+            ii=ii+1;
+            TicToc(ii) = MotorModels{cc}.TicToc(tt);
+            MeanY(ii) = MotorModels{cc}.MeanY(tt);
+            TRs(ii) = MotorModels{cc}.TRs(tt);
+            BestDevAmp(ii) = MotorModels{cc}.DevAmp(tt);
+            BestDevSpecMean(ii) = MotorModels{cc}.DevAmpSpecMean(tt);
+            BestDevSal(ii) = MotorModels{cc}.DevAmpSal(tt);
+            BestDevNull(ii) = MotorModels{cc}.DevNull(tt);
+        end
+        
+        figure(10)
+        hold on
+        plot(MotorModels{cc}.TRs,MotorModels{cc}.DevAmpSpecMean', 'Color',ColorCode(1,:), 'LineWidth',2)
+        hold on
+        plot(MotorModels{cc}.TRs,MotorModels{cc}.DevAmpSal,'Color', ColorCode(2,:), 'LineWidth',2)
+        hold on
+        plot(MotorModels{cc}.TRs,MotorModels{cc}.DevAmp, 'Color', ColorCode(3,:),'LineWidth',2)
+        hold on
+        plot(MotorModels{cc}.TRs,MotorModels{cc}.DevNull, 'Color',ColorCode(4,:),'LineWidth',2, 'LineStyle','--')
+        if cc==1
+            legend({'Amp + SpecMean' 'Amp + Sal' 'Amp' 'Null'})
+            legend('Autoupdate','off')
+            ylabel('Deviance')
+            xlabel('Time resolution in ms')
+        end
+        
+        
+        figure(20)
+        subplot(1,2,1)
+        hold on
+        plot(MotorModels{cc}.TRs, MotorModels{cc}.DevAmp-MotorModels{cc}.DevAmpSpecMean , 'Color',ColorCode(1,:), 'LineWidth',2)
+        hold on
+        plot(MotorModels{cc}.TRs,MotorModels{cc}.DevAmp - MotorModels{cc}.DevAmpSal,'Color', ColorCode(2,:), 'LineWidth',2)
+        hold on
+        plot(MotorModels{cc}.TRs,MotorModels{cc}.DevNull -MotorModels{cc}.DevAmp, 'Color', ColorCode(3,:),'LineWidth',2)
+        if cc==1
+            legend({'SpecMean contribution' 'Sal contribution' 'Amp contribution'})
+            legend('Autoupdate','off')
+            ylabel('Difference of Deviance')
+            xlabel('Time resolution in ms')
+        end
+        
+        subplot(1,2,2)
+        hold on
+        plot(MotorModels{cc}.TRs, (MotorModels{cc}.DevAmp-MotorModels{cc}.DevAmpSpecMean)./MotorModels{cc}.DevAmp , 'Color',ColorCode(1,:), 'LineWidth',2)
+        hold on
+        plot(MotorModels{cc}.TRs,(MotorModels{cc}.DevAmp - MotorModels{cc}.DevAmpSal)./MotorModels{cc}.DevAmp,'Color', ColorCode(2,:), 'LineWidth',2)
+        hold on
+        plot(MotorModels{cc}.TRs,(MotorModels{cc}.DevNull -MotorModels{cc}.DevAmp)./MotorModels{cc}.DevAmp, 'Color', ColorCode(3,:),'LineWidth',2)
+        if cc==1
+            legend({'SpecMean contribution' 'Sal contribution' 'Amp contribution'})
+            legend('Autoupdate','off')
+            ylabel('R2')
+            xlabel('Time resolution in ms')
+        end
+        
+    end
+end
+
+figure()
+subplot(1,2,1)
+scatter(MeanY,TicToc/(60*60), 'MarkerFaceColor','k')
+xlabel('MeanRate')
+ylabel('Model Time consumption (h)')
+subplot(1,2,2)
+scatter(TRs,TicToc/(60*60), 'MarkerFaceColor','k')
+xlabel('Models Time Resolution (ms)')
+ylabel('Model Time consumption (h)')
+
+
+figure()
+ColorCode = get(groot, 'DefaultAxesColorOrder');
+%subplot(1,2,1)
+scatter(TRs,BestDevSpecMean, 'MarkerFaceColor',ColorCode(1,:), 'MarkerEdgeColor',ColorCode(1,:))
+hold on
+scatter(TRs,BestDevSal,'MarkerFaceColor',ColorCode(2,:), 'MarkerEdgeColor',ColorCode(2,:))
+hold on
+scatter(TRs,BestDevAmp, 'MarkerFaceColor',ColorCode(3,:), 'MarkerEdgeColor',ColorCode(3,:))
+hold on
+scatter(TRs,BestDevNull, 'MarkerFaceColor',ColorCode(4,:), 'MarkerEdgeColor',ColorCode(4,:))
+legend({'Amp + SpecMean' 'Amp + Sal' 'Amp' 'Null'})
+legend('Autoupdate','off')
+ylabel('Deviance')
+xlabel('Time resolution in ms')
+
+
+
+
+figure()
+subplot(1,2,1)
+scatter(TRs, BestDevAmp-BestDevSpecMean , 'MarkerFaceColor',ColorCode(1,:), 'MarkerEdgeColor',ColorCode(1,:))
+hold on
+scatter(TRs,BestDevAmp - BestDevSal,'MarkerFaceColor',ColorCode(2,:), 'MarkerEdgeColor',ColorCode(2,:))
+hold on
+scatter(TRs,BestDevNull -BestDevAmp, 'MarkerFaceColor',ColorCode(3,:), 'MarkerEdgeColor',ColorCode(3,:))
+legend({'SpecMean contribution' 'Sal contribution' 'Amp contribution'})
+ylabel('Difference of Deviance')
+xlabel('Time resolution in ms')
+
+subplot(1,2,2)
+scatter(TRs, (BestDevAmp-BestDevSpecMean)./BestDevAmp , 'MarkerFaceColor',ColorCode(1,:), 'MarkerEdgeColor',ColorCode(1,:))
+hold on
+scatter(TRs,(BestDevAmp - BestDevSal)./BestDevAmp,'MarkerFaceColor',ColorCode(2,:), 'MarkerEdgeColor',ColorCode(2,:))
+hold on
+scatter(TRs,(BestDevNull -BestDevAmp)./BestDevAmp,'MarkerFaceColor',ColorCode(3,:), 'MarkerEdgeColor',ColorCode(3,:))
+legend({'SpecMean contribution' 'Sal contribution' 'Amp contribution'})
+ylabel('R2')
+xlabel('Time resolution in ms')
+%%
+        
+
 
 
 
