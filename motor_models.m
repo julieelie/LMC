@@ -91,6 +91,11 @@ parfor cc=1:NCells
         % Neural Data loop
         YPerStim = get_y(Cell.SpikesArrivalTimes_Behav(IndVoc), Cell.Duration(IndVoc),Win,Delay,TR);
         Y = [YPerStim{:}]';
+        % Check the values of Y, to do calculations faster, we're going to
+        % use a ridge regression, transforming the data with log to get
+        % somewhat normal distributions, we don't want 0 values
+        figure()
+        histogram(Y)
         
         MeanY(tr)=nanmean(Y);
         % check that the neural response is high enough
@@ -641,7 +646,7 @@ function [YPerStim] = get_y(SAT, Duration, Win,Delay,TR)
 % offset of the vocalization
 YPerStim = cell(1,length(Duration));
 % Gaussian window of 2*std equal to TR (68% of Gaussian centered in TR)
-nStd =4;
+nStd =10; % before set as 4
 Tau = (TR/2);
 T_pts = (0:2*nStd*Tau) -nStd*Tau; % centered tpoints around the mean = 0 and take data into account up to 4 std away on each side
 Expwav = exp(-0.5*(T_pts).^2./Tau^2)/(Tau*(2*pi)^0.5);
