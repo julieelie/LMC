@@ -43,9 +43,9 @@ Delay = 100;% ms
 
 %% Running through cells
 NCells = length(CellsPath);
-%MotorModels = cell(NCells,1);
-load(fullfile(Path,'MotorModelsAllCells'),'MotorModels','CellsPath');
-parfor cc=1:NCells
+MotorModels = cell(NCells,1);
+%load(fullfile(Path,'MotorModelsAllCells'),'MotorModels','CellsPath');
+for cc=1:NCells % parfor
     if ~isempty(MotorModels{cc}) % This one was already calculated
         fprintf(1, 'Cell %d/%d Already calculated\n',cc,NCells)
         continue
@@ -646,14 +646,15 @@ function [YPerStim] = get_y(SAT, Duration, Win,Delay,TR)
 % offset of the vocalization
 YPerStim = cell(1,length(Duration));
 % Gaussian window of 2*std equal to TR (68% of Gaussian centered in TR)
-nStd =10; % before set as 4
+nStd =max(Duration) + Win-Delay + Delay; % before set as 4
 Tau = (TR/2);
-T_pts = (0:2*nStd*Tau) -nStd*Tau; % centered tpoints around the mean = 0 and take data into account up to 4 std away on each side
+T_pts = (0:2*nStd*Tau) - nStd*Tau; % centered tpoints around the mean = 0 and take data into account up to nstd away on each side
 Expwav = exp(-0.5*(T_pts).^2./Tau^2)/(Tau*(2*pi)^0.5);
 Expwav = Expwav./sum(Expwav);
 
 % Loop through the stimuli and fill in the matrix
 for stim=1:length(Duration)
+    stim
     % Time slots for the neural response
     TimeBinsY = -(Win-Delay) : (Delay + Duration(stim));
     SpikePattern = zeros(1,length(TimeBinsY)-1);
@@ -664,6 +665,15 @@ for stim=1:length(Duration)
         end
     end
     YPerStim{stim} = conv(SpikePattern, Expwav,'same');
+    % change zero values for the smallest value under matlab.
+    if sum(YPerStim{stim}==0)
+        MinData = min(YPerStim{stim}(YPerStim{stim} ~=0));
+        if ~isempty(MinData)
+            YPerStim{stim}(YPerStim{stim}==0)=min(MinData,realmin('double'));
+        else
+            YPerStim{stim}(YPerStim{stim}==0)=realmin('double');
+        end
+    end
     %         % Time slots for the neural response
     %         TimeBinsY = -(Delay) : TR: (Delay + Duration(stim));
     %         YPerStim{stim} = nan(1,length(TimeBinsY)-1);
