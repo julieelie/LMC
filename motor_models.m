@@ -1,6 +1,7 @@
 addpath(genpath('/Users/elie/Documents/CODE/SoundAnalysisBats'));
 addpath(genpath('/Users/elie/Documents/CODE/LoggerDataProcessing'));
-DatFig=0; %Set to 1 to see input data figures
+DatFig=0; %Set to 1 to see input data figures for each cell
+OutFig = 1;%Set to 1 to see output data figures for each cell
 
 %% Listing datacells
 %Filename = '59834_20190611_SSS_1-97.mat';
@@ -16,21 +17,13 @@ for ff=1:length(AllFiles)
     end
 end
 CellsPath = AllFiles(logical(Files2run));
+
 %% Model parameters
 % Assumption of stationarity over time
-ParamModel.LAMBDARATIO=1e-4;
-ParamModel.NUMLAMBDA=10;%25?
-ParamModel.LINK='log';
-ParamModel.DISTR='poisson';
-% Determine a list of alpha (parameter that range the regularization
-% betweeen ridge (L2, alpha=0) and lasso (L1, alpha =1))
-ParamModel.Alpha=0.001; % STRFs are easier to interpret using ridge than using Lasso and deviances are similar.
 
 % Define the time resolution at which neural density estimates should be calculated
-% TRs = [1 5 10 15 20 25 30 35 40 45 50]; % time in ms
-% Based on first results of calculations for a subset of cells, I decide to
-% rping down the number of time resolution to explore
-TRs = [1 5 10 15 20]; % time in ms
+TRs = [1 5 10 15 20 30 40 50]; % time in ms
+
 
 Win =300;%value in ms for the duration of the snippet of sound which
 % acoustic features are used to predict the neural response at a given time
@@ -40,87 +33,122 @@ Delay = 100;% ms
 %The neural activity at time t is predicted by a time varying
 % acoustic feature that starts at t-Delay ms
 
+% parameters of the Poisson GLM Models
+ParamModel.LAMBDARATIO=1e-4;
+ParamModel.NUMLAMBDA=10;%25?
+ParamModel.LINK='log';
+ParamModel.DISTR='poisson';
+% Determine a list of alpha (parameter that range the regularization
+% betweeen ridge (L2, alpha=0) and lasso (L1, alpha =1))
+ParamModel.Alpha=0.001; % STRFs are easier to interpret using ridge than using Lasso and deviances are similar.
 
-%% Running through cells
+%% Running through cells to find the optimal time resolution of the neural response for acoustic feature predicion from the neural response
+% here we use a ridge regularization with an MSE optimization on the
+% prediction of log(spike rate)
 NCells = length(CellsPath);
-MotorModels = cell(NCells,1);
-%load(fullfile(Path,'MotorModelsAllCells'),'MotorModels','CellsPath');
+MSE_TR_Amp = cell(NCells,1);
+MSE_TR_SpecMean = cell(NCells,1);
+MSE_TR_Sal = cell(NCells,1);
+Ypredict_Amp = cell(NCells,1);
+Ypredict_SpecMean = cell(NCells,1);
+Ypredict_Sal = cell(NCells,1);
+MeanYTrain = cell(NCells,1);
+TicToc = cell(NCells,1);
+load(fullfile(Path,'MotorModelsRidge.mat'));
+
 for cc=1:NCells % parfor
-    if ~isempty(MotorModels{cc}) % This one was already calculated
+    if ~isempty(MSE_TR_Amp{cc}) && ~isnan(MSE_TR_Amp{cc}(end)) % This cell was already calculated
         fprintf(1, 'Cell %d/%d Already calculated\n',cc,NCells)
         continue
-    end
+    end 
     Cell = load(fullfile(CellsPath(cc).folder,CellsPath(cc).name));
     
     
     % Number of vocalizations in the dataset
     if ~isfield(Cell, 'What')
         fprintf(1,'*** . Problem with Cell %d, no what field!! ****\n', cc)
+        continue
     end
     IndVoc = find(contains(Cell.What, 'Voc') .* (Cell.Duration>20)); % No saliency calculated when duration <20ms
     NStims = length(IndVoc);
     
-    %% Variable organization and running models
+    %%  Split the set in a training 75% and testing set 25%
+    AllRand = randperm(NStims);
+    TrainSet = AllRand(1:round(NStims*0.75));
+    ValSet = setdiff(AllRand, TrainSet);
+    
+    %% Calculate acoustic features input to the models
     % organize acoustic data as a matrix where each
     % column corresponds to amp env at t-100:Win:t+100, t being
     % time of neural window;
-    % neural response is a vector that compile all spike counts starting
-    % at -100ms before stim onset and stop at 100ms after
-    % stim offset
-    BestDevSpecMean = nan(length(TRs),1); % contains the deviance of the spectral mean model
-    BestDevSal = nan(length(TRs),1);  % contains the deviance of the saliency model
-    BestDevAmp = nan(length(TRs),1);  % contains the deviance of the amplitude model
-    % BestDevSpecMed = nan(length(TRs),1); % contains the deviance of the spectral median model
-    BestDevNull = nan(length(TRs),1);  % contains the deviance of the null model
+    % Acoustic feature loop, first column of biosound is microphone second is
+    % piezo
+    XSpecMeanPerStim = get_x(Cell.BioSound(IndVoc,1), Cell.Duration(IndVoc), Win, Delay,'SpectralMean');
+    XSpecMeanTrain = [XSpecMeanPerStim{TrainSet}]';
+    XSpecMeanTrain(isnan(XSpecMeanTrain))=nanmean(reshape(XSpecMeanTrain,numel(XSpecMeanTrain),1)); % Change the padding with NaN to the mean for the SpecMean for silence.
+    XSpecMeanVal = [XSpecMeanPerStim{ValSet}]';
+    XSpecMeanVal(isnan(XSpecMeanVal))=nanmean(reshape(XSpecMeanVal,numel(XSpecMeanVal),1)); % Change the padding with NaN to the mean for the SpecMean for silence.
+    XSaliencyPerStim = get_x(Cell.BioSound(IndVoc,2), Cell.Duration(IndVoc), Win, Delay,'sal');
+    XSaliencyTrain = [XSaliencyPerStim{TrainSet}]';
+    XSaliencyTrain(isnan(XSaliencyTrain))=0; % Change the padding with NaN to zeros for the Saliency, we know Silence is not harmonic
+    XSaliencyVal = [XSaliencyPerStim{ValSet}]';
+    XSaliencyVal(isnan(XSaliencyVal))=0; % Change the padding with NaN to zeros for the Saliency, we know Silence is not harmonic
+    XAmpPerStim = get_x(Cell.BioSound(IndVoc,2), Cell.Duration(IndVoc), Win, Delay,'amp');
+    XAmpTrain = [XAmpPerStim{TrainSet}]';
+    XAmpTrain(isnan(XAmpTrain))=0; % Change the padding with NaN to zeros for the amplitude, we know here that there is no sound
+    XAmpVal = [XAmpPerStim{ValSet}]';
+    XAmpVal(isnan(XAmpVal))=0; % Change the padding with NaN to zeros for the amplitude, we know here that there is no sound
+    %         XSpecMedPerStim = get_x(BioSound(IndVoc,1), Duration(IndVoc), Win, TR, Delay,'Q2t');
+    %         XSpecMed = [XSpecMedPerStim{:}]';
     
-    BSpecMean = nan(length(TRs),2*Win+1); % contains the Betas of the spectral mean model with the best deviance
-    BSal = nan(length(TRs),2*Win+1);  % contains the Betas of the saliency model with the best deviance
-    BAmp = nan(length(TRs),Win+1);  % contains the Betas of the amplitude model with the best deviance
-    % BestDevSpecMed = nan(length(TRs),1); % contains the Betas of the spectral
-    % median model with the best deviance
-    % BNull = nan(length(TRs),Win+1);  % contains the Beta of the null model
-    BNull = nan(length(TRs),1);  % contains the Beta of the null model
-    TicToc = nan(length(TRs),1);  % duration of each loop of models
-    MeanY = nan(length(TRs),1);
     
-    for tr = 1:length(TRs)
+    
+    %% Variable organization and running models
+    MSE_TR_Amp{cc} = nan(1,length(TRs));
+        MSE_TR_SpecMean{cc} = nan(1,length(TRs));
+        MSE_TR_Sal{cc} =  nan(1,length(TRs));
+        MeanYTrain{cc} = nan(1,length(TRs));
+        Ypredict_Amp{cc} = cell(1,length(TRs));
+        Ypredict_SpecMean{cc} = cell(1,length(TRs));
+        Ypredict_Sal{cc} =  cell(1,length(TRs));
+        TicToc{cc} = nan(1,length(TRs));
+        Tr1=1;
+    
+    %%
+    for tr = Tr1:length(TRs)
         TR = TRs(tr);
-        fprintf(1,'Cell %d/%d Models with Time resolution %d ms (%d/%d)\n', cc,NCells,TR, tr, length(TRs));
-        %% Gather the data
+        fprintf(1,'Cell %d/%d Ridge models with Time resolution %d ms (%d/%d)\n', cc,NCells,TR, tr, length(TRs));
+        %% Compute neural data vector
         TimerLoop =tic;
         % Neural Data loop
+        % neural response is a vector that compile all spike counts starting
+        % at -100ms (Delay) before stim onset and stop at 100ms (Delay) after
+        % stim offset
         YPerStim = get_y(Cell.SpikesArrivalTimes_Behav(IndVoc), Cell.Duration(IndVoc),Win,Delay,TR);
-        Y = [YPerStim{:}]';
-        % Check the values of Y, to do calculations faster, we're going to
-        % use a ridge regression, transforming the data with log to get
-        % somewhat normal distributions, we don't want 0 values
-        figure()
-        histogram(Y)
+        Y = [YPerStim{TrainSet}]';
         
-        MeanY(tr)=nanmean(Y);
-        % check that the neural response is high enough
-        if nanmean(Y)<10^-2
-            fprintf(1, 'Cell %d/%d Models with Time resolution %d ms (%d/%d) -> Rate is too low, not calculating models to avoid convergence issues\n',cc,NCells,TR, tr, length(TRs))
-            continue
+        % save the values of Y with the smallest window for later model
+        % evaluation at that smallest time resolution
+        if tr==1
+            Yval=[YPerStim{ValSet}]';
         end
-        
-        
-        % Acoustic feature loop, first column of biosound is microphone second is
-        % piezo
-        XSpecMeanPerStim = get_x(Cell.BioSound(IndVoc,1), Cell.Duration(IndVoc), Win, Delay,'SpectralMean');
-        XSpecMean = [XSpecMeanPerStim{:}]';
-        XSpecMean(isnan(XSpecMean))=nanmean(reshape(XSpecMean,numel(XSpecMean),1)); % Change the padding with NaN to the mean for the SpecMean for silence.
-        XSaliencyPerStim = get_x(Cell.BioSound(IndVoc,2), Cell.Duration(IndVoc), Win, Delay,'sal');
-        XSaliency = [XSaliencyPerStim{:}]';
-        XSaliency(isnan(XSaliency))=0; % Change the padding with NaN to zeros for the Saliency, we know Silence is not harmonic
-        XAmpPerStim = get_x(Cell.BioSound(IndVoc,2), Cell.Duration(IndVoc), Win, Delay,'amp');
-        XAmp = [XAmpPerStim{:}]';
-        XAmp(isnan(XAmp))=0; % Change the padding with NaN to zeros for the amplitude, we know here that there is no sound
-        %         XSpecMedPerStim = get_x(BioSound(IndVoc,1), Duration(IndVoc), Win, TR, Delay,'Q2t');
-        %         XSpecMed = [XSpecMedPerStim{:}]';
         
         %% Plot of features and neuronal response if requested (BioSound,YPerStim,XPerStim, TR,Delay,F_high,FeatureName)
         if DatFig
+            % Check the values of Y, to do calculations faster, we're going to
+            % use a ridge regression, transforming the data with log to get
+            % somewhat normal distributions, we don't want 0 values
+            figure(2)
+            clf
+            subplot(1,2,1)
+            histogram(Y)
+            xlabel('Spike rate histogram Y')
+            ylabel('# bins')
+            subplot(1,2,2)
+            histogram(log(Y))
+            xlabel('Log Spike rate histogram log(Y)')
+            ylabel('# bins')
+            
             plotxyfeatures(BioSound(IndVoc,1),YPerStim,XSpecMeanPerStim,TR,Win,Delay,Duration(IndVoc), 50000,'Spectral Mean')
             plotxyfeatures(BioSound(IndVoc,2),YPerStim,XSaliencyPerStim,TR,Win,Delay,Duration(IndVoc), 10000,'Saliency')
             plotxyfeatures(BioSound(IndVoc,2),YPerStim,XAmpPerStim,TR,Win,Delay,Duration(IndVoc), 10000,'Amp')
@@ -130,22 +158,174 @@ for cc=1:NCells % parfor
         %% Calculate the model
         % get rid of Nans
         Nan_Ind=find(isnan(Y));
-        Y(Nan_Ind) = [];
-        XSpecMean(Nan_Ind,:) =[];
-        XSaliency(Nan_Ind,:) =[];
-        %         XSpecMed(Nan_Ind,:) =[];
+        if ~isempty(Nan_Ind)
+            keyboard
+            Y(Nan_Ind) = [];
+            XSpecMeanTrain(Nan_Ind,:) =[];
+            XSaliencyTrain(Nan_Ind,:) =[];
+            XAmpTrain(Nan_Ind,:) =[];
+        end
         
-        %% Run ridge GLM Poisson on acoustic features
-        
+        MeanYTrain{cc}(tr) = mean(Y);
+    
+    
+        %% Run ridge regression on log transform of the data
+        % Amp predicting Y
+        [MSE_TR_Amp{cc}(tr),Ypredict_Amp{cc}{tr} ] = find_optimalTR(XAmpTrain,Y,XAmpVal,Yval);
         % spectral mean predicting Y
-        [BSpecMean_local, FitInfo_SpecMean]=lassoglm([XAmp XSpecMean],Y,ParamModel.DISTR,'Alpha', ParamModel.Alpha,'Link',ParamModel.LINK,'NumLambda',ParamModel.NUMLAMBDA,'Standardize',1,'LambdaRatio',ParamModel.LAMBDARATIO);
+        [MSE_TR_SpecMean{cc}(tr), Ypredict_SpecMean{cc}{tr}] = find_optimalTR(XSpecMeanTrain,Y,XSpecMeanVal, Yval);
+        % Pitch saliency predicting Y
+        [MSE_TR_Sal{cc}(tr), Ypredict_Sal{cc}{tr}] = find_optimalTR(XSaliencyTrain,Y,XSaliencyVal,Yval);
+        TicToc{cc}(tr) = toc(TimerLoop);
+        fprintf(1,'Cell %d/%d Models with Time resolution %d ms (%d/%d) => done in %.2f minutes \n', cc,NCells,TR, tr, length(TRs), TicToc{cc}(tr)/60);
+    end
+    if OutFig
+        figure(3)
+        clf
+        plot(TRs, MSE_TR_Amp{cc}, 'Linewidth',2)
+        hold on
+        plot(TRs, MSE_TR_SpecMean{cc}, 'Linewidth',2)
+        hold on
+        plot(TRs, MSE_TR_Sal{cc}, 'Linewidth',2)
+        xlabel('Time resolution in ms')
+        ylabel('Mean Squared Error')
+        hold off
+        
+        figure(4)
+        clf
+        subplot(2,3,1)
+        MAP = colormap();
+        c=linspace(1,256,length(TRs));
+        for tr = 1:length(TRs)
+            scatter(Yval, Ypredict_Amp{cc}{tr},30,MAP(round(c(tr)),:),'filled')
+            hold on
+        end
+        xlabel('Observed rate')
+        ylabel('Predicted rate')
+        title('Amplitude Model')
+        colorbar('southoutside','Ticks', c/256,'TickLabels',TRs)
+        hold off
+        YL = ylim;
+        XL = xlim;
+        ylim([min(YL(1),XL(1)) max(YL(2),XL(2))])
+        xlim([min(YL(1),XL(1)) max(YL(2),XL(2))])
+        
+        subplot(2,3,2)
+        for tr = 1:length(TRs)
+            scatter(Yval, Ypredict_SpecMean{cc}{tr},30,MAP(round(c(tr)),:),'filled')
+            hold on
+        end
+        xlabel('Observed rate')
+        ylabel('Predicted rate')
+        title('SpecMean Model')
+        colorbar('southoutside','Ticks', c/256,'TickLabels',TRs)
+        hold off
+        YL = ylim;
+        XL = xlim;
+        ylim([min(YL(1),XL(1)) max(YL(2),XL(2))])
+        xlim([min(YL(1),XL(1)) max(YL(2),XL(2))])
+        
+        subplot(2,3,3)
+        for tr = 1:length(TRs)
+            scatter(Yval, Ypredict_Sal{cc}{tr},30,MAP(round(c(tr)),:),'filled')
+            hold on
+        end
+        xlabel('Observed rate')
+        ylabel('Predicted rate')
+        title('Saliency Model')
+        colorbar('southoutside','Ticks', c/256,'TickLabels',TRs)
+        hold off
+        YL = ylim;
+        XL = xlim;
+        ylim([min(YL(1),XL(1)) max(YL(2),XL(2))])
+        xlim([min(YL(1),XL(1)) max(YL(2),XL(2))])
+        
+        
+        MSE_TR_Amp_local = nan(1,length(TRs));
+        MSE_TR_SpecMean_local = nan(1,length(TRs));
+        MSE_TR_Sal_local = nan(1,length(TRs));
+        subplot(2,3,4)
+        MAP = colormap();
+        c=linspace(1,256,length(TRs));
+        for tr = 1:length(TRs)
+            scatter(Yval, (Ypredict_Amp{cc}{tr}-Yval).^2,30,MAP(round(c(tr)),:),'filled')
+            hold on
+            MSE_TR_Amp_local(tr) = mean((Ypredict_Amp{cc}{tr}-Yval).^2);
+            line(xlim,MSE_TR_Amp_local(tr)*ones(2,1),'Color',MAP(round(c(tr)),:), 'LineWidth',2)
+            hold on
+        end
+        xlabel('Observed rate')
+        ylabel('Error2 on rate')
+        title('Amplitude Model')
+        colorbar('southoutside','Ticks', c/256,'TickLabels',TRs)
+        hold off
+        
+        
+        subplot(2,3,5)
+        for tr = 1:length(TRs)
+            scatter(Yval, (Ypredict_SpecMean{cc}{tr}-Yval).^2,30,MAP(round(c(tr)),:),'filled')
+            hold on
+            MSE_TR_SpecMean_local(tr) = mean((Ypredict_SpecMean{cc}{tr}-Yval).^2);
+            line(xlim,MSE_TR_SpecMean_local(tr)*ones(2,1),'Color',MAP(round(c(tr)),:), 'LineWidth',2)
+            hold on
+        end
+        xlabel('Observed rate')
+        ylabel('Error2 on log rate')
+        title('SpecMean Model')
+        colorbar('southoutside','Ticks', c/256,'TickLabels',TRs)
+        hold off
+        
+        subplot(2,3,6)
+        for tr = 1:length(TRs)
+            scatter(Yval, (Ypredict_Sal{cc}{tr}-Yval).^2,30,MAP(round(c(tr)),:),'filled')
+            hold on
+            MSE_TR_Sal_local(tr) = mean((Ypredict_Sal{cc}{tr}-Yval).^2);
+            line(xlim,mean((Ypredict_Sal{cc}{tr}-Yval).^2)*ones(2,1),'Color',MAP(round(c(tr)),:), 'LineWidth',2)
+            hold on
+        end
+        xlabel('Observed rate')
+        ylabel('Error2 on log rate')
+        title('Saliency Model')
+        colorbar('southoutside','Ticks', c/256,'TickLabels',TRs)
+        hold off
+        
+        figure(3)
+        hold on
+        plot(TRs, MSE_TR_Amp_local, 'Linewidth',2, 'LineStyle','--')
+        hold on
+        plot(TRs, MSE_TR_SpecMean_local, 'Linewidth',2,'LineStyle','--')
+        hold on
+        plot(TRs, MSE_TR_Sal_local, 'Linewidth',2,'LineStyle','--')
+        legend({'Amp' 'SpectralMean' 'Saliency' 'AmpMe' 'SpectralMeanMe' 'SaliencyMe'})
+        hold off
+        
+        figure(5)
+        clf
+        plot(TRs,MeanYTrain{cc}-mean(Yval))
+        xlabel('Time resolution (ms)')
+        ylabel('Mean rate difference Training-testing')
+    end
+%     keyboard
+end
+
+%% Plot the results of the time resolution optimization
+
+
+ 
+
+
+
+%%         %% Run ridge GLM Poisson on acoustic features
+
+% spectral mean predicting Y
+ [Mdl_SpecMean_local]=fitrlinear([XAmpTrain XSpecMeanTrain],log(Y),'Regularization', 'ridge', 'Learner','leastsquares', 'CrossVal','on');
         % find the model with the minimum of deviance (best lambda)
         [BestDevSpecMean(tr),BestModSpecMean] = min(FitInfo_SpecMean.Deviance);
         BSpecMean(tr,2:end) = BSpecMean_local(:,BestModSpecMean);
         BSpecMean(tr,1) = FitInfo_SpecMean.Intercept(BestModSpecMean);
         
         % pitch saliency predicting Y
-        [BSal_local, FitInfo_Sal]=lassoglm([XAmp XSaliency],Y,ParamModel.DISTR,'Alpha', ParamModel.Alpha,'Link',ParamModel.LINK,'NumLambda',ParamModel.NUMLAMBDA,'Standardize',1,'LambdaRatio',ParamModel.LAMBDARATIO);
+        [BSal_local, FitInfo_Sal]=lassoglm([XAmpTrain XSaliencyTrain],Y,ParamModel.DISTR,'Alpha', ParamModel.Alpha,'Link',ParamModel.LINK,'NumLambda',ParamModel.NUMLAMBDA,'Standardize',1,'LambdaRatio',ParamModel.LAMBDARATIO);
         % find the model with the minimum of deviance (best lambda)
         [BestDevSal(tr),BestModSal] = min(FitInfo_Sal.Deviance);
         BSal(tr,2:end) = BSal_local(:,BestModSal);
@@ -158,7 +338,7 @@ for cc=1:NCells % parfor
         %         [BestDevSpecMed(tr,dd),BestModSpecMed] = min(FitInfo_SpecMean.Deviance);
         
         % amplitude predicting Y, is a null model for the former 2 models
-        [BAmp_local, FitInfo_Amp]=lassoglm(XAmp,Y,ParamModel.DISTR,'Alpha', ParamModel.Alpha,'Link',ParamModel.LINK,'NumLambda',ParamModel.NUMLAMBDA,'Standardize',1,'LambdaRatio',ParamModel.LAMBDARATIO);
+        [BAmp_local, FitInfo_Amp]=lassoglm(XAmpTrain,Y,ParamModel.DISTR,'Alpha', ParamModel.Alpha,'Link',ParamModel.LINK,'NumLambda',ParamModel.NUMLAMBDA,'Standardize',1,'LambdaRatio',ParamModel.LAMBDARATIO);
         % find the model with the minimum of deviance (best lambda)
         [BestDevAmp(tr),BestModAmp] = min(FitInfo_Amp.Deviance);
         
@@ -166,7 +346,7 @@ for cc=1:NCells % parfor
         BAmp(tr,1) = FitInfo_Amp.Intercept(BestModAmp);
         
         % null model
-        MDL_null=fitglm(ones(size(XAmp,1),1),Y,'Distribution',ParamModel.DISTR,'Link',ParamModel.LINK,'Intercept',false);
+        MDL_null=fitglm(ones(size(XAmpTrain,1),1),Y,'Distribution',ParamModel.DISTR,'Link',ParamModel.LINK,'Intercept',false);
         % find the model with the minimum of deviance (best lambda)
         %     [BestDevNull(tr),BestModNull] = min(FitInfo_Amp.Deviance);
         %
@@ -175,7 +355,7 @@ for cc=1:NCells % parfor
         
         BestDevNull(tr) = MDL_null.Deviance;
         BNull(tr) = MDL_null.Coefficients.Estimate;
-        
+
         if DatFig
             TimeBinsX = -Delay : (Win-Delay);
             figure()
@@ -199,7 +379,7 @@ for cc=1:NCells % parfor
         end
         TicToc(tr) = toc(TimerLoop);
         fprintf(1,'Cell %d/%d Models with Time resolution %d ms (%d/%d) => done in %.2f minutes \n', cc,NCells,TR, tr, length(TRs), TicToc(tr)/60);
-    end
+   
     if DatFig
         
         figure()
@@ -300,7 +480,7 @@ for cc=1:NCells % parfor
     MotorModels{cc}.TicToc = TicToc;
     MotorModels{cc}.MeanY = MeanY;
         
-end
+
 %%
 save(fullfile(Path,'MotorModelsAllCells'),'MotorModels','CellsPath');
 %% Plot issues with no convergence
@@ -654,7 +834,6 @@ Expwav = Expwav./sum(Expwav);
 
 % Loop through the stimuli and fill in the matrix
 for stim=1:length(Duration)
-    stim
     % Time slots for the neural response
     TimeBinsY = -(Win-Delay) : (Delay + Duration(stim));
     SpikePattern = zeros(1,length(TimeBinsY)-1);
@@ -665,15 +844,22 @@ for stim=1:length(Duration)
         end
     end
     YPerStim{stim} = conv(SpikePattern, Expwav,'same');
-    % change zero values for the smallest value under matlab.
-    if sum(YPerStim{stim}==0)
-        MinData = min(YPerStim{stim}(YPerStim{stim} ~=0));
-        if ~isempty(MinData)
-            YPerStim{stim}(YPerStim{stim}==0)=min(MinData,realmin('double'));
-        else
-            YPerStim{stim}(YPerStim{stim}==0)=realmin('double');
-        end
+%     % change zero values for the smallest value under matlab.
+%     if sum(YPerStim{stim}==0)
+%         MinData = min(YPerStim{stim}(YPerStim{stim} ~=0));
+%         if ~isempty(MinData)
+%             YPerStim{stim}(YPerStim{stim}==0)=min(MinData,realmin('double'));
+%         else
+%             YPerStim{stim}(YPerStim{stim}==0)=realmin('double');
+%         end
+%     end
+    
+    % Make sure that the output sum(Y) = input sum(Y)
+    if (~sum(YPerStim{stim})==0) && ~(sum(SpikePattern)==0)
+        YPerStim{stim} = YPerStim{stim}./sum(YPerStim{stim}).*sum(SpikePattern);
     end
+    
+    
     %         % Time slots for the neural response
     %         TimeBinsY = -(Delay) : TR: (Delay + Duration(stim));
     %         YPerStim{stim} = nan(1,length(TimeBinsY)-1);
@@ -696,6 +882,8 @@ end
 %     end
 
 function plotxyfeatures(BioSound,YPerStim,XPerStim,TR,Win,Delay,Duration,F_high,FeatureName)
+% This function plots for each stimulus the spectrogram with the
+% corresponding acoustic feature and spike rate
 if nargin<6
     FeatureName = 'Acoustic Feature';
 end
@@ -763,5 +951,32 @@ for stim =1:length(BioSound)
 end
 end
 
+
+function [MSEVal, YPredict] = find_optimalTR(X,Y,Xval,Yval)
+    % First find the optimal hyper parameter Lambda using by default a 5 fold
+    % cross-validation optimization on MSE with a ridge regularization
+    [~,FitInfo,~] = fitrlinear(X,Y,...
+    'OptimizeHyperparameters','Lambda','HyperparameterOptimizationOptions',struct('MaxObjectiveEvaluations',20,'UseParallel',true, 'ShowPlots', true),'Regularization', 'ridge', 'Learner','leastsquares');
+    % Second, determine the model Beta values using the optimize Lambda and all
+    % the dataset
+    [Mdl,~] = fitrlinear(X,Y,...
+    'Lambda',FitInfo.Lambda,'Regularization', 'ridge', 'Learner','leastsquares');
+    % third, find the fit performance of that model on the Validation Dataset
+    % Yval
+    MSEVal = loss(Mdl, Xval, Yval);
+    YPredict = predict(Mdl,Xval);
+    figure(10)
+    scatter(Yval,YPredict, 'filled')
+    xlabel('Observed log Spkie Rate')
+    ylabel('Predicted log Spike RAte')
+    YL = ylim;
+    XL = xlim;
+    ylim([min(YL(1),XL(1)) max(YL(2),XL(2))])
+    xlim([min(YL(1),XL(1)) max(YL(2),XL(2))])
+    F1 = figure(1);
+    close(F1)
+    F2 = figure(2);
+    close(F2)
+end
 
 
