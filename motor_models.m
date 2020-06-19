@@ -307,12 +307,67 @@ for cc=1:NCells % parfor
     end
 %     keyboard
 end
+save(fullfile(Path,'MotorModelsRidge.mat'));
 
-%% Plot the results of the time resolution optimization
 
+%% Plot the results of the time resolution optimization using ridge regression
+load(fullfile(Path,'MotorModelsRidge.mat'));
+% Plot the zscored average MSE accross cells
+MSE_TR_Amp_zs = nan(NCells,length(TRs));
+MSE_TR_SpecMean_zs = nan(NCells,length(TRs));
+MSE_TR_Sal_zs = nan(NCells,length(TRs));
+% also the MSE as a proportion of the average rate of the training correspoding portion
+% of the validating set (same temporal resolution)
+MSE_TR_Amp_Prop = nan(NCells,length(TRs));
+MSE_TR_SpecMean_Prop = nan(NCells,length(TRs));
+MSE_TR_Sal_Prop = nan(NCells,length(TRs));
+for cc=1:NCells
+    MSE_TR_Amp_zs(cc,:) = zscore(MSE_TR_Amp{cc});
+    MSE_TR_SpecMean_zs(cc,:) = zscore(MSE_TR_SpecMean{cc});
+    MSE_TR_Sal_zs(cc,:) = zscore(MSE_TR_Sal{cc});
+    MSE_TR_Amp_Prop(cc,:) = MSE_TR_Amp{cc}./MeanYTrain{cc}(1);
+    MSE_TR_SpecMean_Prop(cc,:) = MSE_TR_SpecMean{cc}./MeanYTrain{cc}(1);
+    MSE_TR_Sal_Prop(cc,:) = MSE_TR_Sal{cc}./MeanYTrain{cc}(1);
+end
 
  
+figure(7)
+ColorCode = get(groot, 'DefaultAxesColorOrder');
+subplot(1,2,1)
+legend('AutoUpdate', 'off')
+shaddedErrorBar(TRs, nanmean(MSE_TR_Amp_zs),nanstd(MSE_TR_Amp_zs)./sum(~isnan(MSE_TR_Amp_zs))^0.5, {'Color',ColorCode(1,:)})
+hold on
+shaddedErrorBar(TRs, nanmean(MSE_TR_SpecMean_zs),nanstd(MSE_TR_SpecMean_zs)./sum(~isnan(MSE_TR_SpecMean_zs))^0.5, {'Color', ColorCode(2,:)})
+hold on
+shaddedErrorBar(TRs, nanmean(MSE_TR_Sal_zs),nanstd(MSE_TR_Sal_zs)./sum(~isnan(MSE_TR_Sal_zs))^0.5, {'Color', ColorCode(3,:)})
+hold on
+plot(TRs, nanmean(MSE_TR_Amp_zs), 'LineWidth',2, 'Color',ColorCode(1,:), 'DisplayName','Amplitude')
+hold on
+plot(TRs, nanmean(MSE_TR_SpecMean_zs), 'LineWidth',2, 'Color',ColorCode(2,:),'DisplayName','SpectralMean')
+hold on
+plot(TRs, nanmean(MSE_TR_Sal_zs), 'LineWidth',2, 'Color',ColorCode(3,:),'DisplayName','Saliency')
+hold off
+xlabel('Time resolution in ms')
+ylabel('zscored Mean Squared Error')
 
+subplot(1,2,2)
+legend('AutoUpdate', 'off')
+shaddedErrorBar(TRs, nanmean(MSE_TR_Amp_Prop),nanstd(MSE_TR_Amp_Prop)./sum(~isnan(MSE_TR_Amp_Prop))^0.5, {'Color',ColorCode(1,:)})
+hold on
+shaddedErrorBar(TRs, nanmean(MSE_TR_SpecMean_Prop),nanstd(MSE_TR_SpecMean_Prop)./sum(~isnan(MSE_TR_SpecMean_Prop))^0.5, {'Color', ColorCode(2,:)})
+hold on
+shaddedErrorBar(TRs, nanmean(MSE_TR_Sal_Prop),nanstd(MSE_TR_Sal_Prop)./sum(~isnan(MSE_TR_Sal_Prop))^0.5, {'Color', ColorCode(3,:)})
+hold on
+plot(TRs, nanmean(MSE_TR_Amp_Prop), 'LineWidth',2, 'Color',ColorCode(1,:), 'DisplayName','Amplitude')
+hold on
+plot(TRs, nanmean(MSE_TR_SpecMean_Prop), 'LineWidth',2, 'Color',ColorCode(2,:),'DisplayName','SpectralMean')
+hold on
+plot(TRs, nanmean(MSE_TR_Sal_Prop), 'LineWidth',2, 'Color',ColorCode(3,:),'DisplayName','Saliency')
+hold off
+
+xlabel('Time resolution in ms')
+ylabel('Mean Squared Error as a proportion to Mean rate')
+hold off
 
 
 %%         %% Run ridge GLM Poisson on acoustic features
