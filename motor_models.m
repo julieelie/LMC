@@ -52,12 +52,13 @@ MSE_TR_Sal = cell(NCells,1);
 Ypredict_Amp = cell(NCells,1);
 Ypredict_SpecMean = cell(NCells,1);
 Ypredict_Sal = cell(NCells,1);
+Yval = cell(NCells,1);
 MeanYTrain = cell(NCells,1);
 TicToc = cell(NCells,1);
 load(fullfile(Path,'MotorModelsRidge.mat'));
 
 for cc=1:NCells % parfor
-    if ~isempty(MSE_TR_Amp{cc}) && ~isnan(MSE_TR_Amp{cc}(end)) % This cell was already calculated
+    if ~isempty(MSE_TR_Amp{cc}) && ~isnan(MSE_TR_Amp{cc}(end)) && ~isnan(Yval{cc}) % This cell was already calculated
         fprintf(1, 'Cell %d/%d Already calculated\n',cc,NCells)
         continue
     end 
@@ -111,6 +112,7 @@ for cc=1:NCells % parfor
         Ypredict_Amp{cc} = cell(1,length(TRs));
         Ypredict_SpecMean{cc} = cell(1,length(TRs));
         Ypredict_Sal{cc} =  cell(1,length(TRs));
+        Yval{cc} =  cell(1,length(TRs));
         TicToc{cc} = nan(1,length(TRs));
         Tr1=1;
     
@@ -130,7 +132,7 @@ for cc=1:NCells % parfor
         % save the values of Y with the smallest window for later model
         % evaluation at that smallest time resolution
         if tr==1
-            Yval=[YPerStim{ValSet}]';
+            Yval{cc}{tr}=[YPerStim{ValSet}]';
         end
         
         %% Plot of features and neuronal response if requested (BioSound,YPerStim,XPerStim, TR,Delay,F_high,FeatureName)
@@ -171,11 +173,11 @@ for cc=1:NCells % parfor
     
         %% Run ridge regression on log transform of the data
         % Amp predicting Y
-        [MSE_TR_Amp{cc}(tr),Ypredict_Amp{cc}{tr} ] = find_optimalTR(XAmpTrain,Y,XAmpVal,Yval);
+        [MSE_TR_Amp{cc}(tr),Ypredict_Amp{cc}{tr} ] = find_optimalTR(XAmpTrain,Y,XAmpVal,Yval{cc}{tr});
         % spectral mean predicting Y
-        [MSE_TR_SpecMean{cc}(tr), Ypredict_SpecMean{cc}{tr}] = find_optimalTR(XSpecMeanTrain,Y,XSpecMeanVal, Yval);
+        [MSE_TR_SpecMean{cc}(tr), Ypredict_SpecMean{cc}{tr}] = find_optimalTR(XSpecMeanTrain,Y,XSpecMeanVal, Yval{cc}{tr});
         % Pitch saliency predicting Y
-        [MSE_TR_Sal{cc}(tr), Ypredict_Sal{cc}{tr}] = find_optimalTR(XSaliencyTrain,Y,XSaliencyVal,Yval);
+        [MSE_TR_Sal{cc}(tr), Ypredict_Sal{cc}{tr}] = find_optimalTR(XSaliencyTrain,Y,XSaliencyVal,Yval{cc}{tr});
         TicToc{cc}(tr) = toc(TimerLoop);
         fprintf(1,'Cell %d/%d Models with Time resolution %d ms (%d/%d) => done in %.2f minutes \n', cc,NCells,TR, tr, length(TRs), TicToc{cc}(tr)/60);
     end
@@ -318,56 +320,97 @@ MSE_TR_SpecMean_zs = nan(NCells,length(TRs));
 MSE_TR_Sal_zs = nan(NCells,length(TRs));
 % also the MSE as a proportion of the average rate of the training correspoding portion
 % of the validating set (same temporal resolution)
-MSE_TR_Amp_Prop = nan(NCells,length(TRs));
-MSE_TR_SpecMean_Prop = nan(NCells,length(TRs));
-MSE_TR_Sal_Prop = nan(NCells,length(TRs));
+MSE0 = nan(NCells,length(TRs));
+R2_TR_Amp = nan(NCells,length(TRs));
+R2_TR_SpecMean = nan(NCells,length(TRs));
+R2_TR_Sal = nan(NCells,length(TRs));
 for cc=1:NCells
+    if isempty(MSE_TR_Amp{cc})
+        continue
+    end
     MSE_TR_Amp_zs(cc,:) = zscore(MSE_TR_Amp{cc});
     MSE_TR_SpecMean_zs(cc,:) = zscore(MSE_TR_SpecMean{cc});
     MSE_TR_Sal_zs(cc,:) = zscore(MSE_TR_Sal{cc});
-    MSE_TR_Amp_Prop(cc,:) = MSE_TR_Amp{cc}./MeanYTrain{cc}(1);
-    MSE_TR_SpecMean_Prop(cc,:) = MSE_TR_SpecMean{cc}./MeanYTrain{cc}(1);
-    MSE_TR_Sal_Prop(cc,:) = MSE_TR_Sal{cc}./MeanYTrain{cc}(1);
+    for tr=1:length(TRs)
+        MSE0(cc,tr) = mean((Yval{cc}{tr}-MeanYTrain{cc}(tr)).^2);
+    end
+    R2_TR_Amp(cc,:) = (MSE0(cc,:)-MSE_TR_Amp{cc})./MSE0(cc,:);
+    R2_TR_SpecMean(cc,:) = (MSE0(cc,:)-MSE_TR_SpecMean{cc})./MSE0(cc,:);
+    R2_TR_Sal(cc,:) = (MSE0(cc,:)-MSE_TR_Sal{cc})./MSE0(cc,:);
 end
 
- 
+
 figure(7)
 ColorCode = get(groot, 'DefaultAxesColorOrder');
 subplot(1,2,1)
-legend('AutoUpdate', 'off')
-shaddedErrorBar(TRs, nanmean(MSE_TR_Amp_zs),nanstd(MSE_TR_Amp_zs)./sum(~isnan(MSE_TR_Amp_zs))^0.5, {'Color',ColorCode(1,:)})
-hold on
-shaddedErrorBar(TRs, nanmean(MSE_TR_SpecMean_zs),nanstd(MSE_TR_SpecMean_zs)./sum(~isnan(MSE_TR_SpecMean_zs))^0.5, {'Color', ColorCode(2,:)})
-hold on
-shaddedErrorBar(TRs, nanmean(MSE_TR_Sal_zs),nanstd(MSE_TR_Sal_zs)./sum(~isnan(MSE_TR_Sal_zs))^0.5, {'Color', ColorCode(3,:)})
-hold on
+legend('AutoUpdate', 'on')
 plot(TRs, nanmean(MSE_TR_Amp_zs), 'LineWidth',2, 'Color',ColorCode(1,:), 'DisplayName','Amplitude')
 hold on
 plot(TRs, nanmean(MSE_TR_SpecMean_zs), 'LineWidth',2, 'Color',ColorCode(2,:),'DisplayName','SpectralMean')
 hold on
 plot(TRs, nanmean(MSE_TR_Sal_zs), 'LineWidth',2, 'Color',ColorCode(3,:),'DisplayName','Saliency')
+legend('AutoUpdate', 'off')
+hold on
+shadedErrorBar(TRs, nanmean(MSE_TR_Amp_zs),nanstd(MSE_TR_Amp_zs)./(sum(~isnan(MSE_TR_Amp_zs))).^0.5, {'Color',ColorCode(1,:)})
+hold on
+shadedErrorBar(TRs, nanmean(MSE_TR_SpecMean_zs),nanstd(MSE_TR_SpecMean_zs)./(sum(~isnan(MSE_TR_SpecMean_zs))).^0.5, {'Color', ColorCode(2,:)})
+hold on
+shadedErrorBar(TRs, nanmean(MSE_TR_Sal_zs),nanstd(MSE_TR_Sal_zs)./(sum(~isnan(MSE_TR_Sal_zs))).^0.5, {'Color', ColorCode(3,:)})
+hold on
+plot(TRs, nanmean(MSE_TR_Amp_zs), 'LineWidth',2, 'Color',ColorCode(1,:))
+hold on
+plot(TRs, nanmean(MSE_TR_SpecMean_zs), 'LineWidth',2, 'Color',ColorCode(2,:))
+hold on
+plot(TRs, nanmean(MSE_TR_Sal_zs), 'LineWidth',2, 'Color',ColorCode(3,:))
 hold off
 xlabel('Time resolution in ms')
 ylabel('zscored Mean Squared Error')
 
 subplot(1,2,2)
+legend('AutoUpdate', 'on')
+plot(TRs, nanmean(R2_TR_Amp), 'LineWidth',2, 'Color',ColorCode(1,:), 'DisplayName','Amplitude')
+hold on
+plot(TRs, nanmean(R2_TR_SpecMean), 'LineWidth',2, 'Color',ColorCode(2,:),'DisplayName','SpectralMean')
+hold on
+plot(TRs, nanmean(R2_TR_Sal), 'LineWidth',2, 'Color',ColorCode(3,:),'DisplayName','Saliency')
+hold on
 legend('AutoUpdate', 'off')
-shaddedErrorBar(TRs, nanmean(MSE_TR_Amp_Prop),nanstd(MSE_TR_Amp_Prop)./sum(~isnan(MSE_TR_Amp_Prop))^0.5, {'Color',ColorCode(1,:)})
+shadedErrorBar(TRs, nanmean(R2_TR_Amp),nanstd(R2_TR_Amp)./(sum(~isnan(R2_TR_Amp))).^0.5, {'Color',ColorCode(1,:)})
 hold on
-shaddedErrorBar(TRs, nanmean(MSE_TR_SpecMean_Prop),nanstd(MSE_TR_SpecMean_Prop)./sum(~isnan(MSE_TR_SpecMean_Prop))^0.5, {'Color', ColorCode(2,:)})
+shadedErrorBar(TRs, nanmean(R2_TR_SpecMean),nanstd(R2_TR_SpecMean)./(sum(~isnan(R2_TR_SpecMean))).^0.5, {'Color', ColorCode(2,:)})
 hold on
-shaddedErrorBar(TRs, nanmean(MSE_TR_Sal_Prop),nanstd(MSE_TR_Sal_Prop)./sum(~isnan(MSE_TR_Sal_Prop))^0.5, {'Color', ColorCode(3,:)})
+shadedErrorBar(TRs, nanmean(R2_TR_Sal),nanstd(R2_TR_Sal)./(sum(~isnan(R2_TR_Sal))).^0.5, {'Color', ColorCode(3,:)})
 hold on
-plot(TRs, nanmean(MSE_TR_Amp_Prop), 'LineWidth',2, 'Color',ColorCode(1,:), 'DisplayName','Amplitude')
+legend('AutoUpdate', 'on')
+plot(TRs, nanmean(R2_TR_Amp), 'LineWidth',2, 'Color',ColorCode(1,:))
 hold on
-plot(TRs, nanmean(MSE_TR_SpecMean_Prop), 'LineWidth',2, 'Color',ColorCode(2,:),'DisplayName','SpectralMean')
+plot(TRs, nanmean(R2_TR_SpecMean), 'LineWidth',2, 'Color',ColorCode(2,:))
 hold on
-plot(TRs, nanmean(MSE_TR_Sal_Prop), 'LineWidth',2, 'Color',ColorCode(3,:),'DisplayName','Saliency')
+plot(TRs, nanmean(R2_TR_Sal), 'LineWidth',2, 'Color',ColorCode(3,:))
+hold off
+xlabel('Time resolution in ms')
+ylabel('R2')
 hold off
 
-xlabel('Time resolution in ms')
-ylabel('Mean Squared Error as a proportion to Mean rate')
-hold off
+figure()
+suplot(1,3,1)
+imagesc(R2_TR_Amp)
+set(gca,'XTickLabel', TRs)
+xlabel('Time Resolution (ms)')
+ylabel('R2 Amplitude')
+
+suplot(1,3,2)
+imagesc(R2_TR_SpecMean)
+set(gca,'XTickLabel', TRs)
+xlabel('Time Resolution (ms)')
+ylabel('R2 SpectralMean')
+
+suplot(1,3,3)
+imagesc(R2_TR_Sal)
+set(gca,'XTickLabel', TRs)
+xlabel('Time Resolution (ms)')
+ylabel('R2 Saliency')
+
 
 
 %%         %% Run ridge GLM Poisson on acoustic features
