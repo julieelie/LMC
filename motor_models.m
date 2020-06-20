@@ -56,9 +56,10 @@ Yval = cell(NCells,1);
 MeanYTrain = cell(NCells,1);
 TicToc = cell(NCells,1);
 load(fullfile(Path,'MotorModelsRidge.mat'));
+Yval = cell(NCells,1);
 
 for cc=1:NCells % parfor
-    if ~isempty(MSE_TR_Amp{cc}) && ~isnan(MSE_TR_Amp{cc}(end)) && ~isnan(Yval{cc}) % This cell was already calculated
+    if ~isempty(MSE_TR_Amp{cc}) && ~isnan(MSE_TR_Amp{cc}(end)) && ~isempty(Yval{cc}) % This cell was already calculated
         fprintf(1, 'Cell %d/%d Already calculated\n',cc,NCells)
         continue
     end 
