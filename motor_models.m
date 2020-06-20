@@ -133,7 +133,7 @@ for cc=1:NCells % parfor
         % save the values of Y with the smallest window for later model
         % evaluation at that smallest time resolution
         if tr==1
-            Yval{cc}{tr}=[YPerStim{ValSet}]';
+            Yval{cc}=[YPerStim{ValSet}]';
         end
         
         %% Plot of features and neuronal response if requested (BioSound,YPerStim,XPerStim, TR,Delay,F_high,FeatureName)
@@ -174,11 +174,11 @@ for cc=1:NCells % parfor
     
         %% Run ridge regression on log transform of the data
         % Amp predicting Y
-        [MSE_TR_Amp{cc}(tr),Ypredict_Amp{cc}{tr} ] = find_optimalTR(XAmpTrain,Y,XAmpVal,Yval{cc}{tr});
+        [MSE_TR_Amp{cc}(tr),Ypredict_Amp{cc}{tr} ] = find_optimalTR(XAmpTrain,Y,XAmpVal,Yval{cc});
         % spectral mean predicting Y
-        [MSE_TR_SpecMean{cc}(tr), Ypredict_SpecMean{cc}{tr}] = find_optimalTR(XSpecMeanTrain,Y,XSpecMeanVal, Yval{cc}{tr});
+        [MSE_TR_SpecMean{cc}(tr), Ypredict_SpecMean{cc}{tr}] = find_optimalTR(XSpecMeanTrain,Y,XSpecMeanVal, Yval{cc});
         % Pitch saliency predicting Y
-        [MSE_TR_Sal{cc}(tr), Ypredict_Sal{cc}{tr}] = find_optimalTR(XSaliencyTrain,Y,XSaliencyVal,Yval{cc}{tr});
+        [MSE_TR_Sal{cc}(tr), Ypredict_Sal{cc}{tr}] = find_optimalTR(XSaliencyTrain,Y,XSaliencyVal,Yval{cc});
         TicToc{cc}(tr) = toc(TimerLoop);
         fprintf(1,'Cell %d/%d Models with Time resolution %d ms (%d/%d) => done in %.2f minutes \n', cc,NCells,TR, tr, length(TRs), TicToc{cc}(tr)/60);
     end
@@ -200,7 +200,7 @@ for cc=1:NCells % parfor
         MAP = colormap();
         c=linspace(1,256,length(TRs));
         for tr = 1:length(TRs)
-            scatter(Yval, Ypredict_Amp{cc}{tr},30,MAP(round(c(tr)),:),'filled')
+            scatter(Yval{cc}, Ypredict_Amp{cc}{tr},30,MAP(round(c(tr)),:),'filled')
             hold on
         end
         xlabel('Observed rate')
@@ -215,7 +215,7 @@ for cc=1:NCells % parfor
         
         subplot(2,3,2)
         for tr = 1:length(TRs)
-            scatter(Yval, Ypredict_SpecMean{cc}{tr},30,MAP(round(c(tr)),:),'filled')
+            scatter(Yval{cc}, Ypredict_SpecMean{cc}{tr},30,MAP(round(c(tr)),:),'filled')
             hold on
         end
         xlabel('Observed rate')
@@ -230,7 +230,7 @@ for cc=1:NCells % parfor
         
         subplot(2,3,3)
         for tr = 1:length(TRs)
-            scatter(Yval, Ypredict_Sal{cc}{tr},30,MAP(round(c(tr)),:),'filled')
+            scatter(Yval{cc}, Ypredict_Sal{cc}{tr},30,MAP(round(c(tr)),:),'filled')
             hold on
         end
         xlabel('Observed rate')
@@ -251,9 +251,9 @@ for cc=1:NCells % parfor
         MAP = colormap();
         c=linspace(1,256,length(TRs));
         for tr = 1:length(TRs)
-            scatter(Yval, (Ypredict_Amp{cc}{tr}-Yval).^2,30,MAP(round(c(tr)),:),'filled')
+            scatter(Yval{cc}, (Ypredict_Amp{cc}{tr}-Yval{cc}).^2,30,MAP(round(c(tr)),:),'filled')
             hold on
-            MSE_TR_Amp_local(tr) = mean((Ypredict_Amp{cc}{tr}-Yval).^2);
+            MSE_TR_Amp_local(tr) = mean((Ypredict_Amp{cc}{tr}-Yval{cc}).^2);
             line(xlim,MSE_TR_Amp_local(tr)*ones(2,1),'Color',MAP(round(c(tr)),:), 'LineWidth',2)
             hold on
         end
@@ -266,9 +266,9 @@ for cc=1:NCells % parfor
         
         subplot(2,3,5)
         for tr = 1:length(TRs)
-            scatter(Yval, (Ypredict_SpecMean{cc}{tr}-Yval).^2,30,MAP(round(c(tr)),:),'filled')
+            scatter(Yval{cc}, (Ypredict_SpecMean{cc}{tr}-Yval{cc}).^2,30,MAP(round(c(tr)),:),'filled')
             hold on
-            MSE_TR_SpecMean_local(tr) = mean((Ypredict_SpecMean{cc}{tr}-Yval).^2);
+            MSE_TR_SpecMean_local(tr) = mean((Ypredict_SpecMean{cc}{tr}-Yval{cc}).^2);
             line(xlim,MSE_TR_SpecMean_local(tr)*ones(2,1),'Color',MAP(round(c(tr)),:), 'LineWidth',2)
             hold on
         end
@@ -280,10 +280,10 @@ for cc=1:NCells % parfor
         
         subplot(2,3,6)
         for tr = 1:length(TRs)
-            scatter(Yval, (Ypredict_Sal{cc}{tr}-Yval).^2,30,MAP(round(c(tr)),:),'filled')
+            scatter(Yval{cc}, (Ypredict_Sal{cc}{tr}-Yval{cc}).^2,30,MAP(round(c(tr)),:),'filled')
             hold on
-            MSE_TR_Sal_local(tr) = mean((Ypredict_Sal{cc}{tr}-Yval).^2);
-            line(xlim,mean((Ypredict_Sal{cc}{tr}-Yval).^2)*ones(2,1),'Color',MAP(round(c(tr)),:), 'LineWidth',2)
+            MSE_TR_Sal_local(tr) = mean((Ypredict_Sal{cc}{tr}-Yval{cc}).^2);
+            line(xlim,mean((Ypredict_Sal{cc}{tr}-Yval{cc}).^2)*ones(2,1),'Color',MAP(round(c(tr)),:), 'LineWidth',2)
             hold on
         end
         xlabel('Observed rate')
@@ -304,7 +304,7 @@ for cc=1:NCells % parfor
         
         figure(5)
         clf
-        plot(TRs,MeanYTrain{cc}-mean(Yval))
+        plot(TRs,MeanYTrain{cc}-mean(Yval{cc}))
         xlabel('Time resolution (ms)')
         ylabel('Mean rate difference Training-testing')
     end
