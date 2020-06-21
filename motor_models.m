@@ -56,7 +56,6 @@ Yval = cell(NCells,1);
 MeanYTrain = cell(NCells,1);
 TicToc = cell(NCells,1);
 load(fullfile(Path,'MotorModelsRidge.mat'));
-Yval = cell(NCells,1);
 
 for cc=1:NCells % parfor
     if ~isempty(MSE_TR_Amp{cc}) && ~isnan(MSE_TR_Amp{cc}(end)) && ~isempty(Yval{cc}) % This cell was already calculated
@@ -325,7 +324,7 @@ MSE0 = nan(NCells,length(TRs));
 R2_TR_Amp = nan(NCells,length(TRs));
 R2_TR_SpecMean = nan(NCells,length(TRs));
 R2_TR_Sal = nan(NCells,length(TRs));
-for cc=1:NCells
+for cc=1:142
     if isempty(MSE_TR_Amp{cc})
         continue
     end
@@ -333,7 +332,7 @@ for cc=1:NCells
     MSE_TR_SpecMean_zs(cc,:) = zscore(MSE_TR_SpecMean{cc});
     MSE_TR_Sal_zs(cc,:) = zscore(MSE_TR_Sal{cc});
     for tr=1:length(TRs)
-        MSE0(cc,tr) = mean((Yval{cc}{tr}-MeanYTrain{cc}(tr)).^2);
+        MSE0(cc,tr) = mean((Yval{cc}-MeanYTrain{cc}(tr)).^2);
     end
     R2_TR_Amp(cc,:) = (MSE0(cc,:)-MSE_TR_Amp{cc})./MSE0(cc,:);
     R2_TR_SpecMean(cc,:) = (MSE0(cc,:)-MSE_TR_SpecMean{cc})./MSE0(cc,:);
@@ -382,7 +381,7 @@ shadedErrorBar(TRs, nanmean(R2_TR_SpecMean),nanstd(R2_TR_SpecMean)./(sum(~isnan(
 hold on
 shadedErrorBar(TRs, nanmean(R2_TR_Sal),nanstd(R2_TR_Sal)./(sum(~isnan(R2_TR_Sal))).^0.5, {'Color', ColorCode(3,:)})
 hold on
-legend('AutoUpdate', 'on')
+
 plot(TRs, nanmean(R2_TR_Amp), 'LineWidth',2, 'Color',ColorCode(1,:))
 hold on
 plot(TRs, nanmean(R2_TR_SpecMean), 'LineWidth',2, 'Color',ColorCode(2,:))
@@ -394,23 +393,29 @@ ylabel('R2')
 hold off
 
 figure()
-suplot(1,3,1)
+subplot(1,3,1)
 imagesc(R2_TR_Amp)
 set(gca,'XTickLabel', TRs)
 xlabel('Time Resolution (ms)')
 ylabel('R2 Amplitude')
+colorbar()
+caxis([0 0.05])
 
-suplot(1,3,2)
+subplot(1,3,2)
 imagesc(R2_TR_SpecMean)
 set(gca,'XTickLabel', TRs)
 xlabel('Time Resolution (ms)')
 ylabel('R2 SpectralMean')
+colorbar()
+caxis([0 0.05])
 
-suplot(1,3,3)
+subplot(1,3,3)
 imagesc(R2_TR_Sal)
 set(gca,'XTickLabel', TRs)
 xlabel('Time Resolution (ms)')
 ylabel('R2 Saliency')
+colorbar()
+caxis([0 0.05])
 
 
 
@@ -423,10 +428,11 @@ TR=1; % 1ms is chosen as the Time resolution for the neural data
     
 NCells = length(CellsPath);
 Lags = -Delay:Delay;
-NQuystLimit = 1/(TR*10^-3) * 0.5;
+Nyquist = 1/(TR*10^-3) * 0.5;
 Freqs = (0:ceil(length(Lags)/2)).* (2*Nyquist/length(Lags)); % Lags is a uneven number so F(i) = i*2*Nyquist/length(Lags)
 CoherencyT = cell(NCells,1);
 CoherencyF = cell(NCells,1);
+Coherence = cell(NCells,1);
 
 for cc=1:NCells % parfor
     % load data
@@ -445,7 +451,7 @@ for cc=1:NCells % parfor
     % neural response is a vector that compile all spike counts starting
     % at -200ms (Delay) before stim onset and stop at 200ms (Delay) after
     % stim offset
-    YPerStim = get_y(Cell.SpikesArrivalTimes_Behav(IndVoc), Cell.Duration(IndVoc),Win,Delay,TR);
+    YPerStim = get_y_4Coherence(Cell.SpikesArrivalTimes_Behav(IndVoc), Cell.Duration(IndVoc),Delay,TR);
         
     % Calculate acoustic features input to the models
     % acoustic data is a vector of the value of the acoustic feature sampled
@@ -458,10 +464,11 @@ for cc=1:NCells % parfor
     AcorrAmp = nan(NStims,length(Lags));
     AcorrY = nan(NStims,length(Lags));
     XcorrAmpY = nan(NStims,length(Lags));
+    W =hann(length(Lags))';
     for ss=1:NStims
-        AcorrAmp(ss,:) = xcorr(XAmpPerStim{ss},XAmpPerStim{ss},Delay,'unbiased');
-        AcorrY(ss,:) = xcorr(YPerStim{ss},YPerStim{ss},Delay,'unbiased');
-        XcorrAmpY(ss,:) = xcorr(XAmpPerStim{ss},YPerStim{ss},Delay,'unbiased');
+        AcorrAmp(ss,:) = W.*xcorr(XAmpPerStim{ss},XAmpPerStim{ss},Delay,'unbiased');
+        AcorrY(ss,:) = W.*xcorr(YPerStim{ss},YPerStim{ss},Delay,'unbiased');
+        XcorrAmpY(ss,:) = W.*xcorr(XAmpPerStim{ss},YPerStim{ss},Delay,'unbiased');
     end
     
     % Getting the fft of the mean over stims for each crosscorrelation
@@ -472,20 +479,23 @@ for cc=1:NCells % parfor
     % calculate the coherency as a function of frequencies. In this domain,
     % the values of power at each frequency band are independant
     CoherencyF{cc} = (FFT_XcorrAmpY)./(abs(FFT_AcorrAmp) .* abs(FFT_AcorrY)).^.5; % here we take abs(FFT) for autocorrelation to alleviate the effect of the phase (pick of the autocorrelation should be at zero phase and it's not when calculating the fft)
+    Coherence{cc} = (abs(CoherencyF{cc})).^2;
     
     % revert to time domain to find the coherency
     CoherencyT{cc} = ifft(CoherencyF{cc});
     
     % Plot the value of coherency as a function of delay
     figure(3)
+    clf
     subplot(1,2,1)
     plot(Lags, CoherencyT{cc}, 'LineWidth',2)
     xlabel('Time Delay (ms)')
     ylabel('Coherency')
-    subplot(1,2,1)
-    plot(Freqs, CoherencyF{cc}, 'LineWidth',2)
+    subplot(1,2,2)
+    plot(Freqs, Coherence{cc}(1:length(Freqs)), 'LineWidth',2)
     xlabel('Frequencies (Hz)')
-    ylabel('Coherency')
+    ylabel('Coherence')
+    pause()
 end
     
 save(fullfile(Path,'MotorModelsCoherency.mat'),'Lags','Delay','CoherencyT','CoherencyF','CellsPath','Win','TR');
@@ -1040,6 +1050,58 @@ for stim=1:length(Duration)
         SpikeInd = round(SAT{stim}(isp));
         if (SpikeInd>=-(Win-Delay)) && (SpikeInd<(Delay + Duration(stim)))
             SpikePattern(SpikeInd + (Win-Delay) +1) = SpikePattern(SpikeInd + (Win-Delay) +1) +1;
+        end
+    end
+    YPerStim{stim} = conv(SpikePattern, Expwav,'same');
+%     % change zero values for the smallest value under matlab.
+%     if sum(YPerStim{stim}==0)
+%         MinData = min(YPerStim{stim}(YPerStim{stim} ~=0));
+%         if ~isempty(MinData)
+%             YPerStim{stim}(YPerStim{stim}==0)=min(MinData,realmin('double'));
+%         else
+%             YPerStim{stim}(YPerStim{stim}==0)=realmin('double');
+%         end
+%     end
+    
+    % Make sure that the output sum(Y) = input sum(Y)
+    if (~sum(YPerStim{stim})==0) && ~(sum(SpikePattern)==0)
+        YPerStim{stim} = YPerStim{stim}./sum(YPerStim{stim}).*sum(SpikePattern);
+    end
+    
+    
+    %         % Time slots for the neural response
+    %         TimeBinsY = -(Delay) : TR: (Delay + Duration(stim));
+    %         YPerStim{stim} = nan(1,length(TimeBinsY)-1);
+    %         for tt=1:(length(TimeBinsY)-1)
+    %             % Find the number of spikes
+    %             YPerStim{stim}(tt) = sum( (SAT{stim}>=TimeBinsY(tt)) .* (SAT{stim}<TimeBinsY(tt+1)));
+    %         end
+end
+
+end
+
+function [YPerStim] = get_y_4Coherence(SAT, Duration,Delay,TR)
+% Calculate the time varying rate applying a gaussian window TR on the
+% spike pattern. The spike pattern considered starts -Delay ms
+% before the onset of the vocalization and stops Delay ms after the
+% offset of the vocalization
+YPerStim = cell(1,length(Duration));
+% Gaussian window of 2*std equal to TR (68% of Gaussian centered in TR)
+nStd =max(Duration) + Delay + Delay; % before set as 4
+Tau = (TR/2);
+T_pts = (0:2*nStd*Tau) - nStd*Tau; % centered tpoints around the mean = 0 and take data into account up to nstd away on each side
+Expwav = exp(-0.5*(T_pts).^2./Tau^2)/(Tau*(2*pi)^0.5);
+Expwav = Expwav./sum(Expwav);
+
+% Loop through the stimuli and fill in the matrix
+for stim=1:length(Duration)
+    % Time slots for the neural response
+    TimeBinsY = -Delay : (Delay + Duration(stim));
+    SpikePattern = zeros(1,length(TimeBinsY)-1);
+    for isp = 1:length(SAT{stim})
+        SpikeInd = round(SAT{stim}(isp));
+        if (SpikeInd>=-Delay) && (SpikeInd<(Delay + Duration(stim)))
+            SpikePattern(SpikeInd + Delay +1) = SpikePattern(SpikeInd + Delay +1) +1;
         end
     end
     YPerStim{stim} = conv(SpikePattern, Expwav,'same');
