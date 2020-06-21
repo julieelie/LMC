@@ -44,7 +44,7 @@ ParamModel.Alpha=0.001; % STRFs are easier to interpret using ridge than using L
 
 %% Running through cells to find the optimal time resolution of the neural response for acoustic feature predicion from the neural response
 % here we use a ridge regularization with an MSE optimization on the
-% prediction of log(spike rate)
+% prediction of spike rate
 NCells = length(CellsPath);
 MSE_TR_Amp = cell(NCells,1);
 MSE_TR_SpecMean = cell(NCells,1);
@@ -411,6 +411,89 @@ imagesc(R2_TR_Sal)
 set(gca,'XTickLabel', TRs)
 xlabel('Time Resolution (ms)')
 ylabel('R2 Saliency')
+
+
+
+%% Running through cells to find the optimal time resolution of the neural response for acoustic feature predicion from the neural response
+% here we calculate the coherency between the neural response and the
+% acoustic features
+Delay=200;
+Win=0;
+TR=1; % 1ms is chosen as the Time resolution for the neural data
+    
+NCells = length(CellsPath);
+Lags = -Delay:Delay;
+NQuystLimit = 1/(TR*10^-3) * 0.5;
+Freqs = (0:ceil(length(Lags)/2)).* (2*Nyquist/length(Lags)); % Lags is a uneven number so F(i) = i*2*Nyquist/length(Lags)
+CoherencyT = cell(NCells,1);
+CoherencyF = cell(NCells,1);
+
+for cc=1:NCells % parfor
+    % load data
+    Cell = load(fullfile(CellsPath(cc).folder,CellsPath(cc).name));
+    
+    % Number of vocalizations in the dataset
+    if ~isfield(Cell, 'What')
+        fprintf(1,'*** . Problem with Cell %d, no what field!! ****\n', cc)
+        continue
+    end
+    IndVoc = find(contains(Cell.What, 'Voc'));
+    NStims = length(IndVoc);
+    
+    % Compute neural vectors
+    % Neural Data loop
+    % neural response is a vector that compile all spike counts starting
+    % at -200ms (Delay) before stim onset and stop at 200ms (Delay) after
+    % stim offset
+    YPerStim = get_y(Cell.SpikesArrivalTimes_Behav(IndVoc), Cell.Duration(IndVoc),Win,Delay,TR);
+        
+    % Calculate acoustic features input to the models
+    % acoustic data is a vector of the value of the acoustic feature sampled
+    % at 1000Hz starting -200ms (Delay) before stim onset and stop at 200ms (Delay) after
+    % stim offset
+    DefaultVal = 0;%zero should be the default value for the amplitude, we know here that there is no sound
+    XAmpPerStim = get_x_4coherence(Cell.BioSound(IndVoc,2), Cell.Duration(IndVoc), Delay,DefaultVal,'amp');
+    
+    % Calculate cross-correlation between sound feature and neural data along with autocorrelation of neural data and sound feature for each stim
+    AcorrAmp = nan(NStims,length(Lags));
+    AcorrY = nan(NStims,length(Lags));
+    XcorrAmpY = nan(NStims,length(Lags));
+    for ss=1:NStims
+        AcorrAmp(ss,:) = xcorr(XAmpPerStim{ss},XAmpPerStim{ss},Delay,'unbiased');
+        AcorrY(ss,:) = xcorr(YPerStim{ss},YPerStim{ss},Delay,'unbiased');
+        XcorrAmpY(ss,:) = xcorr(XAmpPerStim{ss},YPerStim{ss},Delay,'unbiased');
+    end
+    
+    % Getting the fft of the mean over stims for each crosscorrelation
+    FFT_AcorrAmp = fft(mean(AcorrAmp));
+    FFT_AcorrY = fft(mean(AcorrY));
+    FFT_XcorrAmpY = fft(mean(XcorrAmpY));
+    
+    % calculate the coherency as a function of frequencies. In this domain,
+    % the values of power at each frequency band are independant
+    CoherencyF{cc} = (FFT_XcorrAmpY)./(abs(FFT_AcorrAmp) .* abs(FFT_AcorrY)).^.5; % here we take abs(FFT) for autocorrelation to alleviate the effect of the phase (pick of the autocorrelation should be at zero phase and it's not when calculating the fft)
+    
+    % revert to time domain to find the coherency
+    CoherencyT{cc} = ifft(CoherencyF{cc});
+    
+    % Plot the value of coherency as a function of delay
+    figure(3)
+    subplot(1,2,1)
+    plot(Lags, CoherencyT{cc}, 'LineWidth',2)
+    xlabel('Time Delay (ms)')
+    ylabel('Coherency')
+    subplot(1,2,1)
+    plot(Freqs, CoherencyF{cc}, 'LineWidth',2)
+    xlabel('Frequencies (Hz)')
+    ylabel('Coherency')
+end
+    
+save(fullfile(Path,'MotorModelsCoherency.mat'),'Lags','Delay','CoherencyT','CoherencyF','CellsPath','Win','TR');
+
+
+
+
+
 
 
 
@@ -914,6 +997,23 @@ for stim = 1:length(Duration)
     for tt=1:(length(TimeBinsY)-1)
         XPerStim{stim}(:,tt) = ZPaddFeature((1:Win) + tt-1);
     end
+end
+
+end
+
+function [XPerStim] = get_x_4coherence(BioSound, Duration, Delay,DefaultVal,Feature)
+% calculate the cell array of acoustic data for each cell. For each
+% voc, XPerStim is a vector where each column correspond to the values of
+% the acoustic feature in the window Win starting Delay ms before time onset
+% of the vocalization.
+
+% Vectors of the acoustic features
+XPerStim = cell(1,length(Duration));
+for stim = 1:length(Duration)
+    XPerStim{stim} = DefaultVal.*ones(1,Delay + Duration(stim) + Delay);
+    % Get ready the stim acoustic features that was sampled at 1000Hz
+    FeatureVal = BioSound{stim}.(sprintf('%s',Feature));
+    XPerStim{stim}(Delay+(1:length(FeatureVal)))=FeatureVal; 
 end
 
 end
