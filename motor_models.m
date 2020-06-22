@@ -422,7 +422,7 @@ caxis([0 0.05])
 %% Running through cells to find the optimal time resolution of the neural response for acoustic feature predicion from the neural response
 % here we calculate the coherency between the neural response and the
 % acoustic features
-Delay=200;
+
 Win=0;
 TR=2; % 1ms is chosen as the Time resolution for the neural data
 Fs = 1/(TR*10^-3); % the data is then sampled at the optimal frequency given the neural time resolution choosen
@@ -432,11 +432,15 @@ Nyquist = Fs * 0.5;
 nFFT = 2^ceil(log2(Nyquist));
 
 NCells = length(CellsPath);
-Lags = -Delay:Delay;
-Freqs = (0:ceil(length(Lags)/2)).* (2*Nyquist/length(Lags)); % Lags is a uneven number so F(i) = i*2*Nyquist/length(Lags)
+Delay = nFFT/(2*Fs)*10^3;
+% Delay=200;
+% Lags = -Delay:Delay;
+% Freqs = (0:ceil(length(Lags)/2)).* (2*Nyquist/length(Lags)); % Lags is a uneven number so F(i) = i*2*Nyquist/length(Lags)
 CoherencyT = cell(NCells,1);
-CoherencyF = cell(NCells,1);
+% CoherencyF = cell(NCells,1);
 Coherence = cell(NCells,1);
+Coherence_low = cell(NCells,1);
+Coherence_up = cell(NCells,1);
 
 for cc=1:NCells % parfor
     % load data
