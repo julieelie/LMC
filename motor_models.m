@@ -424,11 +424,15 @@ caxis([0 0.05])
 % acoustic features
 Delay=200;
 Win=0;
-TR=1; % 1ms is chosen as the Time resolution for the neural data
-    
+TR=2; % 1ms is chosen as the Time resolution for the neural data
+Fs = 1/(TR*10^-3); % the data is then sampled at the optimal frequency given the neural time resolution choosen
+% find the closest power of 2 for the number of FFT window points that
+% correspond to the Nyquist limit
+Nyquist = Fs * 0.5;
+nFFT = 2^ceil(log2(Nyquist));
+
 NCells = length(CellsPath);
 Lags = -Delay:Delay;
-Nyquist = 1/(TR*10^-3) * 0.5;
 Freqs = (0:ceil(length(Lags)/2)).* (2*Nyquist/length(Lags)); % Lags is a uneven number so F(i) = i*2*Nyquist/length(Lags)
 CoherencyT = cell(NCells,1);
 CoherencyF = cell(NCells,1);
@@ -452,44 +456,50 @@ for cc=1:NCells % parfor
     % at -200ms (Delay) before stim onset and stop at 200ms (Delay) after
     % stim offset
     YPerStim = get_y_4Coherence(Cell.SpikesArrivalTimes_Behav(IndVoc), Cell.Duration(IndVoc),Delay,TR);
-        
+    Y = [YPerStim{:}]';    
+    
     % Calculate acoustic features input to the models
     % acoustic data is a vector of the value of the acoustic feature sampled
     % at 1000Hz starting -200ms (Delay) before stim onset and stop at 200ms (Delay) after
     % stim offset
     DefaultVal = 0;%zero should be the default value for the amplitude, we know here that there is no sound
-    XAmpPerStim = get_x_4coherence(Cell.BioSound(IndVoc,2), Cell.Duration(IndVoc), Delay,DefaultVal,'amp');
+    XAmpPerStim = get_x_4coherence(Cell.BioSound(IndVoc,2), Cell.Duration(IndVoc), Delay,TR,DefaultVal,'amp');
+    XAmp = [XAmp{:}]';
     
-    % Calculate cross-correlation between sound feature and neural data along with autocorrelation of neural data and sound feature for each stim
-    AcorrAmp = nan(NStims,length(Lags));
-    AcorrY = nan(NStims,length(Lags));
-    XcorrAmpY = nan(NStims,length(Lags));
-    W =hann(length(Lags))';
-    for ss=1:NStims
-        AcorrAmp(ss,:) = W.*xcorr(XAmpPerStim{ss},XAmpPerStim{ss},Delay,'unbiased');
-        AcorrY(ss,:) = W.*xcorr(YPerStim{ss},YPerStim{ss},Delay,'unbiased');
-        XcorrAmpY(ss,:) = W.*xcorr(XAmpPerStim{ss},YPerStim{ss},Delay,'unbiased');
-    end
-    
-    % Getting the fft of the mean over stims for each crosscorrelation
-    FFT_AcorrAmp = fft(mean(AcorrAmp));
-    FFT_AcorrY = fft(mean(AcorrY));
-    FFT_XcorrAmpY = fft(mean(XcorrAmpY));
-    
-    % calculate the coherency as a function of frequencies. In this domain,
-    % the values of power at each frequency band are independant
-    CoherencyF{cc} = (FFT_XcorrAmpY)./(abs(FFT_AcorrAmp) .* abs(FFT_AcorrY)).^.5; % here we take abs(FFT) for autocorrelation to alleviate the effect of the phase (pick of the autocorrelation should be at zero phase and it's not when calculating the fft)
-    Coherence{cc} = (abs(CoherencyF{cc})).^2;
-    
-    % revert to time domain to find the coherency
-    CoherencyT{cc} = ifft(CoherencyF{cc});
+    % Calculate coherence and coherency between the signals
+    [CoherencyT{cc}, Freqs, Coherence{cc}, Coherence_up{cc}, Coherence_low{cc}, stP] = multitapercoherence_JN([Y XAmp],nFFT,Fs);
+   
+    %% That was my own calculation without multitaper and jackknife
+%     % Calculate cross-correlation between sound feature and neural data along with autocorrelation of neural data and sound feature for each stim
+%     AcorrAmp = nan(NStims,length(Lags));
+%     AcorrY = nan(NStims,length(Lags));
+%     XcorrAmpY = nan(NStims,length(Lags));
+%     W =hann(length(Lags))';
+%     for ss=1:NStims
+%         AcorrAmp(ss,:) = W.*xcorr(XAmpPerStim{ss},XAmpPerStim{ss},Delay,'unbiased');
+%         AcorrY(ss,:) = W.*xcorr(YPerStim{ss},YPerStim{ss},Delay,'unbiased');
+%         XcorrAmpY(ss,:) = W.*xcorr(XAmpPerStim{ss},YPerStim{ss},Delay,'unbiased');
+%     end
+%     
+%     % Getting the fft of the mean over stims for each crosscorrelation
+%     FFT_AcorrAmp = fft(mean(AcorrAmp));
+%     FFT_AcorrY = fft(mean(AcorrY));
+%     FFT_XcorrAmpY = fft(mean(XcorrAmpY));
+%     
+%     % calculate the coherency as a function of frequencies. In this domain,
+%     % the values of power at each frequency band are independant
+%     CoherencyF{cc} = (FFT_XcorrAmpY)./(abs(FFT_AcorrAmp) .* abs(FFT_AcorrY)).^.5; % here we take abs(FFT) for autocorrelation to alleviate the effect of the phase (pick of the autocorrelation should be at zero phase and it's not when calculating the fft)
+%     Coherence{cc} = (abs(CoherencyF{cc})).^2;
+%     
+%     % revert to time domain to find the coherency
+%     CoherencyT{cc} = ifft(CoherencyF{cc});
     
     % Plot the value of coherency as a function of delay
     figure(3)
     clf
     subplot(1,2,1)
-    plot(Lags, CoherencyT{cc}, 'LineWidth',2)
-    xlabel('Time Delay (ms)')
+    plot(CoherencyT{cc}, 'LineWidth',2)
+    xlabel('Time Delay')
     ylabel('Coherency')
     subplot(1,2,2)
     plot(Freqs, Coherence{cc}(1:length(Freqs)), 'LineWidth',2)
@@ -1011,19 +1021,19 @@ end
 
 end
 
-function [XPerStim] = get_x_4coherence(BioSound, Duration, Delay,DefaultVal,Feature)
+function [XPerStim] = get_x_4coherence(BioSound, Duration, Delay,TR,DefaultVal,Feature)
 % calculate the cell array of acoustic data for each cell. For each
 % voc, XPerStim is a vector where each column correspond to the values of
 % the acoustic feature in the window Win starting Delay ms before time onset
 % of the vocalization.
-
+Fs = 1/(TR.*10^-3);
 % Vectors of the acoustic features
 XPerStim = cell(1,length(Duration));
 for stim = 1:length(Duration)
-    XPerStim{stim} = DefaultVal.*ones(1,Delay + Duration(stim) + Delay);
+    XPerStim{stim} = DefaultVal.*ones(1,Fs .* (Delay + Duration(stim) + Delay).*10^-3);
     % Get ready the stim acoustic features that was sampled at 1000Hz
-    FeatureVal = BioSound{stim}.(sprintf('%s',Feature));
-    XPerStim{stim}(Delay+(1:length(FeatureVal)))=FeatureVal; 
+    FeatureVal = resample(BioSound{stim}.(sprintf('%s',Feature)), Fs, 1000);
+    XPerStim{stim}(Fs * Delay * 10^-3+(1:length(FeatureVal)))=FeatureVal; 
 end
 
 end
@@ -1092,7 +1102,8 @@ Tau = (TR/2);
 T_pts = (0:2*nStd*Tau) - nStd*Tau; % centered tpoints around the mean = 0 and take data into account up to nstd away on each side
 Expwav = exp(-0.5*(T_pts).^2./Tau^2)/(Tau*(2*pi)^0.5);
 Expwav = Expwav./sum(Expwav);
-
+% Frequency at which the neural data should be sampled
+Fs = 1/(TR.*10^-3);
 % Loop through the stimuli and fill in the matrix
 for stim=1:length(Duration)
     % Time slots for the neural response
@@ -1104,7 +1115,11 @@ for stim=1:length(Duration)
             SpikePattern(SpikeInd + Delay +1) = SpikePattern(SpikeInd + Delay +1) +1;
         end
     end
-    YPerStim{stim} = conv(SpikePattern, Expwav,'same');
+    if Fs~=1000
+        YPerStim{stim} = resample(conv(SpikePattern, Expwav,'same'), Fs, 1000);
+    else
+        YPerStim{stim} = conv(SpikePattern, Expwav,'same');
+    end
 %     % change zero values for the smallest value under matlab.
 %     if sum(YPerStim{stim}==0)
 %         MinData = min(YPerStim{stim}(YPerStim{stim} ~=0));
