@@ -441,6 +441,9 @@ Coherence = cell(NCells,1);
 Coherence_low = cell(NCells,1);
 Coherence_up = cell(NCells,1);
 FirstNonSigCoherenceFreq = nan(NCells,1);
+Info = nan(NCells,1);
+Info_low = nan(NCells,1);
+Info_up = nan(NCells,1);
 
 for cc=1:NCells % parfor
     % load data
@@ -481,7 +484,7 @@ for cc=1:NCells % parfor
     cStruct.cUpper = Coherence_up{cc}.^2;
     
     closgn = sign(real(Coherence_low{cc}));
-    cStruct.cLower = (clo.^2) .* closgn; %Coherence_low{cc} can be negative, multiply by sign after squaring
+    cStruct.cLower = (Coherence_low{cc}.^2) .* closgn; %Coherence_low{cc} can be negative, multiply by sign after squaring
     
     %% restrict frequencies analyzed to the requested cutoff and minimum frequency given the window size
     freqCutoff = Nyquist; % keep all frequencies up to Nyquist as of now
@@ -517,11 +520,9 @@ for cc=1:NCells % parfor
     df = cStruct.f(2) - cStruct.f(1);
     cStruct.minFreq = minFreq;
     cStruct.freqCutoff = freqCutoff;
-    cStruct.info = -df*sum(log2(1 - cStruct.c(1:cutoffIndex)));
-    cStruct.infoUpper = -df*sum(log2(1 - cStruct.cUpper(1:cutoffIndex)));
-    cStruct.infoLower = -df*sum(log2(1 - cStruct.cLower(1:cutoffIndex)));
-    
-    
+    Info(cc) = -df*sum(log2(1 - cStruct.c(1:cutoffIndex)));
+    Info_up(cc) = -df*sum(log2(1 - cStruct.cUpper(1:cutoffIndex)));
+    Info_low(cc) = -df*sum(log2(1 - cStruct.cLower(1:cutoffIndex)));
     
     %% That was my own calculation without multitaper and jackknife
 %     % Calculate cross-correlation between sound feature and neural data along with autocorrelation of neural data and sound feature for each stim
@@ -568,6 +569,7 @@ for cc=1:NCells % parfor
     plot([Freqs(1) Freqs(end)], [0 0], 'r--', 'LineWidth',2)
     hold off
     ylim([-0.2 1])
+    text(Freqs(end)/2,0.8,sprintf('Info = %.2f InfoUp = %.2f InfoLow = %.2f', Info(cc), Info_up(cc), Info_low(cc)))
     xlabel('Frequencies (Hz)')
     ylabel('Coherence')
     
@@ -1108,10 +1110,11 @@ Fs = 1/(TR.*10^-3);
 % Vectors of the acoustic features
 XPerStim = cell(1,length(Duration));
 for stim = 1:length(Duration)
-    XPerStim{stim} = DefaultVal.*ones(1,round(Fs .* (Delay + Duration(stim) + Delay).*10^-3));
-    % Get ready the stim acoustic features that was sampled at 1000Hz
-    FeatureVal = resample(BioSound{stim}.(sprintf('%s',Feature)), Fs, 1000);
-    XPerStim{stim}(round(Fs * Delay * 10^-3)+(1:length(FeatureVal)))=FeatureVal; 
+    % Get ready an output vector for the stim acoustic features that was sampled at 1000Hz
+    XPerStim_temp = DefaultVal.*ones(1,round(1000 .* (Delay + Duration(stim) + Delay).*10^-3));
+    FeatureVal = BioSound{stim}.(sprintf('%s',Feature));
+    XPerStim_temp(Delay+(1:length(FeatureVal)))=FeatureVal;
+    XPerStim{stim} = resample(XPerStim_temp, Fs, 1000); 
 end
 
 end
