@@ -473,6 +473,56 @@ for cc=1:NCells % parfor
     % Calculate coherence and coherency between the signals
     [CoherencyT{cc}, Freqs, Coherence{cc}, Coherence_up{cc}, Coherence_low{cc}, stP] = multitapercoherence_JN([Y XAmp],nFFT,Fs);
    
+    % Calculate the information on coherence
+    %% normalize coherencies
+    cStruct = struct;
+    cStruct.f = Freqs;
+    cStruct.c = Coherence{cc}.^2;
+    cStruct.cUpper = Coherence_up{cc}.^2;
+    
+    closgn = sign(real(Coherence_low{cc}));
+    cStruct.cLower = (clo.^2) .* closgn; %Coherence_low{cc} can be negative, multiply by sign after squaring
+    
+    %% restrict frequencies analyzed to the requested cutoff and minimum frequency given the window size
+    freqCutoff = Nyquist; % keep all frequencies up to Nyquist as of now
+    if freqCutoff ~= -1
+        findx = find(cStruct.f < freqCutoff);
+        eindx = max(findx);
+        indx = 1:eindx;
+        
+        cStruct.f = cStruct.f(indx);
+        cStruct.c = cStruct.c(indx);
+        cStruct.cUpper = cStruct.cUpper(indx);
+        cStruct.cLower = cStruct.cLower(indx);
+    end 
+    
+    minFreq = Fs/nFFT;
+    if minFreq > 0        
+        findx = find(cStruct.f >= minFreq);
+        sindx = min(findx);
+        cStruct.f = cStruct.f(sindx:end);
+        cStruct.c = cStruct.c(sindx:end);
+        cStruct.cUpper = cStruct.cUpper(sindx:end);
+        cStruct.cLower = cStruct.cLower(sindx:end);        
+    end
+    
+    %% if the clower goes below zero set all values to zero.
+    cutoffIndex = find(cStruct.cLower < 0, 1, 'first');
+    if (isempty(cutoffIndex))
+        cutoffIndex = length(cStruct.cLower);        
+    end
+    freqCutoff = cStruct.f(cutoffIndex);
+    
+    %% compute information by integrating log of 1 - coherence        
+    df = cStruct.f(2) - cStruct.f(1);
+    cStruct.minFreq = minFreq;
+    cStruct.freqCutoff = freqCutoff;
+    cStruct.info = -df*sum(log2(1 - cStruct.c(1:cutoffIndex)));
+    cStruct.infoUpper = -df*sum(log2(1 - cStruct.cUpper(1:cutoffIndex)));
+    cStruct.infoLower = -df*sum(log2(1 - cStruct.cLower(1:cutoffIndex)));
+    
+    
+    
     %% That was my own calculation without multitaper and jackknife
 %     % Calculate cross-correlation between sound feature and neural data along with autocorrelation of neural data and sound feature for each stim
 %     AcorrAmp = nan(NStims,length(Lags));
