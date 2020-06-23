@@ -33,26 +33,26 @@ function [CoherencyT, fo, Coherence, Coherence_up, Coherence_low, stP] = multita
 % Modified by Julie E Elie, 2020
 
 %% Sorting inputs and setting default values
-if nargs<2
+if nargin<2
     nFFT = 1024;
 end
 
-if nargs<3
+if nargin<3
     Fs = 2;
 end
-if nargs<4
+if nargin<4
     WinLength = nFFT;
 end
-if nargs<5
+if nargin<5
     nOverlap = WinLength/2;
 end
-if nargs<6
+if nargin<6
     NW = 3;
 end
-if nargs<7
+if nargin<7
     Detrend = ''; 
 end
-if nargs<8
+if nargin<8
     nTapers = 2*NW -1;
 end
 
@@ -105,8 +105,8 @@ Py=zeros(nFFT, nChannels, nChannels); % output array for psd's
 % This involves lots of wrangling with multidimensional arrays.
 
 TaperingArray = repmat(Tapers, [1 1 nChannels]);
-for j=1:nFFTChunks
-	Segment = x((j-1)*winstep + 1:WinLength, :);
+for jj=1:nFFTChunks
+	Segment = x((jj-1)*winstep + (1:WinLength), :);
     if (~isempty(Detrend))
         Segment = detrend(Segment, Detrend);
     end
@@ -125,7 +125,7 @@ for j=1:nFFTChunks
 
 			%eJ and eJ2 are the sum over all the tapers.
 			eJ=sum(Temp3, 2)/nTapers;
-			JN(j,:,Ch1, Ch2) = eJ;  % Here it is just the
+			JN(jj,:,Ch1, Ch2) = eJ;  % Here it is just the
 						% cross-power for one
 						% particular chunk.
 			y(:,Ch1, Ch2)= y(:,Ch1,Ch2) + eJ;  % y is
@@ -153,8 +153,8 @@ if any(nans)
 end
 
 
-for j = 1:nFFTChunks
-    JN(j,:, :, :) = abs(y - squeeze(JN(j,:, :,:))); % This is where
+for jj = 1:nFFTChunks
+    JN(jj,:, :, :) = abs(y - squeeze(JN(jj,:, :,:))); % This is where
                                                     % it becomes
                                                     % the JN
                                                     % quantity
@@ -163,9 +163,9 @@ for j = 1:nFFTChunks
         for Ch2 = (Ch1+1):nChannels  
             % Calculate the transformed coherence
             %JN(j,:, Ch1, Ch2) =atanh(abs(JN(j,:,Ch1,Ch2))./sqrt(abs(JN(j,:,Ch1,Ch1)).*abs(JN(j,:,Ch2,Ch2))));
-            JN(j,:, Ch1, Ch2) =atanh(real(JN(j,:,Ch1,Ch2))./sqrt(abs(JN(j,:,Ch1,Ch1)).*abs(JN(j,:,Ch2,Ch2))));
+            JN(jj,:, Ch1, Ch2) =atanh(real(JN(jj,:,Ch1,Ch2))./sqrt(abs(JN(jj,:,Ch1,Ch1)).*abs(JN(jj,:,Ch2,Ch2))));
             % Obtain the pseudo values
-            JN(j,:, Ch1, Ch2) = nFFTChunks*Py(:, Ch1, Ch2)' - (nFFTChunks-1)*squeeze(JN(j,:, Ch1,Ch2));
+            JN(jj,:, Ch1, Ch2) = nFFTChunks*Py(:, Ch1, Ch2)' - (nFFTChunks-1)*squeeze(JN(jj,:, Ch1,Ch2));
         end
     end  
 end
@@ -208,7 +208,7 @@ if ~any(any(imag(x)))    % x purely real
     meanP = meanP(select,:,:);
     Pupper = Pupper(select,:,:);
     Plower = Plower(select,:,:);
-	y = y(select,:,:);
+% 	y = y(select,:,:);
 else
 	select = 1:nFFT;
 end
@@ -223,7 +223,7 @@ Coherence_up = Pupper(:,1,2);
 Coherence_low = Plower(:,1,2);
 % y contains the cross and auto correlation spectral densities of the 2
 % signals in x so the time coherency is obtained by:
-CoherencyT = ifft(y(:,1,2)/(abs(y(:,1,1)) .* abs(y(:,2,2))).^0.5);
+CoherencyT = ifft(y(:,1,2)./(abs(y(:,1,1)) .* abs(y(:,2,2))).^0.5);
 
 % the rest of this code is stolen from
 % specgram and just deals with the output stage

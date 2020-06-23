@@ -1,5 +1,6 @@
 addpath(genpath('/Users/elie/Documents/CODE/SoundAnalysisBats'));
 addpath(genpath('/Users/elie/Documents/CODE/LoggerDataProcessing'));
+addpath(genpath('/Users/elie/Documents/CODE/LMC'));
 DatFig=0; %Set to 1 to see input data figures for each cell
 OutFig = 1;%Set to 1 to see output data figures for each cell
 
@@ -422,9 +423,7 @@ caxis([0 0.05])
 %% Running through cells to find the optimal time resolution of the neural response for acoustic feature predicion from the neural response
 % here we calculate the coherency between the neural response and the
 % acoustic features
-
-Win=0;
-TR=2; % 1ms is chosen as the Time resolution for the neural data
+TR=2; % 2ms is chosen as the Time resolution for the neural data
 Fs = 1/(TR*10^-3); % the data is then sampled at the optimal frequency given the neural time resolution choosen
 % find the closest power of 2 for the number of FFT window points that
 % correspond to the Nyquist limit
@@ -432,8 +431,8 @@ Nyquist = Fs * 0.5;
 nFFT = 2^ceil(log2(Nyquist));
 
 NCells = length(CellsPath);
-Delay = nFFT/(2*Fs)*10^3;
-% Delay=200;
+%Delay = nFFT/(2*Fs)*10^3;
+ Delay=200;
 % Lags = -Delay:Delay;
 % Freqs = (0:ceil(length(Lags)/2)).* (2*Nyquist/length(Lags)); % Lags is a uneven number so F(i) = i*2*Nyquist/length(Lags)
 CoherencyT = cell(NCells,1);
@@ -441,6 +440,7 @@ CoherencyT = cell(NCells,1);
 Coherence = cell(NCells,1);
 Coherence_low = cell(NCells,1);
 Coherence_up = cell(NCells,1);
+FirstNonSigCoherenceFreq = nan(NCells,1);
 
 for cc=1:NCells % parfor
     % load data
@@ -468,7 +468,7 @@ for cc=1:NCells % parfor
     % stim offset
     DefaultVal = 0;%zero should be the default value for the amplitude, we know here that there is no sound
     XAmpPerStim = get_x_4coherence(Cell.BioSound(IndVoc,2), Cell.Duration(IndVoc), Delay,TR,DefaultVal,'amp');
-    XAmp = [XAmp{:}]';
+    XAmp = [XAmpPerStim{:}]';
     
     % Calculate coherence and coherency between the signals
     [CoherencyT{cc}, Freqs, Coherence{cc}, Coherence_up{cc}, Coherence_low{cc}, stP] = multitapercoherence_JN([Y XAmp],nFFT,Fs);
@@ -501,15 +501,39 @@ for cc=1:NCells % parfor
     % Plot the value of coherency as a function of delay
     figure(3)
     clf
-    subplot(1,2,1)
-    plot(CoherencyT{cc}, 'LineWidth',2)
+    subplot(1,3,1)
+    plot(-(((nFFT/2)-1)/Fs*10^3):TR:((nFFT*10^3)/2)/Fs, fftshift(CoherencyT{cc}), 'LineWidth',2)
     xlabel('Time Delay')
     ylabel('Coherency')
-    subplot(1,2,2)
-    plot(Freqs, Coherence{cc}(1:length(Freqs)), 'LineWidth',2)
+%     subplot(1,2,2)
+%     plot(Freqs, Coherence{cc}, '-k','LineWidth',2)
+%     hold on
+%     plot(Freqs, Coherence_up{cc}, '--r','LineWidth',2)
+%     hold on
+%     plot(Freqs, Coherence_low{cc}, '--b','LineWidth',2)
+%     hold off
+    subplot(1,3,2)
+    shadedErrorBar(Freqs, Coherence{cc},[(Coherence_up{cc}-Coherence{cc})'; (-Coherence_low{cc}+Coherence{cc})'], {'LineWidth',2,'Color','k'})
+    hold on
+    plot([Freqs(1) Freqs(end)], [0 0], 'r--', 'LineWidth',2)
+    hold off
+    ylim([-0.2 1])
     xlabel('Frequencies (Hz)')
     ylabel('Coherence')
-    pause()
+    
+    if sum((Coherence_up{cc}>0) .* (Coherence_low{cc}<0))
+        FirstNonSigCoherenceFreq(cc)=find((Coherence_up{cc}>0) .* (Coherence_low{cc}<0), 1,'first');
+        if ~isempty(FirstNonSigCoherenceFreq(cc))
+            subplot(1,3,3)
+            shadedErrorBar(Freqs(1:(FirstNonSigCoherenceFreq(cc)+1)), Coherence{cc}(1:(FirstNonSigCoherenceFreq(cc)+1)),[(Coherence_up{cc}(1:(FirstNonSigCoherenceFreq(cc)+1))-Coherence{cc}(1:(FirstNonSigCoherenceFreq(cc)+1)))'; (-Coherence_low{cc}(1:(FirstNonSigCoherenceFreq(cc)+1))+Coherence{cc}(1:(FirstNonSigCoherenceFreq(cc)+1)))'], {'LineWidth',2,'Color','k'})
+            hold on
+            plot([Freqs(1) Freqs(FirstNonSigCoherenceFreq(cc)+1)], [0 0], 'r--', 'LineWidth',2)
+            hold off
+            xlabel('Frequencies (Hz)')
+            ylabel('Coherence')
+        end
+    end
+    pause(1)
 end
     
 save(fullfile(Path,'MotorModelsCoherency.mat'),'Lags','Delay','CoherencyT','CoherencyF','CellsPath','Win','TR');
@@ -1034,10 +1058,10 @@ Fs = 1/(TR.*10^-3);
 % Vectors of the acoustic features
 XPerStim = cell(1,length(Duration));
 for stim = 1:length(Duration)
-    XPerStim{stim} = DefaultVal.*ones(1,Fs .* (Delay + Duration(stim) + Delay).*10^-3);
+    XPerStim{stim} = DefaultVal.*ones(1,round(Fs .* (Delay + Duration(stim) + Delay).*10^-3));
     % Get ready the stim acoustic features that was sampled at 1000Hz
     FeatureVal = resample(BioSound{stim}.(sprintf('%s',Feature)), Fs, 1000);
-    XPerStim{stim}(Fs * Delay * 10^-3+(1:length(FeatureVal)))=FeatureVal; 
+    XPerStim{stim}(round(Fs * Delay * 10^-3)+(1:length(FeatureVal)))=FeatureVal; 
 end
 
 end
