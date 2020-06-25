@@ -7,8 +7,9 @@ OutFig = 1;%Set to 1 to see output data figures for each cell
 %% Listing datacells
 %Filename = '59834_20190611_SSS_1-97.mat';
 % Filename = '59834_20190610_SSS_1-130.mat';
-Path = '/Users/elie/Documents/LMCResults/';
+% Path = '/Users/elie/Documents/LMCResults/';
 % Path = '/Users/elie/Documents/ManipBats/LMC/ResultsFiles/';
+Path = '/Users/elie/Google Drive/BatmanData/';
 
 AllFiles = dir(fullfile(Path,'*.mat'));
 Files2run = zeros(length(AllFiles),1);
@@ -445,7 +446,7 @@ CoherencyT_WidthAtMaxPeak = nan(NCells,1);
 Coherence = cell(NCells,1);
 Coherence_low = cell(NCells,1);
 Coherence_up = cell(NCells,1);
-MaxCoherence = nan(NCells,1);
+MaxCoherence = nan(NCells,2);
 CoherencePeaks = cell(NCells,1);
 CoherencePeaksF = cell(NCells,1);
 FirstNonSigCoherenceFreq = nan(NCells,1);
@@ -569,10 +570,11 @@ for cc=437:NCells % parfor
     end
     
     %% Find if there are other peaks in coherence than the initial one
-    MaxCoherence(cc) = max(Coherence{cc});
+    MaxCoherence(cc,1) = max(Coherence{cc});
+    MaxCoherence(cc,2) = Freqs(Coherence{cc}==MaxCoherence(cc,1));
     [Coherence2ndPeaks, LocsC] = findpeaks(Coherence{cc}, 'MinPeakHeight', MinCoherence4peaks, 'MinPeakProminence',MinCoherence4peaks);
-    LocsC(Coherence2ndPeaks==MaxCoherence(cc))=[];% eliminate the peak that corresponds to max value
-    Coherence2ndPeaks(Coherence2ndPeaks==MaxCoherence(cc))=[]; % eliminate the peak that corresponds to max value
+    LocsC(Coherence2ndPeaks==MaxCoherence(cc,1))=[];% eliminate the peak that corresponds to max value
+    Coherence2ndPeaks(Coherence2ndPeaks==MaxCoherence(cc,1))=[]; % eliminate the peak that corresponds to max value
     Coherence2ndPeaks(Coherence_low{cc}(LocsC)<0)=[]; % eliminate peaks that are non-significant
     LocsC(Coherence_low{cc}(LocsC)<0)=[];% eliminate peaks that are non-significant
     CoherencePeaks{cc} = Coherence2ndPeaks;
@@ -632,7 +634,7 @@ for cc=437:NCells % parfor
     hold on
     plot(CoherencePeaksF{cc}, CoherencePeaks{cc}, 'go', 'MarkerSize',6,'MarkerFaceColor','g')
     hold on
-    plot(Freqs(Coherence{cc}==MaxCoherence(cc)), MaxCoherence(cc), 'ro', 'MarkerSize',6,'MarkerFaceColor','r')
+    plot(MaxCoherence(cc,2), MaxCoherence(cc,1), 'ro', 'MarkerSize',6,'MarkerFaceColor','r')
     MaxY = 0.4;
     ylim([-0.1 MaxY])
     text(Freqs(end)/3,0.8*MaxY,sprintf('Info = %.2f   InfoUp = %.2f    InfoLow = %.2f', Info(cc), Info_up(cc), Info_low(cc)))
@@ -658,7 +660,7 @@ for cc=437:NCells % parfor
         hold on
         plot(CoherencePeaksF{cc}, CoherencePeaks{cc}, 'go', 'MarkerSize',6,'MarkerFaceColor','g')
         hold on
-        plot(Freqs(Coherence{cc}==MaxCoherence(cc)), MaxCoherence(cc), 'ro', 'MarkerSize',6,'MarkerFaceColor','r')
+        plot(MaxCoherence(cc,2), MaxCoherence(cc,1), 'ro', 'MarkerSize',6,'MarkerFaceColor','r')
         hold off
         xlabel('Frequencies (Hz)')
         ylabel('Coherence')
@@ -670,10 +672,83 @@ end
 save(fullfile(Path,'MotorModelsCoherency.mat'),'Delay','CoherencyT','CoherencyT_filt','CoherencyT_xTimeDelay','CoherencyT_DelayAtzero','CoherencyT_WidthAtMaxPeak','Coherence','Coherence_low','Coherence_up','MaxCoherence','CoherencePeaks','CoherencePeaksF','FirstNonSigCoherenceFreq','Info','Info_low','Info_up','CellWithDurationIssue','CellsPath','Win','TR');
 
 
+%% Plots results of coherence calculations for the population
+load(fullfile(Path,'MotorModelsCoherency.mat'))
+figure()
+subplot(1,3,1)
+histogram(MaxCoherence,'BinWidth',0.005,'FaceColor','k')
+xlabel('Max coherence with sound amplitude')
+ylabel('Number of cells')
+hold on
+vline(quantile(MaxCoherence, 0.25),'b--')
+hold on
+vline(quantile(MaxCoherence, 0.5),'g--')
+hold on
+vline(quantile(MaxCoherence, 0.75),'b--')
 
+subplot(1,3,2)
+plot(Info,MaxCoherence, 'o','Color','k','MarkerSize',6,'MarkerFaceColor','k')
+xlabel('Information on Coherence with sound Amplitude(bits)')
+ylabel('Max coherence with sound amplitude')
 
+subplot(1,3,3)
+histogram(Info,'BinWidth',0.05,'FaceColor','k')
+xlabel('Information on Coherence with sound Amplitude(bits)')
+ylabel('Number of Cells')
+hold on
+vline(quantile(Info, 0.25),'b--')
+hold on
+vline(quantile(Info, 0.5),'g--')
+hold on
+vline(quantile(Info, 0.75),'b--')
 
+figure()
+subplot(2,3,1)
+plot(Info, CoherencyT_DelayAtzero, 'o','Color','k','MarkerSize',6,'MarkerFaceColor','k')
+xlabel('Information on Coherence with sound Amplitude(bits)')
+ylabel('Phase of coherency')
+hold on
+vline(quantile(Info, 0.25),'b--')
+hold on
+vline(quantile(Info, 0.5),'g--')
+hold on
+vline(quantile(Info, 0.75),'b--')
 
+subplot(2,3,2)
+plot(Info, CoherencyT_WidthAtMaxPeak, 'o','Color','k','MarkerSize',6,'MarkerFaceColor','k')
+xlabel('Information on Coherence with sound Amplitude(bits)')
+ylabel('Time resolution of Coherency (ms)')
+hold on
+vline(quantile(Info, 0.25),'b--')
+hold on
+vline(quantile(Info, 0.5),'g--')
+hold on
+vline(quantile(Info, 0.75),'b--')
+
+subplot(2,3,3)
+plot(Info, 1./FirstNonSigCoherenceFreq.*10^3, 'o','Color','k','MarkerSize',6,'MarkerFaceColor','k')
+xlabel('Information on Coherence with sound Amplitude(bits)')
+ylabel('Time resolution as per coherence (ms)')
+hold on
+vline(quantile(Info, 0.25),'b--')
+hold on
+vline(quantile(Info, 0.5),'g--')
+hold on
+vline(quantile(Info, 0.75),'b--')
+
+subplot(2,3,4)
+histogram(CoherencyT_DelayAtzero,'BinWidth',TR,'FaceColor','k')
+xlabel('Phase of coherency')
+ylabel('Number of calls')
+hold on
+vline(0, 'r:')
+
+subplot(2,3,6)
+plot(MaxCoherence(:,1), 1./FirstNonSigCoherenceFreq*10^3, 'o','Color','k','MarkerSize',6,'MarkerFaceColor','k')
+xlabel('Max Coherence with sound Amplitude')
+ylabel('Time resolution as per coherence (ms)')
+
+fprintf(1,'Cell with highest Info Value: %s', CellsPath(Info == max(Info)).name)
 
 
 %%         %% Run ridge GLM Poisson on acoustic features
