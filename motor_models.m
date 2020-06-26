@@ -7,11 +7,11 @@ OutFig = 1;%Set to 1 to see output data figures for each cell
 %% Listing datacells
 %Filename = '59834_20190611_SSS_1-97.mat';
 % Filename = '59834_20190610_SSS_1-130.mat';
-% Path = '/Users/elie/Documents/LMCResults/';
+Path = '/Users/elie/Documents/LMCResults/';
 % Path = '/Users/elie/Documents/ManipBats/LMC/ResultsFiles/';
-Path = '/Users/elie/Google Drive/BatmanData/';
+% Path = '/Users/elie/Google Drive/BatmanData/';
 
-AllFiles = dir(fullfile(Path,'*.mat'));
+AllFiles = dir(fullfile(Path,'59834*.mat'));
 Files2run = zeros(length(AllFiles),1);
 for ff=1:length(AllFiles)
     if length(strfind(AllFiles(ff).name, '_'))==3
@@ -442,6 +442,7 @@ CoherencyT_filt = cell(NCells,1);
 CoherencyT_xTimeDelay = cell(NCells,1);
 CoherencyT_DelayAtzero = nan(NCells,1);
 CoherencyT_WidthAtMaxPeak = nan(NCells,1);
+Freqs = cell(NCells,1);
 % CoherencyF = cell(NCells,1);
 Coherence = cell(NCells,1);
 Coherence_low = cell(NCells,1);
@@ -455,7 +456,7 @@ Info_low = nan(NCells,1);
 Info_up = nan(NCells,1);
 CellWithDurationIssue = [];
 
-for cc=437:NCells % parfor
+for cc=1:NCells % parfor
     fprintf(1, 'Cell %d/%d\n', cc, NCells)
     % load data
     Cell = load(fullfile(CellsPath(cc).folder,CellsPath(cc).name));
@@ -500,12 +501,12 @@ for cc=437:NCells % parfor
     XAmp = [XAmpPerStim{:}]';
     
     % Calculate coherence and coherency between the signals
-    [CoherencyT_unshifted, Freqs, CSR, CSR_up, CSR_low, stP] = multitapercoherence_JN([Y XAmp],nFFT,Fs);
+    [CoherencyT_unshifted, Freqs{cc}, CSR, CSR_up, CSR_low, stP] = multitapercoherence_JN([Y XAmp],nFFT,Fs);
     CoherencyT{cc} = fftshift(CoherencyT_unshifted);
     % Calculate the information on coherence
     %% normalize coherencies
     cStruct = struct;
-    Freqs4Info = Freqs;
+    Freqs4Info = Freqs{cc};
     Coherence{cc} = CSR.^2;
     Coherence4Info = Coherence{cc};
     Coherence_up{cc} = CSR_up.^2;
@@ -571,14 +572,14 @@ for cc=437:NCells % parfor
     
     %% Find if there are other peaks in coherence than the initial one
     MaxCoherence(cc,1) = max(Coherence{cc});
-    MaxCoherence(cc,2) = Freqs(Coherence{cc}==MaxCoherence(cc,1));
+    MaxCoherence(cc,2) = Freqs{cc}(Coherence{cc}==MaxCoherence(cc,1));
     [Coherence2ndPeaks, LocsC] = findpeaks(Coherence{cc}, 'MinPeakHeight', MinCoherence4peaks, 'MinPeakProminence',MinCoherence4peaks);
     LocsC(Coherence2ndPeaks==MaxCoherence(cc,1))=[];% eliminate the peak that corresponds to max value
     Coherence2ndPeaks(Coherence2ndPeaks==MaxCoherence(cc,1))=[]; % eliminate the peak that corresponds to max value
     Coherence2ndPeaks(Coherence_low{cc}(LocsC)<0)=[]; % eliminate peaks that are non-significant
     LocsC(Coherence_low{cc}(LocsC)<0)=[];% eliminate peaks that are non-significant
     CoherencePeaks{cc} = Coherence2ndPeaks;
-    CoherencePeaksF{cc} = Freqs(LocsC);
+    CoherencePeaksF{cc} = Freqs{cc}(LocsC);
     
     
     %% That was my own calculation without multitaper and jackknife
@@ -628,20 +629,20 @@ for cc=437:NCells % parfor
 %     plot(Freqs, Coherence_low{cc}, '--b','LineWidth',2)
 %     hold off
     subplot(1,3,2)
-    shadedErrorBar(Freqs, Coherence{cc},[(Coherence_up{cc}-Coherence{cc})'; (-Coherence_low{cc}+Coherence{cc})'], {'LineWidth',2,'Color','k'})
+    shadedErrorBar(Freqs{cc}, Coherence{cc},[(Coherence_up{cc}-Coherence{cc})'; (-Coherence_low{cc}+Coherence{cc})'], {'LineWidth',2,'Color','k'})
     hold on
-    plot([Freqs(1) Freqs(end)], [0 0], 'r--', 'LineWidth',2)
+    plot([Freqs{cc}(1) Freqs{cc}(end)], [0 0], 'r--', 'LineWidth',2)
     hold on
     plot(CoherencePeaksF{cc}, CoherencePeaks{cc}, 'go', 'MarkerSize',6,'MarkerFaceColor','g')
     hold on
     plot(MaxCoherence(cc,2), MaxCoherence(cc,1), 'ro', 'MarkerSize',6,'MarkerFaceColor','r')
     MaxY = 0.4;
     ylim([-0.1 MaxY])
-    text(Freqs(end)/3,0.8*MaxY,sprintf('Info = %.2f   InfoUp = %.2f    InfoLow = %.2f', Info(cc), Info_up(cc), Info_low(cc)))
+    text(Freqs{cc}(end)/3,0.8*MaxY,sprintf('Info = %.2f   InfoUp = %.2f    InfoLow = %.2f', Info(cc), Info_up(cc), Info_low(cc)))
     hold on
-    text(Freqs(end)/3,0.9*MaxY,sprintf('MaxCoherence = %.2f', MaxCoherence(cc)))
+    text(Freqs{cc}(end)/3,0.9*MaxY,sprintf('MaxCoherence = %.2f', MaxCoherence(cc)))
     hold on
-    text(Freqs(end)/3,0.85*MaxY,sprintf('FreqCutOff = %.2f Hz -> TimeResolution = %.2f ms', FirstNonSigCoherenceFreq(cc),1/FirstNonSigCoherenceFreq(cc)*10^3))
+    text(Freqs{cc}(end)/3,0.85*MaxY,sprintf('FreqCutOff = %.2f Hz -> TimeResolution = %.2f ms', FirstNonSigCoherenceFreq(cc),1/FirstNonSigCoherenceFreq(cc)*10^3))
     hold off
     xlabel('Frequencies (Hz)')
     ylabel('Coherence')
@@ -649,14 +650,14 @@ for cc=437:NCells % parfor
     
     if ~isempty(FirstNonSigCoherenceFreq(cc))
         if ~isempty(CoherencePeaksF{cc})
-            maxFreqInd = max(find(Freqs == max(CoherencePeaksF{cc})), find(FirstNonSigCoherenceFreq(cc)==Freqs)) +2;
+            maxFreqInd = max(find(Freqs{cc} == max(CoherencePeaksF{cc})), find(FirstNonSigCoherenceFreq(cc)==Freqs{cc})) +2;
         else
-            maxFreqInd = find(FirstNonSigCoherenceFreq(cc)==Freqs) +2;
+            maxFreqInd = find(FirstNonSigCoherenceFreq(cc)==Freqs{cc}) +2;
         end
         subplot(1,3,3)
-        shadedErrorBar(Freqs(1:maxFreqInd), Coherence{cc}(1:maxFreqInd),[(Coherence_up{cc}(1:maxFreqInd)-Coherence{cc}(1:maxFreqInd))'; (-Coherence_low{cc}(1:maxFreqInd)+Coherence{cc}(1:maxFreqInd))'], {'LineWidth',2,'Color','k'})
+        shadedErrorBar(Freqs{cc}(1:maxFreqInd), Coherence{cc}(1:maxFreqInd),[(Coherence_up{cc}(1:maxFreqInd)-Coherence{cc}(1:maxFreqInd))'; (-Coherence_low{cc}(1:maxFreqInd)+Coherence{cc}(1:maxFreqInd))'], {'LineWidth',2,'Color','k'})
         hold on
-        plot([Freqs(1) Freqs(maxFreqInd)], [0 0], 'r--', 'LineWidth',2)
+        plot([Freqs{cc}(1) Freqs{cc}(maxFreqInd)], [0 0], 'r--', 'LineWidth',2)
         hold on
         plot(CoherencePeaksF{cc}, CoherencePeaks{cc}, 'go', 'MarkerSize',6,'MarkerFaceColor','g')
         hold on
@@ -666,10 +667,12 @@ for cc=437:NCells % parfor
         ylabel('Coherence')
     end
 %     keyboard
-    pause(1)
+    if Info(cc)>2
+        pause(1)
+    end
 end
     
-save(fullfile(Path,'MotorModelsCoherency.mat'),'Delay','CoherencyT','CoherencyT_filt','CoherencyT_xTimeDelay','CoherencyT_DelayAtzero','CoherencyT_WidthAtMaxPeak','Coherence','Coherence_low','Coherence_up','MaxCoherence','CoherencePeaks','CoherencePeaksF','FirstNonSigCoherenceFreq','Info','Info_low','Info_up','CellWithDurationIssue','CellsPath','Win','TR');
+save(fullfile(Path,'MotorModelsCoherency.mat'),'Delay','CoherencyT','CoherencyT_filt','CoherencyT_xTimeDelay','CoherencyT_DelayAtzero','CoherencyT_WidthAtMaxPeak','Freqs','Coherence','Coherence_low','Coherence_up','MaxCoherence','CoherencePeaks','CoherencePeaksF','FirstNonSigCoherenceFreq','Info','Info_low','Info_up','CellWithDurationIssue','CellsPath','Win','TR');
 
 
 %% Plots results of coherence calculations for the population
