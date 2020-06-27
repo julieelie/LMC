@@ -668,7 +668,7 @@ for cc=1:NCells % parfor
     end
 %     keyboard
     if Info(cc)>2
-        pause(1)
+        keyboard
     end
 end
     
@@ -676,21 +676,25 @@ save(fullfile(Path,'MotorModelsCoherency.mat'),'Delay','CoherencyT','CoherencyT_
 
 
 %% Plots results of coherence calculations for the population
-load(fullfile(Path,'MotorModelsCoherency.mat'))
-figure()
+% load(fullfile(Path,'MotorModelsCoherency.mat'))
+figure(1)
+clf
 subplot(1,3,1)
-histogram(MaxCoherence,'BinWidth',0.005,'FaceColor','k')
+histogram(MaxCoherence(:,1),'BinWidth',0.005,'FaceColor','k')
 xlabel('Max coherence with sound amplitude')
 ylabel('Number of cells')
 hold on
-vline(quantile(MaxCoherence, 0.25),'b--')
+v=vline(quantile(MaxCoherence(:,1), 0.25),'b--');
+v.LineWidth = 2;
 hold on
-vline(quantile(MaxCoherence, 0.5),'g--')
+v=vline(quantile(MaxCoherence(:,1), 0.5),'g--');
+v.LineWidth = 2;
 hold on
-vline(quantile(MaxCoherence, 0.75),'b--')
+v=vline(quantile(MaxCoherence(:,1), 0.75),'b--');
+v.LineWidth = 2;
 
 subplot(1,3,2)
-plot(Info,MaxCoherence, 'o','Color','k','MarkerSize',6,'MarkerFaceColor','k')
+plot(Info,MaxCoherence(:,1), 'o','Color','k','MarkerSize',6,'MarkerFaceColor','k')
 xlabel('Information on Coherence with sound Amplitude(bits)')
 ylabel('Max coherence with sound amplitude')
 
@@ -699,57 +703,105 @@ histogram(Info,'BinWidth',0.05,'FaceColor','k')
 xlabel('Information on Coherence with sound Amplitude(bits)')
 ylabel('Number of Cells')
 hold on
-vline(quantile(Info, 0.25),'b--')
+v=vline(quantile(Info, 0.25),'b--');
+v.LineWidth = 2;
 hold on
-vline(quantile(Info, 0.5),'g--')
+v=vline(quantile(Info, 0.5),'g--');
+v.LineWidth = 2;
 hold on
-vline(quantile(Info, 0.75),'b--')
+v=vline(quantile(Info, 0.75),'b--');
+v.LineWidth = 2;
 
-figure()
-subplot(2,3,1)
+figure(2)
+clf
+subplot(2,4,1)
 plot(Info, CoherencyT_DelayAtzero, 'o','Color','k','MarkerSize',6,'MarkerFaceColor','k')
 xlabel('Information on Coherence with sound Amplitude(bits)')
-ylabel('Phase of coherency')
+ylabel('Phase of coherency (ms)')
 hold on
-vline(quantile(Info, 0.25),'b--')
+v=vline(quantile(Info, 0.25),'b--');
+v.LineWidth = 2;
 hold on
-vline(quantile(Info, 0.5),'g--')
+v=vline(quantile(Info, 0.5),'g--');
+v.LineWidth = 2;
 hold on
-vline(quantile(Info, 0.75),'b--')
+v=vline(quantile(Info, 0.75),'b--');
+v.LineWidth = 2;
+hold on
+h=hline(0,'r--');
+h.LineWidth = 2;
 
-subplot(2,3,2)
+subplot(2,4,2)
 plot(Info, CoherencyT_WidthAtMaxPeak, 'o','Color','k','MarkerSize',6,'MarkerFaceColor','k')
 xlabel('Information on Coherence with sound Amplitude(bits)')
 ylabel('Time resolution of Coherency (ms)')
 hold on
-vline(quantile(Info, 0.25),'b--')
+v=vline(quantile(Info, 0.25),'b--');
+v.LineWidth = 2;
 hold on
-vline(quantile(Info, 0.5),'g--')
+v=vline(quantile(Info, 0.5),'g--');
+v.LineWidth = 2;
 hold on
-vline(quantile(Info, 0.75),'b--')
+v=vline(quantile(Info, 0.75),'b--');
+v.LineWidth = 2;
 
-subplot(2,3,3)
-plot(Info, 1./FirstNonSigCoherenceFreq.*10^3, 'o','Color','k','MarkerSize',6,'MarkerFaceColor','k')
+subplot(2,4,3)
+plot(Info, FirstNonSigCoherenceFreq, 'o','Color','k','MarkerSize',6,'MarkerFaceColor','k')
 xlabel('Information on Coherence with sound Amplitude(bits)')
-ylabel('Time resolution as per coherence (ms)')
+ylabel('Max significant Frequency (Hz)')
 hold on
-vline(quantile(Info, 0.25),'b--')
+v=vline(quantile(Info, 0.25),'b--');
+v.LineWidth = 2;
 hold on
-vline(quantile(Info, 0.5),'g--')
+v=vline(quantile(Info, 0.5),'g--');
+v.LineWidth = 2;
 hold on
-vline(quantile(Info, 0.75),'b--')
+v=vline(quantile(Info, 0.75),'b--');
+v.LineWidth = 2;
 
-subplot(2,3,4)
-histogram(CoherencyT_DelayAtzero,'BinWidth',TR,'FaceColor','k')
-xlabel('Phase of coherency')
-ylabel('Number of calls')
+subplot(2,4,4)
+plot(Info, MaxCoherence(:,2), 'o','Color','k','MarkerSize',6,'MarkerFaceColor','k')
+xlabel('Information on Coherence with sound Amplitude(bits)')
+ylabel('Frequency of Max Coherence (Hz)')
 hold on
-vline(0, 'r:')
+v=vline(quantile(Info, 0.25),'b--');
+v.LineWidth = 2;
+hold on
+v=vline(quantile(Info, 0.5),'g--');
+v.LineWidth = 2;
+hold on
+v=vline(quantile(Info, 0.75),'b--');
+v.LineWidth = 2;
+% Some points with very low values of info have high values of frequency of
+% Max coherence, keep the plot focused on the majority of points
+ylim([0 50])
 
-subplot(2,3,6)
-plot(MaxCoherence(:,1), 1./FirstNonSigCoherenceFreq*10^3, 'o','Color','k','MarkerSize',6,'MarkerFaceColor','k')
-xlabel('Max Coherence with sound Amplitude')
-ylabel('Time resolution as per coherence (ms)')
+subplot(2,4,5)
+histogram(CoherencyT_DelayAtzero,'BinWidth',TR/2,'FaceColor','k')
+xlabel('Phase of coherency (ms)')
+ylabel('Number of cells')
+hold on
+v=vline(0, 'r:');
+v.LineWidth = 2;
+
+subplot(2,4,6)
+histogram(CoherencyT_WidthAtMaxPeak,'BinWidth',TR/2,'FaceColor','k')
+xlabel('Time resolution of Coherency (ms)')
+ylabel('Number of cells')
+
+
+subplot(2,4,7)
+histogram(FirstNonSigCoherenceFreq, 'BinWidth',ceil(nFFT/Nyquist),'FaceColor','k')
+xlabel('Max significant Frequency (Hz)')
+ylabel('Number of Cells')
+
+subplot(2,4,8)
+histogram(MaxCoherence(:,2), 'BinWidth',ceil(nFFT/Nyquist),'FaceColor','k')
+% Some points with very low values of info have high values of frequency of
+% Max coherence, keep the plot focused on the majority of points
+xlim([0 50])
+xlabel('Frequency of Max Coherence (Hz)')
+ylabel('Number of Cells')
 
 fprintf(1,'Cell with highest Info Value: %s', CellsPath(Info == max(Info)).name)
 
