@@ -805,7 +805,14 @@ ylabel('Number of Cells')
 
 fprintf(1,'Cell with highest Info Value: %s', CellsPath(Info == max(Info)).name)
 
+% Plot the values of the secondary peaks found for some cells
+figure(4)
+scatter([CoherencePeaksF{:}], [CoherencePeaks{:}],10, 'filled', 'MarkerEdgeColor', 'k', 'MarkerFaceColor','k')
+xlabel('Frequency of secondary peaks in Coherence')
+ylabel('Values of Coherence')
 
+
+%% Restrict 
 %%         %% Run ridge GLM Poisson on acoustic features
 
 % spectral mean predicting Y
