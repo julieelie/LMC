@@ -476,10 +476,10 @@ ylabel('Number of cells with Info > 1bit')
 % Assumption of stationarity over time
 
 % Define the time resolution at which neural density estimates should be calculated
-TRs = [1 5 10 15 20 30 40 50]; % time in ms
+TRs = [75 100 125 150 175 200]; % time in ms
 
 
-Win =300;%value in ms for the duration of the snippet of sound which
+Win =300; %value in ms for the duration of the snippet of sound which
 % acoustic features are used to predict the neural response at a given time
 % t. This will be the size of the xaxis of the MRF.
 
@@ -499,7 +499,7 @@ ParamModel.Alpha=0.001; % STRFs are easier to interpret using ridge than using L
 %% Running through cells to find the optimal time resolution of the neural response for acoustic feature predicion from the neural response
 % here we use a ridge regularization with an MSE optimization on the
 % prediction of spike rate
-NCells = length(CellsPath);
+NCells = sum(GoodInfo);
 MSE_TR_Amp = cell(NCells,1);
 MSE_TR_SpecMean = cell(NCells,1);
 MSE_TR_Sal = cell(NCells,1);
@@ -509,19 +509,19 @@ Ypredict_Sal = cell(NCells,1);
 Yval = cell(NCells,1);
 MeanYTrain = cell(NCells,1);
 TicToc = cell(NCells,1);
-load(fullfile(Path,'MotorModelsRidge.mat'));
+% load(fullfile(Path,'MotorModelsRidge.mat'));
 
 for cc=1:NCells % parfor
     if ~isempty(MSE_TR_Amp{cc}) && ~isnan(MSE_TR_Amp{cc}(end)) && ~isempty(Yval{cc}) % This cell was already calculated
         fprintf(1, 'Cell %d/%d Already calculated\n',cc,NCells)
         continue
     end 
-    Cell = load(fullfile(CellsPath(cc).folder,CellsPath(cc).name));
+    Cell = load(fullfile(CellsPath(GoodInfo(cc)).folder,CellsPath(GoodInfo(cc)).name));
     
     
     % Number of vocalizations in the dataset
     if ~isfield(Cell, 'What')
-        fprintf(1,'*** . Problem with Cell %d, no what field!! ****\n', cc)
+        fprintf(1,'*** . Problem with Cell %s, no what field!! ****\n', CellsPath(GoodInfo(cc)).name)
         continue
     end
     IndVoc = find(contains(Cell.What, 'Voc') .* (Cell.Duration>20)); % No saliency calculated when duration <20ms
@@ -560,15 +560,15 @@ for cc=1:NCells % parfor
     
     %% Variable organization and running models
     MSE_TR_Amp{cc} = nan(1,length(TRs));
-        MSE_TR_SpecMean{cc} = nan(1,length(TRs));
-        MSE_TR_Sal{cc} =  nan(1,length(TRs));
-        MeanYTrain{cc} = nan(1,length(TRs));
-        Ypredict_Amp{cc} = cell(1,length(TRs));
-        Ypredict_SpecMean{cc} = cell(1,length(TRs));
-        Ypredict_Sal{cc} =  cell(1,length(TRs));
-        Yval{cc} =  cell(1,length(TRs));
-        TicToc{cc} = nan(1,length(TRs));
-        Tr1=1;
+    MSE_TR_SpecMean{cc} = nan(1,length(TRs));
+    MSE_TR_Sal{cc} =  nan(1,length(TRs));
+    MeanYTrain{cc} = nan(1,length(TRs));
+    Ypredict_Amp{cc} = cell(1,length(TRs));
+    Ypredict_SpecMean{cc} = cell(1,length(TRs));
+    Ypredict_Sal{cc} =  cell(1,length(TRs));
+    Yval{cc} =  cell(1,length(TRs));
+    TicToc{cc} = nan(1,length(TRs));
+    Tr1=1;
     
     %%
     for tr = Tr1:length(TRs)
@@ -763,7 +763,7 @@ for cc=1:NCells % parfor
     end
 %     keyboard
 end
-save(fullfile(Path,'MotorModelsRidge.mat'));
+save(fullfile(Path,'MotorModelsRidge.mat'), 'NCells', 'MSE_TR_Amp', 'MSE_TR_SpecMean','MSE_TR_Sal','Ypredict_Amp','Ypredict_SpecMean','Ypredict_Sal','Yval','MeanYTrain','TicToc','CellsPath');
 
 
 %% Plot the results of the time resolution optimization using ridge regression
