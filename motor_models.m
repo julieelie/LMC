@@ -667,9 +667,9 @@ for cc=1:NCells % parfor
         ylabel('Coherence')
     end
 %     keyboard
-    if Info(cc)>2
-        keyboard
-    end
+%     if Info(cc)>2
+%         keyboard
+%     end
 end
     
 save(fullfile(Path,'MotorModelsCoherency.mat'),'Delay','CoherencyT','CoherencyT_filt','CoherencyT_xTimeDelay','CoherencyT_DelayAtzero','CoherencyT_WidthAtMaxPeak','Freqs','Coherence','Coherence_low','Coherence_up','MaxCoherence','CoherencePeaks','CoherencePeaksF','FirstNonSigCoherenceFreq','Info','Info_low','Info_up','CellWithDurationIssue','CellsPath','Win','TR');
