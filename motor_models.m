@@ -578,8 +578,8 @@ for cc=1:NCells % parfor
     Coherence2ndPeaks(Coherence2ndPeaks==MaxCoherence(cc,1))=[]; % eliminate the peak that corresponds to max value
     Coherence2ndPeaks(Coherence_low{cc}(LocsC)<0)=[]; % eliminate peaks that are non-significant
     LocsC(Coherence_low{cc}(LocsC)<0)=[];% eliminate peaks that are non-significant
-    CoherencePeaks{cc} = Coherence2ndPeaks;
-    CoherencePeaksF{cc} = Freqs{cc}(LocsC);
+    CoherencePeaks{cc} = Coherence2ndPeaks';
+    CoherencePeaksF{cc} = Freqs{cc}(LocsC)';
     
     
     %% That was my own calculation without multitaper and jackknife
@@ -672,7 +672,7 @@ for cc=1:NCells % parfor
 %     end
 end
     
-save(fullfile(Path,'MotorModelsCoherency.mat'),'Delay','CoherencyT','CoherencyT_filt','CoherencyT_xTimeDelay','CoherencyT_DelayAtzero','CoherencyT_WidthAtMaxPeak','Freqs','Coherence','Coherence_low','Coherence_up','MaxCoherence','CoherencePeaks','CoherencePeaksF','FirstNonSigCoherenceFreq','Info','Info_low','Info_up','CellWithDurationIssue','CellsPath','Win','TR');
+save(fullfile(Path,'MotorModelsCoherency.mat'),'Delay','CoherencyT','CoherencyT_filt','CoherencyT_xTimeDelay','CoherencyT_DelayAtzero','CoherencyT_WidthAtMaxPeak','Freqs','Coherence','Coherence_low','Coherence_up','MaxCoherence','CoherencePeaks','CoherencePeaksF','FirstNonSigCoherenceFreq','Info','Info_low','Info_up','CellWithDurationIssue','CellsPath','TR','MinCoherence4peaks');
 
 
 %% Plots results of coherence calculations for the population
@@ -810,6 +810,7 @@ figure(4)
 scatter([CoherencePeaksF{:}], [CoherencePeaks{:}],10, 'filled', 'MarkerEdgeColor', 'k', 'MarkerFaceColor','k')
 xlabel('Frequency of secondary peaks in Coherence')
 ylabel('Values of Coherence')
+
 
 
 %% Restrict 
