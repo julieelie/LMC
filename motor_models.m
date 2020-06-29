@@ -559,7 +559,7 @@ for cc=1:NCells % parfor
     [z,p,k] = butter(6,FirstNonSigCoherenceFreq(cc)/(Fs/2),'low');
     sos_low = zp2sos(z,p,k);
     CoherencyT_filt{cc}=filtfilt(sos_low,1,CoherencyT{cc});
-    CoherencyT_xTimeDelay{cc} = -(((nFFT/2)-1)/Fs*10^3):TR:((nFFT*10^3)/2)/Fs; % Corresponding values in ms of the Delay for each value of CoherencyT
+    CoherencyT_xTimeDelay{cc} = -(((nFFT/2)/Fs)*10^3):TR:(((nFFT/2-1))/Fs)*10^3; % Corresponding values in ms of the Delay for each value of CoherencyT
     [P,Locs] = findpeaks(CoherencyT_filt{cc});
     if ~isempty(Locs)
         [P,IndM] = max(P);
