@@ -180,7 +180,9 @@ for cc=1:NCells % parfor
     LocsC(Coherence_low{cc}(LocsC)<0)=[];% eliminate peaks that are non-significant
     CoherencePeaks{cc} = Coherence2ndPeaks';
     CoherencePeaksF{cc} = Freqs{cc}(LocsC)';
-    SecondCoherenceFreqCutOff(cc) = max(CoherencePeaksF{cc});
+    if ~isempty(CoherencePeaksF{cc})
+        SecondCoherenceFreqCutOff(cc) = max(CoherencePeaksF{cc});
+    end
     
     
     %% That was my own calculation without multitaper and jackknife
