@@ -436,8 +436,11 @@ ylabel('Values of Coherence')
 
 
 
-% Restrict the dataset to Cells with Info >1 bit
+% Restrict the dataset to Cells with Info >1 bit and order cells by
+% decreasing values of info
 GoodInfo = find(Info>=1);
+[~,I] = sort(Info(GoodInfo),'descend');
+GoodInfo = GoodInfo(I);
 % plot again the histograms for this subset of cells
 figure(5)
 clf
@@ -951,6 +954,7 @@ suplabel('R2 Ridge regression models','t')
 %% Run ridge GLM Poisson on acoustic features for cells with high values of Info on coherence (Channel capacity with Amplitude)
 %load(fullfile(Path,'MotorModelsAllCells'),'MotorModels','CellsPath', 'GoodInfo');
 NCells = length(GoodInfo);
+
 MotorModels = cell(NCells,1);
 parfor cc=1:NCells
     if ~isempty(MotorModels{cc}) % This one was already calculated
