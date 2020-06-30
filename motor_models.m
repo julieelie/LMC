@@ -773,16 +773,16 @@ save(fullfile(Path,'MotorModelsRidge.mat'), 'NCells', 'MSE_TR_Amp', 'MSE_TR_Spec
 %% Plot the results of the time resolution optimization using ridge regression
 load(fullfile(Path,'MotorModelsRidge.mat'));
 % Plot the zscored average MSE accross cells % This does not make sense
-% anymore we're already taking best values
+% anymore we're already taking best values of Time resolution
 % MSE_TR_Amp_zs = nan(NCells,size(TRs,2));
 % MSE_TR_SpecMean_zs = nan(NCells,size(TRs,2));
 % MSE_TR_Sal_zs = nan(NCells,size(TRs,2));
 % also the MSE as a proportion of the average rate of the training correspoding portion
 % of the validating set (same temporal resolution)
-MSE0 = nan(NCells,size(TRs,2));
-R2_TR_Amp = nan(NCells,size(TRs,2));
-R2_TR_SpecMean = nan(NCells,size(TRs,2));
-R2_TR_Sal = nan(NCells,size(TRs,2));
+MSE0 = nan(NCells,2);
+R2_TR_Amp = nan(NCells,2);
+R2_TR_SpecMean = nan(NCells,2);
+R2_TR_Sal = nan(NCells,2);
 for cc=1:NCells
     if isempty(MSE_TR_Amp{cc})
         continue
@@ -851,30 +851,101 @@ end
 % ylabel('R2')
 % hold off
 
+% Plot MSE
 figure()
+
+ColorCode = get(groot, 'DefaultAxesColorOrder');
 subplot(1,3,1)
-imagesc(R2_TR_Amp)
-set(gca,'XTickLabel', TRs(cc,:))
+for cc=1:NCells
+    if rem(cc,size(ColorCode,1))
+        plot(TRs{cc}, MSE_TR_Amp{cc}, 'o-','MarkerSize',5,'MarkerFaceColor',ColorCode(rem(cc,size(ColorCode,1)),:),'MarkerEdgeColor',ColorCode(rem(cc,size(ColorCode,1)),:), 'Color',ColorCode(rem(cc,size(ColorCode,1)),:));
+    else
+        plot(TRs{cc}, MSE_TR_Amp{cc}, 'o-','MarkerSize',5,'MarkerFaceColor',ColorCode(end,:),'MarkerEdgeColor',ColorCode(end,:), 'Color',ColorCode(end,:));
+    end
+    hold on
+end
+h=hline(0,'k:');
+h.LineWidth = 2;
 xlabel('Time Resolution (ms)')
-ylabel('R2 Amplitude')
-colorbar()
-caxis([0 0.05])
+ylabel('MSE Amplitude')
+
 
 subplot(1,3,2)
-imagesc(R2_TR_SpecMean)
-set(gca,'XTickLabel', TRs(cc,:))
+for cc=1:NCells
+    if rem(cc,size(ColorCode,1))
+        plot(TRs{cc}, MSE_TR_SpecMean{cc}, 'o-','MarkerSize',5,'MarkerFaceColor',ColorCode(rem(cc,size(ColorCode,1)),:),'MarkerEdgeColor',ColorCode(rem(cc,size(ColorCode,1)),:), 'Color',ColorCode(rem(cc,size(ColorCode,1)),:));
+    else
+        plot(TRs{cc}, MSE_TR_SpecMean{cc}, 'o-','MarkerSize',5,'MarkerFaceColor',ColorCode(end,:),'MarkerEdgeColor',ColorCode(end,:),'Color',ColorCode(end,:));
+    end
+    hold on
+end
+h=hline(0,'k:');
+h.LineWidth = 2;
 xlabel('Time Resolution (ms)')
-ylabel('R2 SpectralMean')
-colorbar()
-caxis([0 0.05])
+ylabel('MSE SpectralMean')
 
 subplot(1,3,3)
-imagesc(R2_TR_Sal)
-set(gca,'XTickLabel', TRs(cc,:))
+for cc=1:NCells
+    if rem(cc,size(ColorCode,1))
+        plot(TRs{cc}, MSE_TR_Sal{cc}, 'o-','MarkerSize',5,'MarkerFaceColor',ColorCode(rem(cc,size(ColorCode,1)),:),'MarkerEdgeColor',ColorCode(rem(cc,size(ColorCode,1)),:), 'Color',ColorCode(rem(cc,size(ColorCode,1)),:));
+    else
+        plot(TRs{cc}, MSE_TR_Sal{cc}, 'o-','MarkerSize',5,'MarkerFaceColor',ColorCode(end,:),'MarkerEdgeColor',ColorCode(end,:),'Color',ColorCode(end,:));
+    end
+    hold on
+end
+h=hline(0,'k:');
+h.LineWidth = 2;
+xlabel('Time Resolution (ms)')
+ylabel('MSE Saliency')
+
+suplabel('Mean Squared Error Ridge regression models','t')
+
+figure()
+ColorCode = get(groot, 'DefaultAxesColorOrder');
+subplot(1,3,1)
+for cc=1:NCells
+    if rem(cc,size(ColorCode,1))
+        plot(TRs{cc}, R2_TR_Amp(cc,:), 'o-','MarkerSize',5,'MarkerFaceColor',ColorCode(rem(cc,size(ColorCode,1)),:),'MarkerEdgeColor',ColorCode(rem(cc,size(ColorCode,1)),:), 'Color',ColorCode(rem(cc,size(ColorCode,1)),:));
+    else
+        plot(TRs{cc}, R2_TR_Amp(cc,:), 'o-','MarkerSize',5,'MarkerFaceColor',ColorCode(end,:),'MarkerEdgeColor',ColorCode(end,:), 'Color',ColorCode(end,:));
+    end
+    hold on
+end
+h=hline(0,'k:');
+h.LineWidth = 2;
+xlabel('Time Resolution (ms)')
+ylabel('R2 Amplitude')
+
+
+subplot(1,3,2)
+for cc=1:NCells
+    if rem(cc,size(ColorCode,1))
+        plot(TRs{cc}, R2_TR_SpecMean(cc,:), 'o-','MarkerSize',5,'MarkerFaceColor',ColorCode(rem(cc,size(ColorCode,1)),:),'MarkerEdgeColor',ColorCode(rem(cc,size(ColorCode,1)),:), 'Color',ColorCode(rem(cc,size(ColorCode,1)),:));
+    else
+        plot(TRs{cc}, R2_TR_SpecMean(cc,:), 'o-','MarkerSize',5,'MarkerFaceColor',ColorCode(end,:),'MarkerEdgeColor',ColorCode(end,:),'Color',ColorCode(end,:));
+    end
+    hold on
+end
+h=hline(0,'k:');
+h.LineWidth = 2;
+xlabel('Time Resolution (ms)')
+ylabel('R2 SpectralMean')
+
+subplot(1,3,3)
+for cc=1:NCells
+    if rem(cc,size(ColorCode,1))
+        plot(TRs{cc}, R2_TR_Sal(cc,:), 'o-','MarkerSize',5,'MarkerFaceColor',ColorCode(rem(cc,size(ColorCode,1)),:),'MarkerEdgeColor',ColorCode(rem(cc,size(ColorCode,1)),:), 'Color',ColorCode(rem(cc,size(ColorCode,1)),:));
+    else
+        plot(TRs{cc}, R2_TR_Sal(cc,:), 'o-','MarkerSize',5,'MarkerFaceColor',ColorCode(end,:),'MarkerEdgeColor',ColorCode(end,:),'Color',ColorCode(end,:));
+    end
+    hold on
+end
+h=hline(0,'k:');
+h.LineWidth = 2;
 xlabel('Time Resolution (ms)')
 ylabel('R2 Saliency')
-colorbar()
-caxis([0 0.05])
+
+suplabel('R2 Ridge regression models','t')
 
 
 
