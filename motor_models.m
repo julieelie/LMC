@@ -770,7 +770,7 @@ for cc=1:NCells % parfor
     end
 %     keyboard
 end
-save(fullfile(Path,'MotorModelsRidge.mat'), 'NCells', 'MSE_TR_Amp', 'MSE_TR_SpecMean','MSE_TR_Sal','Ypredict_Amp','Ypredict_SpecMean','Ypredict_Sal','Yval','MeanYTrain','TicToc','CellsPath','TRs');
+save(fullfile(Path,'MotorModelsRidge.mat'), 'NCells', 'MSE_TR_Amp', 'MSE_TR_SpecMean','MSE_TR_Sal','Ypredict_Amp','Ypredict_SpecMean','Ypredict_Sal','Yval','MeanYTrain','TicToc','CellsPath','TRs', 'GoodInfo');
 
 
 %% Plot the results of the time resolution optimization using ridge regression
@@ -952,11 +952,11 @@ suplabel('R2 Ridge regression models','t')
 
 
 %% Run ridge GLM Poisson on acoustic features for cells with high values of Info on coherence (Channel capacity with Amplitude)
-%load(fullfile(Path,'MotorModelsAllCells'),'MotorModels','CellsPath', 'GoodInfo');
+%load(fullfile(Path,'MotorModelsGLM'),'MotorModels','CellsPath', 'GoodInfo');
 NCells = length(GoodInfo);
 
 MotorModels = cell(NCells,1);
-parfor cc=1:NCells
+for cc=1:NCells
     if ~isempty(MotorModels{cc}) % This one was already calculated
         fprintf(1, 'Cell %d/%d Already calculated\n',cc,NCells)
         continue
@@ -1045,14 +1045,14 @@ parfor cc=1:NCells
         %% Run ridge GLM Poisson on acoustic features
     
         % spectral mean predicting Y
-        [BSpecMean_local, FitInfo_SpecMean]=lassoglm([XAmpTrain XSpecMeanTrain],Y_local,ParamModel.DISTR,'Alpha', ParamModel.Alpha,'Link',ParamModel.LINK,'NumLambda',ParamModel.NUMLAMBDA,'Standardize',1,'LambdaRatio',ParamModel.LAMBDARATIO);
+        [BSpecMean_local, FitInfo_SpecMean]=lassoglm([XAmp XSpecMean],Y_local,ParamModel.DISTR,'Alpha', ParamModel.Alpha,'Link',ParamModel.LINK,'NumLambda',ParamModel.NUMLAMBDA,'Standardize',1,'LambdaRatio',ParamModel.LAMBDARATIO);
         % find the model with the minimum of deviance (best lambda)
         [BestDevSpecMean(tr),BestModSpecMean] = min(FitInfo_SpecMean.Deviance);
         BSpecMean(tr,2:end) = BSpecMean_local(:,BestModSpecMean);
         BSpecMean(tr,1) = FitInfo_SpecMean.Intercept(BestModSpecMean);
         
         % pitch saliency predicting Y
-        [BSal_local, FitInfo_Sal]=lassoglm([XAmpTrain XSaliencyTrain],Y_local,ParamModel.DISTR,'Alpha', ParamModel.Alpha,'Link',ParamModel.LINK,'NumLambda',ParamModel.NUMLAMBDA,'Standardize',1,'LambdaRatio',ParamModel.LAMBDARATIO);
+        [BSal_local, FitInfo_Sal]=lassoglm([XAmp XSaliency],Y_local,ParamModel.DISTR,'Alpha', ParamModel.Alpha,'Link',ParamModel.LINK,'NumLambda',ParamModel.NUMLAMBDA,'Standardize',1,'LambdaRatio',ParamModel.LAMBDARATIO);
         % find the model with the minimum of deviance (best lambda)
         [BestDevSal(tr),BestModSal] = min(FitInfo_Sal.Deviance);
         BSal(tr,2:end) = BSal_local(:,BestModSal);
@@ -1065,7 +1065,7 @@ parfor cc=1:NCells
         %         [BestDevSpecMed(tr,dd),BestModSpecMed] = min(FitInfo_SpecMean.Deviance);
         
         % amplitude predicting Y, is a null model for the former 2 models
-        [BAmp_local, FitInfo_Amp]=lassoglm(XAmpTrain,Y_local,ParamModel.DISTR,'Alpha', ParamModel.Alpha,'Link',ParamModel.LINK,'NumLambda',ParamModel.NUMLAMBDA,'Standardize',1,'LambdaRatio',ParamModel.LAMBDARATIO);
+        [BAmp_local, FitInfo_Amp]=lassoglm(XAmp,Y_local,ParamModel.DISTR,'Alpha', ParamModel.Alpha,'Link',ParamModel.LINK,'NumLambda',ParamModel.NUMLAMBDA,'Standardize',1,'LambdaRatio',ParamModel.LAMBDARATIO);
         % find the model with the minimum of deviance (best lambda)
         [BestDevAmp(tr),BestModAmp] = min(FitInfo_Amp.Deviance);
         
@@ -1073,7 +1073,7 @@ parfor cc=1:NCells
         BAmp(tr,1) = FitInfo_Amp.Intercept(BestModAmp);
         
         % null model
-        MDL_null=fitglm(ones(size(XAmpTrain,1),1),Y_local,'Distribution',ParamModel.DISTR,'Link',ParamModel.LINK,'Intercept',false);
+        MDL_null=fitglm(ones(size(XAmp,1),1),Y_local,'Distribution',ParamModel.DISTR,'Link',ParamModel.LINK,'Intercept',false);
         % find the model with the minimum of deviance (best lambda)
         %     [BestDevNull(tr),BestModNull] = min(FitInfo_Amp.Deviance);
         %
@@ -1085,7 +1085,7 @@ parfor cc=1:NCells
 
         if DatFig
             TimeBinsX = -Delay : (Win-Delay);
-            figure()
+            figure(21)
             plot(TimeBinsX,BSpecMean(:,BestModSpecMean),'LineStyle','-', 'LineWidth',2,'DisplayName', sprintf('Spectral Mean Dev = %.1f',BestDevSpecMean(tr)))
             hold on
             plot(TimeBinsX,BSal(:,BestModSal),'LineStyle','-', 'LineWidth',2,'DisplayName', sprintf('Saliency Dev = %.1f',BestDevSal(tr)))
@@ -1109,7 +1109,7 @@ parfor cc=1:NCells
     end
     if DatFig
         
-        figure()
+        figure(22)
         ColorCode = get(groot, 'DefaultAxesColorOrder');
         subplot(1,2,1)
         plot(TRs{cc},BestDevSpecMean', 'Color',ColorCode(1,:), 'LineWidth',2)
@@ -1140,7 +1140,7 @@ parfor cc=1:NCells
         hold off
         
         
-        figure()
+        figure(23)
         subplot(1,2,1)
         plot(TRs{cc}, BestDevAmp-BestDevSpecMean , 'Color',ColorCode(1,:), 'LineWidth',2)
         hold on
@@ -1162,7 +1162,7 @@ parfor cc=1:NCells
         xlabel('Time resolution in ms')
         
         % Plotting betas
-        figure()
+        figure(24)
         subplot(2,3,1:3)
         bar(TRs{cc},exp([BNull BAmp(:,1) BSpecMean(:,1) BSal(:,1)])*1000)
         xlabel('Time resolution in ms')
@@ -1208,8 +1208,8 @@ parfor cc=1:NCells
     MotorModels{cc}.MeanY = MeanY;
         
 end
-%%
-save(fullfile(Path,'MotorModelsAllCells'),'MotorModels','CellsPath', 'GoodInfo');
+%
+save(fullfile(Path,'MotorModelsGLM'),'MotorModels','CellsPath', 'GoodInfo');
 
 %% Plot issues with no convergence
 load(fullfile(Path,'MotorModelsAllCells'),'MotorModels','CellsPath');
