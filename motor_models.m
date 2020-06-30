@@ -1045,6 +1045,7 @@ for cc=1:NCells
         %% Run ridge GLM Poisson on acoustic features
     
         % spectral mean predicting Y
+        fprintf(1,'Cell %d/%d Models with Time resolution %d ms (%d/%d): SpectralMean Model\n', cc,NCells,TR_local, tr, length(TRs{cc}));
         [BSpecMean_local, FitInfo_SpecMean]=lassoglm([XAmp XSpecMean],Y_local,ParamModel.DISTR,'Alpha', ParamModel.Alpha,'Link',ParamModel.LINK,'NumLambda',ParamModel.NUMLAMBDA,'Standardize',1,'LambdaRatio',ParamModel.LAMBDARATIO);
         % find the model with the minimum of deviance (best lambda)
         [BestDevSpecMean(tr),BestModSpecMean] = min(FitInfo_SpecMean.Deviance);
@@ -1052,6 +1053,7 @@ for cc=1:NCells
         BSpecMean(tr,1) = FitInfo_SpecMean.Intercept(BestModSpecMean);
         
         % pitch saliency predicting Y
+        fprintf(1,'Cell %d/%d Models with Time resolution %d ms (%d/%d): Saliency Model\n', cc,NCells,TR_local, tr, length(TRs{cc}));
         [BSal_local, FitInfo_Sal]=lassoglm([XAmp XSaliency],Y_local,ParamModel.DISTR,'Alpha', ParamModel.Alpha,'Link',ParamModel.LINK,'NumLambda',ParamModel.NUMLAMBDA,'Standardize',1,'LambdaRatio',ParamModel.LAMBDARATIO);
         % find the model with the minimum of deviance (best lambda)
         [BestDevSal(tr),BestModSal] = min(FitInfo_Sal.Deviance);
@@ -1065,6 +1067,7 @@ for cc=1:NCells
         %         [BestDevSpecMed(tr,dd),BestModSpecMed] = min(FitInfo_SpecMean.Deviance);
         
         % amplitude predicting Y, is a null model for the former 2 models
+        fprintf(1,'Cell %d/%d Models with Time resolution %d ms (%d/%d): Amplitude Model\n', cc,NCells,TR_local, tr, length(TRs{cc}));
         [BAmp_local, FitInfo_Amp]=lassoglm(XAmp,Y_local,ParamModel.DISTR,'Alpha', ParamModel.Alpha,'Link',ParamModel.LINK,'NumLambda',ParamModel.NUMLAMBDA,'Standardize',1,'LambdaRatio',ParamModel.LAMBDARATIO);
         % find the model with the minimum of deviance (best lambda)
         [BestDevAmp(tr),BestModAmp] = min(FitInfo_Amp.Deviance);
@@ -1073,6 +1076,7 @@ for cc=1:NCells
         BAmp(tr,1) = FitInfo_Amp.Intercept(BestModAmp);
         
         % null model
+        fprintf(1,'Cell %d/%d Models with Time resolution %d ms (%d/%d): Null Model\n', cc,NCells,TR_local, tr, length(TRs{cc}));
         MDL_null=fitglm(ones(size(XAmp,1),1),Y_local,'Distribution',ParamModel.DISTR,'Link',ParamModel.LINK,'Intercept',false);
         % find the model with the minimum of deviance (best lambda)
         %     [BestDevNull(tr),BestModNull] = min(FitInfo_Amp.Deviance);
