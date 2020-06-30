@@ -437,7 +437,7 @@ ylabel('Values of Coherence')
 
 
 % Restrict the dataset to Cells with Info >1 bit
-GoodInfo = Info>=1;
+GoodInfo = find(Info>=1);
 % plot again the histograms for this subset of cells
 figure(5)
 clf
@@ -477,10 +477,6 @@ ylabel('Number of cells with Info > 1bit')
 %% Motor Models parameters
 % Assumption of stationarity over time
 
-% Define the time resolution at which neural density estimates should be calculated
-TRs = [75 100 125 150 175 200]; % time in ms
-
-
 Win =300; %value in ms for the duration of the snippet of sound which
 % acoustic features are used to predict the neural response at a given time
 % t. This will be the size of the xaxis of the MRF.
@@ -501,7 +497,9 @@ ParamModel.Alpha=0.001; % STRFs are easier to interpret using ridge than using L
 %% Running through cells to find the optimal time resolution of the neural response for acoustic feature predicion from the neural response
 % here we use a ridge regularization with an MSE optimization on the
 % prediction of spike rate
-NCells = sum(GoodInfo);
+NCells = length(GoodInfo);
+% Define the time resolution at which neural density estimates should be calculated
+TRs = cell(NCells,1); % time in ms with first column being the optimal time according to coherency peak width and second column being the optimal time according to last peak in coherence
 MSE_TR_Amp = cell(NCells,1);
 MSE_TR_SpecMean = cell(NCells,1);
 MSE_TR_Sal = cell(NCells,1);
@@ -518,6 +516,10 @@ for cc=1:NCells % parfor
         fprintf(1, 'Cell %d/%d Already calculated\n',cc,NCells)
         continue
     end 
+    TRs{cc}(1) = CoherencyT_WidthAtMaxPeak(GoodInfo(cc));
+    if ~isnan(SecondCoherenceFreqCutOff(GoodInfo(cc)))
+        TRs{cc}(2) = round(1/SecondCoherenceFreqCutOff(GoodInfo(cc))*10^3);
+    end
     Cell = load(fullfile(CellsPath(GoodInfo(cc)).folder,CellsPath(GoodInfo(cc)).name));
     
     
@@ -561,21 +563,21 @@ for cc=1:NCells % parfor
     
     
     %% Variable organization and running models
-    MSE_TR_Amp{cc} = nan(1,length(TRs));
-    MSE_TR_SpecMean{cc} = nan(1,length(TRs));
-    MSE_TR_Sal{cc} =  nan(1,length(TRs));
-    MeanYTrain{cc} = nan(1,length(TRs));
-    Ypredict_Amp{cc} = cell(1,length(TRs));
-    Ypredict_SpecMean{cc} = cell(1,length(TRs));
-    Ypredict_Sal{cc} =  cell(1,length(TRs));
-    Yval{cc} =  cell(1,length(TRs));
-    TicToc{cc} = nan(1,length(TRs));
+    MSE_TR_Amp{cc} = nan(1,length(TRs{cc}));
+    MSE_TR_SpecMean{cc} = nan(1,length(TRs{cc}));
+    MSE_TR_Sal{cc} =  nan(1,length(TRs{cc}));
+    MeanYTrain{cc} = nan(1,length(TRs{cc}));
+    Ypredict_Amp{cc} = cell(1,length(TRs{cc}));
+    Ypredict_SpecMean{cc} = cell(1,length(TRs{cc}));
+    Ypredict_Sal{cc} =  cell(1,length(TRs{cc}));
+    Yval{cc} =  cell(1,length(TRs{cc}));
+    TicToc{cc} = nan(1,length(TRs{cc}));
     Tr1=1;
     
     %%
-    for tr = Tr1:length(TRs)
-        TR = TRs(tr);
-        fprintf(1,'Cell %d/%d Ridge models with Time resolution %d ms (%d/%d)\n', cc,NCells,TR, tr, length(TRs));
+    for tr = Tr1:length(TRs{cc})
+        TR = TRs{cc}(tr);
+        fprintf(1,'Cell %d/%d Ridge models with Time resolution %d ms (%d/%d)\n', cc,NCells,TR, tr, length(TRs{cc}));
         %% Compute neural data vector
         TimerLoop =tic;
         % Neural Data loop
@@ -635,16 +637,16 @@ for cc=1:NCells % parfor
         % Pitch saliency predicting Y
         [MSE_TR_Sal{cc}(tr), Ypredict_Sal{cc}{tr}] = find_optimalTR(XSaliencyTrain,Y,XSaliencyVal,Yval{cc});
         TicToc{cc}(tr) = toc(TimerLoop);
-        fprintf(1,'Cell %d/%d Models with Time resolution %d ms (%d/%d) => done in %.2f minutes \n', cc,NCells,TR, tr, length(TRs), TicToc{cc}(tr)/60);
+        fprintf(1,'Cell %d/%d Models with Time resolution %d ms (%d/%d) => done in %.2f minutes \n', cc,NCells,TR, tr, length(TRs{cc}), TicToc{cc}(tr)/60);
     end
     if OutFig
         figure(3)
         clf
-        plot(TRs, MSE_TR_Amp{cc}, 'Linewidth',2)
+        plot(TRs{cc}, MSE_TR_Amp{cc}, 'Linewidth',2)
         hold on
-        plot(TRs, MSE_TR_SpecMean{cc}, 'Linewidth',2)
+        plot(TRs{cc}, MSE_TR_SpecMean{cc}, 'Linewidth',2)
         hold on
-        plot(TRs, MSE_TR_Sal{cc}, 'Linewidth',2)
+        plot(TRs{cc}, MSE_TR_Sal{cc}, 'Linewidth',2)
         xlabel('Time resolution in ms')
         ylabel('Mean Squared Error')
         hold off
@@ -653,15 +655,15 @@ for cc=1:NCells % parfor
         clf
         subplot(2,3,1)
         MAP = colormap();
-        c=linspace(1,256,length(TRs));
-        for tr = 1:length(TRs)
+        c=linspace(1,256,length(TRs{cc}));
+        for tr = 1:length(TRs{cc})
             scatter(Yval{cc}, Ypredict_Amp{cc}{tr},30,MAP(round(c(tr)),:),'filled')
             hold on
         end
         xlabel('Observed rate')
         ylabel('Predicted rate')
         title('Amplitude Model')
-        colorbar('southoutside','Ticks', c/256,'TickLabels',TRs)
+        colorbar('southoutside','Ticks', c/256,'TickLabels',TRs{cc})
         hold off
         YL = ylim;
         XL = xlim;
@@ -669,14 +671,14 @@ for cc=1:NCells % parfor
         xlim([min(YL(1),XL(1)) max(YL(2),XL(2))])
         
         subplot(2,3,2)
-        for tr = 1:length(TRs)
+        for tr = 1:length(TRs{cc})
             scatter(Yval{cc}, Ypredict_SpecMean{cc}{tr},30,MAP(round(c(tr)),:),'filled')
             hold on
         end
         xlabel('Observed rate')
         ylabel('Predicted rate')
         title('SpecMean Model')
-        colorbar('southoutside','Ticks', c/256,'TickLabels',TRs)
+        colorbar('southoutside','Ticks', c/256,'TickLabels',TRs{cc})
         hold off
         YL = ylim;
         XL = xlim;
@@ -684,14 +686,14 @@ for cc=1:NCells % parfor
         xlim([min(YL(1),XL(1)) max(YL(2),XL(2))])
         
         subplot(2,3,3)
-        for tr = 1:length(TRs)
+        for tr = 1:length(TRs{cc})
             scatter(Yval{cc}, Ypredict_Sal{cc}{tr},30,MAP(round(c(tr)),:),'filled')
             hold on
         end
         xlabel('Observed rate')
         ylabel('Predicted rate')
         title('Saliency Model')
-        colorbar('southoutside','Ticks', c/256,'TickLabels',TRs)
+        colorbar('southoutside','Ticks', c/256,'TickLabels',TRs{cc})
         hold off
         YL = ylim;
         XL = xlim;
@@ -699,13 +701,13 @@ for cc=1:NCells % parfor
         xlim([min(YL(1),XL(1)) max(YL(2),XL(2))])
         
         
-        MSE_TR_Amp_local = nan(1,length(TRs));
-        MSE_TR_SpecMean_local = nan(1,length(TRs));
-        MSE_TR_Sal_local = nan(1,length(TRs));
+        MSE_TR_Amp_local = nan(1,length(TRs{cc}));
+        MSE_TR_SpecMean_local = nan(1,length(TRs{cc}));
+        MSE_TR_Sal_local = nan(1,length(TRs{cc}));
         subplot(2,3,4)
         MAP = colormap();
-        c=linspace(1,256,length(TRs));
-        for tr = 1:length(TRs)
+        c=linspace(1,256,length(TRs{cc}));
+        for tr = 1:length(TRs{cc})
             scatter(Yval{cc}, (Ypredict_Amp{cc}{tr}-Yval{cc}).^2,30,MAP(round(c(tr)),:),'filled')
             hold on
             MSE_TR_Amp_local(tr) = mean((Ypredict_Amp{cc}{tr}-Yval{cc}).^2);
@@ -715,12 +717,12 @@ for cc=1:NCells % parfor
         xlabel('Observed rate')
         ylabel('Error2 on rate')
         title('Amplitude Model')
-        colorbar('southoutside','Ticks', c/256,'TickLabels',TRs)
+        colorbar('southoutside','Ticks', c/256,'TickLabels',TRs{cc})
         hold off
         
         
         subplot(2,3,5)
-        for tr = 1:length(TRs)
+        for tr = 1:length(TRs{cc})
             scatter(Yval{cc}, (Ypredict_SpecMean{cc}{tr}-Yval{cc}).^2,30,MAP(round(c(tr)),:),'filled')
             hold on
             MSE_TR_SpecMean_local(tr) = mean((Ypredict_SpecMean{cc}{tr}-Yval{cc}).^2);
@@ -730,11 +732,11 @@ for cc=1:NCells % parfor
         xlabel('Observed rate')
         ylabel('Error2 on log rate')
         title('SpecMean Model')
-        colorbar('southoutside','Ticks', c/256,'TickLabels',TRs)
+        colorbar('southoutside','Ticks', c/256,'TickLabels',TRs{cc})
         hold off
         
         subplot(2,3,6)
-        for tr = 1:length(TRs)
+        for tr = 1:length(TRs{cc})
             scatter(Yval{cc}, (Ypredict_Sal{cc}{tr}-Yval{cc}).^2,30,MAP(round(c(tr)),:),'filled')
             hold on
             MSE_TR_Sal_local(tr) = mean((Ypredict_Sal{cc}{tr}-Yval{cc}).^2);
@@ -744,50 +746,51 @@ for cc=1:NCells % parfor
         xlabel('Observed rate')
         ylabel('Error2 on log rate')
         title('Saliency Model')
-        colorbar('southoutside','Ticks', c/256,'TickLabels',TRs)
+        colorbar('southoutside','Ticks', c/256,'TickLabels',TRs{cc})
         hold off
         
         figure(3)
         hold on
-        plot(TRs, MSE_TR_Amp_local, 'Linewidth',2, 'LineStyle','--')
+        plot(TRs{cc}, MSE_TR_Amp_local, 'Linewidth',2, 'LineStyle','--')
         hold on
-        plot(TRs, MSE_TR_SpecMean_local, 'Linewidth',2,'LineStyle','--')
+        plot(TRs{cc}, MSE_TR_SpecMean_local, 'Linewidth',2,'LineStyle','--')
         hold on
-        plot(TRs, MSE_TR_Sal_local, 'Linewidth',2,'LineStyle','--')
+        plot(TRs{cc}, MSE_TR_Sal_local, 'Linewidth',2,'LineStyle','--')
         legend({'Amp' 'SpectralMean' 'Saliency' 'AmpMe' 'SpectralMeanMe' 'SaliencyMe'})
         hold off
         
         figure(5)
         clf
-        plot(TRs,MeanYTrain{cc}-mean(Yval{cc}))
+        plot(TRs{cc},MeanYTrain{cc}-mean(Yval{cc}))
         xlabel('Time resolution (ms)')
         ylabel('Mean rate difference Training-testing')
     end
 %     keyboard
 end
-save(fullfile(Path,'MotorModelsRidge.mat'), 'NCells', 'MSE_TR_Amp', 'MSE_TR_SpecMean','MSE_TR_Sal','Ypredict_Amp','Ypredict_SpecMean','Ypredict_Sal','Yval','MeanYTrain','TicToc','CellsPath');
+save(fullfile(Path,'MotorModelsRidge.mat'), 'NCells', 'MSE_TR_Amp', 'MSE_TR_SpecMean','MSE_TR_Sal','Ypredict_Amp','Ypredict_SpecMean','Ypredict_Sal','Yval','MeanYTrain','TicToc','CellsPath','TRs');
 
 
 %% Plot the results of the time resolution optimization using ridge regression
 load(fullfile(Path,'MotorModelsRidge.mat'));
-% Plot the zscored average MSE accross cells
-MSE_TR_Amp_zs = nan(NCells,length(TRs));
-MSE_TR_SpecMean_zs = nan(NCells,length(TRs));
-MSE_TR_Sal_zs = nan(NCells,length(TRs));
+% Plot the zscored average MSE accross cells % This does not make sense
+% anymore we're already taking best values
+% MSE_TR_Amp_zs = nan(NCells,size(TRs,2));
+% MSE_TR_SpecMean_zs = nan(NCells,size(TRs,2));
+% MSE_TR_Sal_zs = nan(NCells,size(TRs,2));
 % also the MSE as a proportion of the average rate of the training correspoding portion
 % of the validating set (same temporal resolution)
-MSE0 = nan(NCells,length(TRs));
-R2_TR_Amp = nan(NCells,length(TRs));
-R2_TR_SpecMean = nan(NCells,length(TRs));
-R2_TR_Sal = nan(NCells,length(TRs));
-for cc=1:142
+MSE0 = nan(NCells,size(TRs,2));
+R2_TR_Amp = nan(NCells,size(TRs,2));
+R2_TR_SpecMean = nan(NCells,size(TRs,2));
+R2_TR_Sal = nan(NCells,size(TRs,2));
+for cc=1:NCells
     if isempty(MSE_TR_Amp{cc})
         continue
     end
-    MSE_TR_Amp_zs(cc,:) = zscore(MSE_TR_Amp{cc});
-    MSE_TR_SpecMean_zs(cc,:) = zscore(MSE_TR_SpecMean{cc});
-    MSE_TR_Sal_zs(cc,:) = zscore(MSE_TR_Sal{cc});
-    for tr=1:length(TRs)
+%     MSE_TR_Amp_zs(cc,:) = zscore(MSE_TR_Amp{cc});
+%     MSE_TR_SpecMean_zs(cc,:) = zscore(MSE_TR_SpecMean{cc});
+%     MSE_TR_Sal_zs(cc,:) = zscore(MSE_TR_Sal{cc});
+    for tr=1:length(TRs{cc})
         MSE0(cc,tr) = mean((Yval{cc}-MeanYTrain{cc}(tr)).^2);
     end
     R2_TR_Amp(cc,:) = (MSE0(cc,:)-MSE_TR_Amp{cc})./MSE0(cc,:);
@@ -796,62 +799,62 @@ for cc=1:142
 end
 
 
-figure(7)
-ColorCode = get(groot, 'DefaultAxesColorOrder');
-subplot(1,2,1)
-legend('AutoUpdate', 'on')
-plot(TRs, nanmean(MSE_TR_Amp_zs), 'LineWidth',2, 'Color',ColorCode(1,:), 'DisplayName','Amplitude')
-hold on
-plot(TRs, nanmean(MSE_TR_SpecMean_zs), 'LineWidth',2, 'Color',ColorCode(2,:),'DisplayName','SpectralMean')
-hold on
-plot(TRs, nanmean(MSE_TR_Sal_zs), 'LineWidth',2, 'Color',ColorCode(3,:),'DisplayName','Saliency')
-legend('AutoUpdate', 'off')
-hold on
-shadedErrorBar(TRs, nanmean(MSE_TR_Amp_zs),nanstd(MSE_TR_Amp_zs)./(sum(~isnan(MSE_TR_Amp_zs))).^0.5, {'Color',ColorCode(1,:)})
-hold on
-shadedErrorBar(TRs, nanmean(MSE_TR_SpecMean_zs),nanstd(MSE_TR_SpecMean_zs)./(sum(~isnan(MSE_TR_SpecMean_zs))).^0.5, {'Color', ColorCode(2,:)})
-hold on
-shadedErrorBar(TRs, nanmean(MSE_TR_Sal_zs),nanstd(MSE_TR_Sal_zs)./(sum(~isnan(MSE_TR_Sal_zs))).^0.5, {'Color', ColorCode(3,:)})
-hold on
-plot(TRs, nanmean(MSE_TR_Amp_zs), 'LineWidth',2, 'Color',ColorCode(1,:))
-hold on
-plot(TRs, nanmean(MSE_TR_SpecMean_zs), 'LineWidth',2, 'Color',ColorCode(2,:))
-hold on
-plot(TRs, nanmean(MSE_TR_Sal_zs), 'LineWidth',2, 'Color',ColorCode(3,:))
-hold off
-xlabel('Time resolution in ms')
-ylabel('zscored Mean Squared Error')
-
-subplot(1,2,2)
-legend('AutoUpdate', 'on')
-plot(TRs, nanmean(R2_TR_Amp), 'LineWidth',2, 'Color',ColorCode(1,:), 'DisplayName','Amplitude')
-hold on
-plot(TRs, nanmean(R2_TR_SpecMean), 'LineWidth',2, 'Color',ColorCode(2,:),'DisplayName','SpectralMean')
-hold on
-plot(TRs, nanmean(R2_TR_Sal), 'LineWidth',2, 'Color',ColorCode(3,:),'DisplayName','Saliency')
-hold on
-legend('AutoUpdate', 'off')
-shadedErrorBar(TRs, nanmean(R2_TR_Amp),nanstd(R2_TR_Amp)./(sum(~isnan(R2_TR_Amp))).^0.5, {'Color',ColorCode(1,:)})
-hold on
-shadedErrorBar(TRs, nanmean(R2_TR_SpecMean),nanstd(R2_TR_SpecMean)./(sum(~isnan(R2_TR_SpecMean))).^0.5, {'Color', ColorCode(2,:)})
-hold on
-shadedErrorBar(TRs, nanmean(R2_TR_Sal),nanstd(R2_TR_Sal)./(sum(~isnan(R2_TR_Sal))).^0.5, {'Color', ColorCode(3,:)})
-hold on
-
-plot(TRs, nanmean(R2_TR_Amp), 'LineWidth',2, 'Color',ColorCode(1,:))
-hold on
-plot(TRs, nanmean(R2_TR_SpecMean), 'LineWidth',2, 'Color',ColorCode(2,:))
-hold on
-plot(TRs, nanmean(R2_TR_Sal), 'LineWidth',2, 'Color',ColorCode(3,:))
-hold off
-xlabel('Time resolution in ms')
-ylabel('R2')
-hold off
+% figure(7)
+% ColorCode = get(groot, 'DefaultAxesColorOrder');
+% subplot(1,2,1)
+% legend('AutoUpdate', 'on')
+% plot(TRs(cc,:), nanmean(MSE_TR_Amp_zs), 'LineWidth',2, 'Color',ColorCode(1,:), 'DisplayName','Amplitude')
+% hold on
+% plot(TRs(cc,:), nanmean(MSE_TR_SpecMean_zs), 'LineWidth',2, 'Color',ColorCode(2,:),'DisplayName','SpectralMean')
+% hold on
+% plot(TRs(cc,:), nanmean(MSE_TR_Sal_zs), 'LineWidth',2, 'Color',ColorCode(3,:),'DisplayName','Saliency')
+% legend('AutoUpdate', 'off')
+% hold on
+% shadedErrorBar(TRs(cc,:), nanmean(MSE_TR_Amp_zs),nanstd(MSE_TR_Amp_zs)./(sum(~isnan(MSE_TR_Amp_zs))).^0.5, {'Color',ColorCode(1,:)})
+% hold on
+% shadedErrorBar(TRs(cc,:), nanmean(MSE_TR_SpecMean_zs),nanstd(MSE_TR_SpecMean_zs)./(sum(~isnan(MSE_TR_SpecMean_zs))).^0.5, {'Color', ColorCode(2,:)})
+% hold on
+% shadedErrorBar(TRs(cc,:), nanmean(MSE_TR_Sal_zs),nanstd(MSE_TR_Sal_zs)./(sum(~isnan(MSE_TR_Sal_zs))).^0.5, {'Color', ColorCode(3,:)})
+% hold on
+% plot(TRs(cc,:), nanmean(MSE_TR_Amp_zs), 'LineWidth',2, 'Color',ColorCode(1,:))
+% hold on
+% plot(TRs(cc,:), nanmean(MSE_TR_SpecMean_zs), 'LineWidth',2, 'Color',ColorCode(2,:))
+% hold on
+% plot(TRs(cc,:), nanmean(MSE_TR_Sal_zs), 'LineWidth',2, 'Color',ColorCode(3,:))
+% hold off
+% xlabel('Time resolution in ms')
+% ylabel('zscored Mean Squared Error')
+% 
+% subplot(1,2,2)
+% legend('AutoUpdate', 'on')
+% plot(TRs(cc,:), nanmean(R2_TR_Amp), 'LineWidth',2, 'Color',ColorCode(1,:), 'DisplayName','Amplitude')
+% hold on
+% plot(TRs(cc,:), nanmean(R2_TR_SpecMean), 'LineWidth',2, 'Color',ColorCode(2,:),'DisplayName','SpectralMean')
+% hold on
+% plot(TRs(cc,:), nanmean(R2_TR_Sal), 'LineWidth',2, 'Color',ColorCode(3,:),'DisplayName','Saliency')
+% hold on
+% legend('AutoUpdate', 'off')
+% shadedErrorBar(TRs(cc,:), nanmean(R2_TR_Amp),nanstd(R2_TR_Amp)./(sum(~isnan(R2_TR_Amp))).^0.5, {'Color',ColorCode(1,:)})
+% hold on
+% shadedErrorBar(TRs(cc,:), nanmean(R2_TR_SpecMean),nanstd(R2_TR_SpecMean)./(sum(~isnan(R2_TR_SpecMean))).^0.5, {'Color', ColorCode(2,:)})
+% hold on
+% shadedErrorBar(TRs(cc,:), nanmean(R2_TR_Sal),nanstd(R2_TR_Sal)./(sum(~isnan(R2_TR_Sal))).^0.5, {'Color', ColorCode(3,:)})
+% hold on
+% 
+% plot(TRs(cc,:), nanmean(R2_TR_Amp), 'LineWidth',2, 'Color',ColorCode(1,:))
+% hold on
+% plot(TRs(cc,:), nanmean(R2_TR_SpecMean), 'LineWidth',2, 'Color',ColorCode(2,:))
+% hold on
+% plot(TRs(cc,:), nanmean(R2_TR_Sal), 'LineWidth',2, 'Color',ColorCode(3,:))
+% hold off
+% xlabel('Time resolution in ms')
+% ylabel('R2')
+% hold off
 
 figure()
 subplot(1,3,1)
 imagesc(R2_TR_Amp)
-set(gca,'XTickLabel', TRs)
+set(gca,'XTickLabel', TRs(cc,:))
 xlabel('Time Resolution (ms)')
 ylabel('R2 Amplitude')
 colorbar()
@@ -859,7 +862,7 @@ caxis([0 0.05])
 
 subplot(1,3,2)
 imagesc(R2_TR_SpecMean)
-set(gca,'XTickLabel', TRs)
+set(gca,'XTickLabel', TRs(cc,:))
 xlabel('Time Resolution (ms)')
 ylabel('R2 SpectralMean')
 colorbar()
@@ -867,7 +870,7 @@ caxis([0 0.05])
 
 subplot(1,3,3)
 imagesc(R2_TR_Sal)
-set(gca,'XTickLabel', TRs)
+set(gca,'XTickLabel', TRs(cc,:))
 xlabel('Time Resolution (ms)')
 ylabel('R2 Saliency')
 colorbar()
