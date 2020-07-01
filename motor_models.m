@@ -956,7 +956,7 @@ suplabel('R2 Ridge regression models','t')
 NCells = length(GoodInfo);
 
 MotorModels = cell(NCells,1);
-for cc=1:NCells
+parfor cc=1:NCells
     if ~isempty(MotorModels{cc}) % This one was already calculated
         fprintf(1, 'Cell %d/%d Already calculated\n',cc,NCells)
         continue
@@ -1089,14 +1089,20 @@ for cc=1:NCells
 
         if DatFig
             TimeBinsX = -Delay : (Win-Delay);
+            TimeBinsX = TimeBinsX(2:end);
             figure(21)
-            plot(TimeBinsX,BSpecMean(:,BestModSpecMean),'LineStyle','-', 'LineWidth',2,'DisplayName', sprintf('Spectral Mean Dev = %.1f',BestDevSpecMean(tr)))
+            ColorCode = get(groot, 'DefaultAxesColorOrder');
+            plot(TimeBinsX,BSpecMean_local((length(TimeBinsX)+1):end,BestModSpecMean),'LineStyle','-', 'LineWidth',2,'DisplayName', 'SpectralMean Betas','Color',ColorCode(1,:))
             hold on
-            plot(TimeBinsX,BSal(:,BestModSal),'LineStyle','-', 'LineWidth',2,'DisplayName', sprintf('Saliency Dev = %.1f',BestDevSal(tr)))
+            plot(TimeBinsX,BSpecMean_local(1:length(TimeBinsX),BestModSpecMean),'LineStyle',':', 'LineWidth',2,'DisplayName', 'SpectralMean Amp Betas','Color',ColorCode(1,:))
+            hold on
+            plot(TimeBinsX,BSal_local((length(TimeBinsX)+1):end,BestModSal),'LineStyle','-', 'LineWidth',2,'DisplayName','Saliency Betas' , 'Color',ColorCode(2,:))
+            hold on
+            plot(TimeBinsX,BSal_local(1:length(TimeBinsX),BestModSal),'LineStyle',':', 'LineWidth',2,'DisplayName','Saliency Amp Betas','Color',ColorCode(2,:))
             hold on
             %         plot(TimeBinsX,BSpecMed(:,BestModSpecMed),'LineStyle','-', 'LineWidth',2,'DisplayName', sprintf('Spectral Median Dev = %.1f',BestDevSpecMed(tr,dd)))
             hold on
-            plot(TimeBinsX,BAmp(:,BestModAmp),'LineStyle','-', 'LineWidth',2,'DisplayName', sprintf('Amp Dev = %.1f',BestDevAmp(tr)))
+            plot(TimeBinsX,BAmp_local(:,BestModAmp),'LineStyle','-', 'LineWidth',2,'DisplayName','Amp Betas' , 'Color', ColorCode(3,:))
             
             
             legend('show')
@@ -1104,7 +1110,12 @@ for cc=1:NCells
             % XTick = cellfun(@str2double, XTick) * Win;
             % set(gca,'XTickLabel',XTick)
             xlabel('Time (ms)')
-            title(sprintf('Poisson Ridge regression on Acoustic Features Delay = %dms Time resolution=%dms', Delay, TR_local))
+            title(sprintf('Model coefficients of Poisson Ridge regression on Acoustic Features, Delay = %dms Neural Response Time Resolution=%dms', Delay, TR_local))
+            YLim = get(gca,'YLim');
+            text(0,YLim(2)*0.8, sprintf('Spectral Mean Dev = %.1f',BestDevSpecMean(tr)))
+            text(0,YLim(2)*0.7,sprintf('Saliency Dev = %.1f',BestDevSal(tr)));
+            text(0,YLim(2)*0.6,sprintf('Amp Dev = %.1f',BestDevAmp(tr)))
+            
             hold off
             pause(1)
         end
@@ -1116,27 +1127,27 @@ for cc=1:NCells
         figure(22)
         ColorCode = get(groot, 'DefaultAxesColorOrder');
         subplot(1,2,1)
-        plot(TRs{cc},BestDevSpecMean', 'Color',ColorCode(1,:), 'LineWidth',2)
+        plot(TRs{cc},BestDevSpecMean','-o', 'MarkerFaceColor',ColorCode(1,:), 'Color', ColorCode(1,:),'LineWidth',2)
         hold on
-        plot(TRs{cc},BestDevSal,'Color', ColorCode(2,:), 'LineWidth',2)
+        plot(TRs{cc},BestDevSal,'-o', 'MarkerFaceColor',ColorCode(2,:),'Color', ColorCode(2,:), 'LineWidth',2)
         hold on
-        plot(TRs{cc},BestDevAmp, 'Color', ColorCode(3,:),'LineWidth',2)
+        plot(TRs{cc},BestDevAmp,'-o', 'MarkerFaceColor',ColorCode(3,:), 'Color', ColorCode(3,:),'LineWidth',2)
         hold on
-        plot(TRs{cc},BestDevNull, 'Color',ColorCode(4,:),'LineWidth',2, 'LineStyle','--')
+        plot(TRs{cc},BestDevNull,'-o', 'MarkerFaceColor',ColorCode(4,:), 'Color',ColorCode(4,:),'LineWidth',2, 'LineStyle','--')
         legend({'Amp + SpecMean' 'Amp + Sal' 'Amp' 'Null'})
-        legend('Autoupdate','off')
+        legend('Autoupdate','off','Location','southoutside')
         ylabel('Deviance')
         xlabel('Time resolution in ms')
         YLim = get(gca,'YLim');
         
         subplot(1,2,2)
-        plot(TRs{cc},BestDevSpecMean', 'Color',ColorCode(1,:), 'LineWidth',2)
+        plot(TRs{cc},BestDevSpecMean', '-o', 'MarkerFaceColor',ColorCode(1,:),'Color',ColorCode(1,:), 'LineWidth',2)
         hold on
-        plot(TRs{cc},BestDevSal,'Color', ColorCode(2,:), 'LineWidth',2)
+        plot(TRs{cc},BestDevSal,'-o', 'MarkerFaceColor',ColorCode(2,:),'Color', ColorCode(2,:), 'LineWidth',2)
         hold on
-        plot(TRs{cc},BestDevAmp, 'Color', ColorCode(3,:),'LineWidth',2)
+        plot(TRs{cc},BestDevAmp,'-o', 'MarkerFaceColor',ColorCode(3,:), 'Color', ColorCode(3,:),'LineWidth',2)
         hold on
-        plot(TRs{cc},BestDevNull, 'Color',ColorCode(4,:),'LineWidth',2, 'LineStyle','--')
+        plot(TRs{cc},BestDevNull,'-o', 'MarkerFaceColor',ColorCode(4,:), 'Color',ColorCode(4,:),'LineWidth',2, 'LineStyle','--')
         ylabel('Deviance')
         xlabel('Time resolution in ms')
         xlim([0 2])
@@ -1146,22 +1157,24 @@ for cc=1:NCells
         
         figure(23)
         subplot(1,2,1)
-        plot(TRs{cc}, BestDevAmp-BestDevSpecMean , 'Color',ColorCode(1,:), 'LineWidth',2)
+        plot(TRs{cc}, BestDevAmp-BestDevSpecMean ,'-o', 'MarkerFaceColor',ColorCode(1,:), 'Color',ColorCode(1,:), 'LineWidth',2)
         hold on
-        plot(TRs{cc},BestDevAmp - BestDevSal,'Color', ColorCode(2,:), 'LineWidth',2)
+        plot(TRs{cc},BestDevAmp - BestDevSal,'-o', 'MarkerFaceColor',ColorCode(2,:),'Color', ColorCode(2,:), 'LineWidth',2)
         hold on
-        plot(TRs{cc},BestDevNull -BestDevAmp, 'Color', ColorCode(3,:),'LineWidth',2)
+        plot(TRs{cc},BestDevNull -BestDevAmp,'-o', 'MarkerFaceColor',ColorCode(3,:), 'Color', ColorCode(3,:),'LineWidth',2)
         legend({'SpecMean contribution' 'Sal contribution' 'Amp contribution'})
+        legend('Autoupdate','off','Location','southoutside')
         ylabel('Difference of Deviance')
         xlabel('Time resolution in ms')
         
         subplot(1,2,2)
-        plot(TRs{cc}, (BestDevAmp-BestDevSpecMean)./BestDevAmp , 'Color',ColorCode(1,:), 'LineWidth',2)
+        plot(TRs{cc}, (BestDevAmp-BestDevSpecMean)./BestDevAmp ,'-o', 'MarkerFaceColor',ColorCode(1,:), 'Color',ColorCode(1,:), 'LineWidth',2)
         hold on
-        plot(TRs{cc},(BestDevAmp - BestDevSal)./BestDevAmp,'Color', ColorCode(2,:), 'LineWidth',2)
+        plot(TRs{cc},(BestDevAmp - BestDevSal)./BestDevAmp,'-o', 'MarkerFaceColor',ColorCode(2,:),'Color', ColorCode(2,:), 'LineWidth',2)
         hold on
-        plot(TRs{cc},(BestDevNull -BestDevAmp)./BestDevAmp, 'Color', ColorCode(3,:),'LineWidth',2)
+        plot(TRs{cc},(BestDevNull -BestDevAmp)./BestDevAmp,'-o', 'MarkerFaceColor',ColorCode(3,:), 'Color', ColorCode(3,:),'LineWidth',2)
         legend({'SpecMean contribution' 'Sal contribution' 'Amp contribution'})
+        legend('Autoupdate','off','Location','southoutside')
         ylabel('R2')
         xlabel('Time resolution in ms')
         
