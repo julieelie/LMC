@@ -57,7 +57,7 @@ Info_low = nan(NCells,1);
 Info_up = nan(NCells,1);
 CellWithDurationIssue = [];
 
-for cc=1:NCells % parfor
+for cc=431:NCells % parfor
     fprintf(1, 'Cell %d/%d\n', cc, NCells)
     % load data
     Cell = load(fullfile(CellsPath(cc).folder,CellsPath(cc).name));
@@ -168,6 +168,9 @@ for cc=1:NCells % parfor
         CoherencyT_DelayAtzero(cc) = CoherencyT_xTimeDelay{cc}(Locs);
         CrossZero1 = CoherencyT_xTimeDelay{cc}(find(CoherencyT_filt{cc}(1:Locs)<=mean(CoherencyT_filt{cc}), 1, 'last')+1);
         CrossZero2 = CoherencyT_xTimeDelay{cc}(Locs + find(CoherencyT_filt{cc}(Locs+1:end)<=mean(CoherencyT_filt{cc}), 1, 'first')-1);
+        if isempty(CrossZero2)
+            CrossZero2 = CoherencyT_xTimeDelay{cc}(Locs + find(CoherencyT_filt{cc}(Locs+1:end)==min(CoherencyT_filt{cc}(Locs+1:end)), 1, 'first')-1);
+        end
         CoherencyT_WidthAtMaxPeak(cc) = CrossZero2 - CrossZero1;
     end
     
