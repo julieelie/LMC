@@ -57,7 +57,7 @@ Info_low = nan(NCells,1);
 Info_up = nan(NCells,1);
 CellWithDurationIssue = [];
 
-for cc=431:NCells % parfor
+for cc=1:NCells % parfor
     fprintf(1, 'Cell %d/%d\n', cc, NCells)
     % load data
     Cell = load(fullfile(CellsPath(cc).folder,CellsPath(cc).name));
@@ -290,11 +290,16 @@ save(fullfile(Path,sprintf('MotorModelsCoherency_%s.mat', FeatureName)),'Delay',
 
 %% Plots results of coherence calculations for the population
 load(fullfile(Path,sprintf('MotorModelsCoherency_%s.mat', FeatureName)))
+if strcmp(FeatureName, 'amp')
+    FeatureName2 = 'Amplitude';
+elseif strcmp(FeatureName, 'sal')
+    FeatureName2 = 'Pitch Saliency';
+end
 figure(1)
 clf
 subplot(1,3,1)
 histogram(MaxCoherence(:,1),'BinWidth',0.005,'FaceColor','k')
-xlabel('Max coherence with sound amplitude')
+xlabel(sprintf('Max coherence with sound %s', FeatureName2))
 ylabel('Number of cells')
 hold on
 v=vline(quantile(MaxCoherence(:,1), 0.25),'b--');
@@ -308,12 +313,12 @@ v.LineWidth = 2;
 
 subplot(1,3,2)
 plot(Info,MaxCoherence(:,1), 'o','Color','k','MarkerSize',6,'MarkerFaceColor','k')
-xlabel('Information on Coherence with sound Amplitude(bits)')
-ylabel('Max coherence with sound amplitude')
+xlabel(sprintf('Information on Coherence with sound %s (bits)', FeatureName2))
+ylabel(sprintf('Max coherence with sound %s',FeatureName2))
 
 subplot(1,3,3)
 histogram(Info,'BinWidth',0.05,'FaceColor','k')
-xlabel('Information on Coherence with sound Amplitude(bits)')
+xlabel(sprintf('Information on Coherence with sound %s (bits)',FeatureName2))
 ylabel('Number of Cells')
 hold on
 v=vline(quantile(Info, 0.25),'b--');
@@ -324,12 +329,13 @@ v.LineWidth = 2;
 hold on
 v=vline(quantile(Info, 0.75),'b--');
 v.LineWidth = 2;
+suplabel(sprintf('%s', FeatureName2), 't');
 
 figure(2)
 clf
 subplot(2,5,1)
 plot(Info, CoherencyT_DelayAtzero, 'o','Color','k','MarkerSize',6,'MarkerFaceColor','k')
-xlabel('Information on Coherence with sound Amplitude(bits)')
+xlabel(sprintf('Information on Coherence with sound %s (bits)',FeatureName2))
 ylabel('Phase of coherency (ms)')
 hold on
 v=vline(quantile(Info, 0.25),'b--');
@@ -346,7 +352,7 @@ h.LineWidth = 2;
 
 subplot(2,5,2)
 plot(Info, CoherencyT_WidthAtMaxPeak, 'o','Color','k','MarkerSize',6,'MarkerFaceColor','k')
-xlabel('Information on Coherence with sound Amplitude(bits)')
+xlabel(sprintf('Information on Coherence with sound %s (bits)',FeatureName2))
 ylabel('Time resolution of Coherency (ms)')
 hold on
 v=vline(quantile(Info, 0.25),'b--');
@@ -360,7 +366,7 @@ v.LineWidth = 2;
 
 subplot(2,5,3)
 plot(Info, FirstNonSigCoherenceFreq, 'o','Color','k','MarkerSize',6,'MarkerFaceColor','k')
-xlabel('Information on Coherence with sound Amplitude(bits)')
+xlabel(sprintf('Information on Coherence with sound %s (bits)',FeatureName2))
 ylabel('Max significant Frequency (Hz)')
 hold on
 v=vline(quantile(Info, 0.25),'b--');
@@ -374,7 +380,7 @@ v.LineWidth = 2;
 
 subplot(2,5,4)
 plot(Info, SecondCoherenceFreqCutOff, 'o','Color','k','MarkerSize',6,'MarkerFaceColor','k')
-xlabel('Information on Coherence with sound Amplitude(bits)')
+xlabel(sprintf('Information on Coherence with sound %s (bits)',FeatureName2))
 ylabel('Max 2nd peaks significant Frequency (Hz)')
 hold on
 v=vline(quantile(Info, 0.25),'b--');
@@ -389,7 +395,7 @@ v.LineWidth = 2;
 
 subplot(2,5,5)
 plot(Info, MaxCoherence(:,2), 'o','Color','k','MarkerSize',6,'MarkerFaceColor','k')
-xlabel('Information on Coherence with sound Amplitude(bits)')
+xlabel(sprintf('Information on Coherence with sound %s (bits)',FeatureName2))
 ylabel('Frequency of Max Coherence (Hz)')
 hold on
 v=vline(quantile(Info, 0.25),'b--');
@@ -436,6 +442,8 @@ xlim([0 50])
 xlabel('Frequency of Max Coherence (Hz)')
 ylabel('Number of Cells')
 
+suplabel(sprintf('%s', FeatureName2), 't');
+
 fprintf(1,'Cell with highest Info Value: %s', CellsPath(Info == max(Info)).name)
 
 % Plot the values of the secondary peaks found for some cells
@@ -447,7 +455,7 @@ ylabel('Values of Coherence')
 
 
 
-% plot again the histograms for this subset of cells
+% plot again the histograms for high Info subset of cells
 figure(5)
 clf
 subplot(1,5,1)
@@ -482,6 +490,39 @@ xlim([0 50])
 xlabel('Frequency of Max Coherence (Hz)')
 ylabel('Number of cells with Info > 1bit')
 
+suplabel(sprintf('%s',FeatureName2),'t');
+
+% Comparing values of information, Delay and Time resolution for saliency and amplitude
+
+
+CoherenceSal = load(fullfile(Path,sprintf('MotorModelsCoherency_%s.mat', 'sal')));
+CoherenceAmp = load(fullfile(Path,sprintf('MotorModelsCoherency_%s.mat', 'amp')));
+figure(6)
+clf
+subplot(1,3,1)
+scatter(CoherenceAmp.Info, CoherenceSal.Info,40,[0 0 0], 'filled')
+hold on
+plot([0 5], [0 5], 'r:', 'LineWidth',2)
+hold off
+xlabel('Information on Coherence with sound Amplitude (bits)')
+ylabel('Information on Coherence with pitch saliency (bits)')
+
+
+subplot(1,3,2)
+scatter(CoherenceAmp.CoherencyT_DelayAtzero, CoherenceSal.CoherencyT_DelayAtzero,40,[0 0 0], 'filled')
+hold on
+plot([-60 60], [-60 60], 'r:', 'LineWidth',2)
+hold off
+xlabel('Phase of Coherency with sound Amplitude (ms)')
+ylabel('Phase of Coherency with pitch saliency (ms)')
+
+subplot(1,3,3)
+scatter(CoherenceAmp.CoherencyT_WidthAtMaxPeak, CoherenceSal.CoherencyT_WidthAtMaxPeak,40,[0 0 0], 'filled')
+hold on
+plot([40 350], [50 350], 'r:', 'LineWidth',2)
+hold off
+xlabel('Time resolution of Coherency with sound Amplitude (ms)')
+ylabel('Time resolution of Coherency with pitch saliency (ms)')
 %% Explore Cell by cell the profile of coherence and scatter plots of cell tuning for Good Cells
 
 load(fullfile(Path,'MotorModelsCoherencyAmp.mat'))
