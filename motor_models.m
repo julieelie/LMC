@@ -23,6 +23,7 @@ CellsPath = AllFiles(logical(Files2run));
 %% Running through cells to find the optimal time resolution of the neural response for acoustic feature predicion from the neural response
 % here we calculate the coherency between the neural response and the
 % acoustic features
+FeatureName = 'sal';
 TR=2; % 2ms is chosen as the Time resolution for the neural data
 Fs = 1/(TR*10^-3); % the data is then sampled at the optimal frequency given the neural time resolution choosen
 % find the closest power of 2 for the number of FFT window points that
@@ -97,7 +98,7 @@ for cc=1:NCells % parfor
     % at 1000Hz starting -200ms (Delay) before stim onset and stop at 200ms (Delay) after
     % stim offset
     DefaultVal = 0;%zero should be the default value for the amplitude, we know here that there is no sound
-    XAmpPerStim = get_x_4coherence(Cell.BioSound(IndVoc,2), Cell.Duration(IndVoc), Delay,TR,DefaultVal,'amp');
+    XAmpPerStim = get_x_4coherence(Cell.BioSound(IndVoc,2), Cell.Duration(IndVoc), Delay,TR,DefaultVal,FeatureName);
     XAmp = [XAmpPerStim{:}]';
     
     % Calculate coherence and coherency between the signals
@@ -223,7 +224,7 @@ for cc=1:NCells % parfor
         hold off
     end
     xlabel('Time Delay')
-    ylabel('Coherency')
+    ylabel(sprintf('Coherency with %s', FeatureName))
 %     subplot(1,2,2)
 %     plot(Freqs, Coherence{cc}, '-k','LineWidth',2)
 %     hold on
@@ -239,7 +240,7 @@ for cc=1:NCells % parfor
     plot(CoherencePeaksF{cc}, CoherencePeaks{cc}, 'go', 'MarkerSize',6,'MarkerFaceColor','g')
     hold on
     plot(MaxCoherence(cc,2), MaxCoherence(cc,1), 'ro', 'MarkerSize',6,'MarkerFaceColor','r')
-    MaxY = 0.4;
+    MaxY = 0.5;
     ylim([-0.1 MaxY])
     text(Freqs{cc}(end)/3,0.8*MaxY,sprintf('Info = %.2f   InfoUp = %.2f    InfoLow = %.2f', Info(cc), Info_up(cc), Info_low(cc)))
     hold on
@@ -248,7 +249,7 @@ for cc=1:NCells % parfor
     text(Freqs{cc}(end)/3,0.85*MaxY,sprintf('FreqCutOff = %.2f Hz -> TimeResolution = %.2f ms', FirstNonSigCoherenceFreq(cc),1/FirstNonSigCoherenceFreq(cc)*10^3))
     hold off
     xlabel('Frequencies (Hz)')
-    ylabel('Coherence')
+    ylabel(sprintf('Coherence with %s', FeatureName))
     
     
     if ~isempty(FirstNonSigCoherenceFreq(cc))
@@ -267,19 +268,25 @@ for cc=1:NCells % parfor
         plot(MaxCoherence(cc,2), MaxCoherence(cc,1), 'ro', 'MarkerSize',6,'MarkerFaceColor','r')
         hold off
         xlabel('Frequencies (Hz)')
-        ylabel('Coherence')
+        ylabel(sprintf('Coherence with %s', FeatureName))
     end
 %     keyboard
 %     if Info(cc)>2
 %         keyboard
 %     end
 end
-    
-save(fullfile(Path,'MotorModelsCoherency.mat'),'Delay','CoherencyT','CoherencyT_filt','CoherencyT_xTimeDelay','CoherencyT_DelayAtzero','CoherencyT_WidthAtMaxPeak','Freqs','Coherence','Coherence_low','Coherence_up','MaxCoherence','CoherencePeaks','CoherencePeaksF','FirstNonSigCoherenceFreq','SecondCoherenceFreqCutOff','Info','Info_low','Info_up','CellWithDurationIssue','CellsPath','TR','MinCoherence4peaks');
+
+% Restrict the dataset to Cells with Info >1 bit and order cells by
+% decreasing values of info
+GoodInfo = find(Info>=1);
+[~,I] = sort(Info(GoodInfo),'descend');
+GoodInfo = GoodInfo(I);
+
+save(fullfile(Path,sprintf('MotorModelsCoherency_%s.mat', FeatureName)),'Delay','CoherencyT','CoherencyT_filt','CoherencyT_xTimeDelay','CoherencyT_DelayAtzero','CoherencyT_WidthAtMaxPeak','Freqs','Coherence','Coherence_low','Coherence_up','MaxCoherence','CoherencePeaks','CoherencePeaksF','FirstNonSigCoherenceFreq','SecondCoherenceFreqCutOff','Info','Info_low','Info_up','CellWithDurationIssue','CellsPath','TR','MinCoherence4peaks', 'GoodInfo');
 
 
 %% Plots results of coherence calculations for the population
-% load(fullfile(Path,'MotorModelsCoherency.mat'))
+load(fullfile(Path,sprintf('MotorModelsCoherency_%s.mat', FeatureName)))
 figure(1)
 clf
 subplot(1,3,1)
@@ -436,11 +443,7 @@ ylabel('Values of Coherence')
 
 
 
-% Restrict the dataset to Cells with Info >1 bit and order cells by
-% decreasing values of info
-GoodInfo = find(Info>=1);
-[~,I] = sort(Info(GoodInfo),'descend');
-GoodInfo = GoodInfo(I);
+
 % plot again the histograms for this subset of cells
 figure(5)
 clf
@@ -475,6 +478,176 @@ histogram(MaxCoherence(find(GoodInfo),2), 'BinWidth',ceil(nFFT/Nyquist),'FaceCol
 xlim([0 50])
 xlabel('Frequency of Max Coherence (Hz)')
 ylabel('Number of cells with Info > 1bit')
+
+%% Explore Cell by cell the profile of coherence and scatter plots of cell tuning for Good Cells
+
+load(fullfile(Path,'MotorModelsCoherencyAmp.mat'))
+NCells = length(GoodInfo);
+for nc=1:NCells
+    cc=GoodInfo(nc);
+    fprintf(1,'Cell %d/%d\n',nc,NCells)
+    % Figure on coherence values with sound Amplitude
+    figure(3)
+    clf
+    subplot(1,3,1)
+    plot(CoherencyT_xTimeDelay{cc}, CoherencyT_filt{cc}, 'LineWidth',2)
+    if ~isnan(CoherencyT_DelayAtzero(cc))
+        hold on
+        P = CoherencyT_filt{cc}(CoherencyT_xTimeDelay{cc} == CoherencyT_DelayAtzero(cc));
+        plot(CoherencyT_DelayAtzero(cc),P,'ro', 'MarkerSize',16, 'MarkerFaceColor','r')
+        text(max(CoherencyT_xTimeDelay{cc})/5, 4.5/5*P, sprintf('Delay at zero = %.2f ms', CoherencyT_DelayAtzero(cc)))
+        text(max(CoherencyT_xTimeDelay{cc})/5, 4/5*P, sprintf('Width at y=mean(coherencyT) = %.2f ms', CoherencyT_WidthAtMaxPeak(cc)))
+        hold off
+    end
+    xlabel('Time Delay')
+    ylabel('Coherency')
+
+    subplot(1,3,2)
+    shadedErrorBar(Freqs{cc}, Coherence{cc},[(Coherence_up{cc}-Coherence{cc})'; (-Coherence_low{cc}+Coherence{cc})'], {'LineWidth',2,'Color','k'})
+    hold on
+    plot([Freqs{cc}(1) Freqs{cc}(end)], [0 0], 'r--', 'LineWidth',2)
+    hold on
+    plot(CoherencePeaksF{cc}, CoherencePeaks{cc}, 'go', 'MarkerSize',6,'MarkerFaceColor','g')
+    hold on
+    plot(MaxCoherence(cc,2), MaxCoherence(cc,1), 'ro', 'MarkerSize',6,'MarkerFaceColor','r')
+    MaxY = 0.5;
+    ylim([-0.1 MaxY])
+    text(Freqs{cc}(end)/3,0.8*MaxY,sprintf('Info = %.2f   InfoUp = %.2f    InfoLow = %.2f', Info(cc), Info_up(cc), Info_low(cc)))
+    hold on
+    text(Freqs{cc}(end)/3,0.9*MaxY,sprintf('MaxCoherence = %.2f', MaxCoherence(cc)))
+    hold on
+    text(Freqs{cc}(end)/3,0.85*MaxY,sprintf('FreqCutOff = %.2f Hz -> TimeResolution = %.2f ms', FirstNonSigCoherenceFreq(cc),1/FirstNonSigCoherenceFreq(cc)*10^3))
+    hold off
+    xlabel('Frequencies (Hz)')
+    ylabel('Coherence')
+    
+    
+    if ~isempty(FirstNonSigCoherenceFreq(cc))
+        if ~isempty(CoherencePeaksF{cc})
+            maxFreqInd = max(find(Freqs{cc} == max(CoherencePeaksF{cc})), find(FirstNonSigCoherenceFreq(cc)==Freqs{cc})) +2;
+        else
+            maxFreqInd = find(FirstNonSigCoherenceFreq(cc)==Freqs{cc}) +2;
+        end
+        subplot(1,3,3)
+        shadedErrorBar(Freqs{cc}(1:maxFreqInd), Coherence{cc}(1:maxFreqInd),[(Coherence_up{cc}(1:maxFreqInd)-Coherence{cc}(1:maxFreqInd))'; (-Coherence_low{cc}(1:maxFreqInd)+Coherence{cc}(1:maxFreqInd))'], {'LineWidth',2,'Color','k'})
+        hold on
+        plot([Freqs{cc}(1) Freqs{cc}(maxFreqInd)], [0 0], 'r--', 'LineWidth',2)
+        hold on
+        plot(CoherencePeaksF{cc}, CoherencePeaks{cc}, 'go', 'MarkerSize',6,'MarkerFaceColor','g')
+        hold on
+        plot(MaxCoherence(cc,2), MaxCoherence(cc,1), 'ro', 'MarkerSize',6,'MarkerFaceColor','r')
+        hold off
+        xlabel('Frequencies (Hz)')
+        ylabel('Coherence')
+        suplabel(sprintf('Cell %s TR = %d  ms', CellsPath(cc).name, TR),'t');
+    end
+    
+    % Now plot the scatter tuning curves
+    % load data
+    Cell = load(fullfile(CellsPath(cc).folder,CellsPath(cc).name));
+    
+    % Number of vocalizations in the dataset
+    if ~isfield(Cell, 'What')
+        fprintf(1,'*** . Problem with Cell %d, no what field!! ****\n', cc)
+        continue
+    else
+        IndVoc = find(contains(Cell.What, 'Voc'));
+        NStims = length(IndVoc);
+        StimDura = nan(NStims,1);
+        for ss=1:NStims
+            StimDura(ss) = round(length(Cell.BioSound{IndVoc(ss),2}.sound) ./(Cell.BioSound{IndVoc(ss),2}.samprate)*10^3);
+        end
+        if any(StimDura ~= Cell.Duration(IndVoc))
+            fprintf(1,'*** . Problem with Cell %d, duration inconcistency!! ****\n', cc)
+            continue
+        end
+    end
+    
+    % Get the type of the vocalization
+    Trill1_Bark0 = contains(Cell.What(IndVoc), 'Tr');
+    
+    % Get the optimal Time resolution values
+    TRs=[];
+    TRs(1) = CoherencyT_WidthAtMaxPeak(cc);
+    if ~isnan(SecondCoherenceFreqCutOff(cc))
+        TRs(2) = round(1/SecondCoherenceFreqCutOff(cc)*10^3);
+    end
+    
+    
+    for tr = 1:length(TRs)
+        TR = TRs(tr);
+       % Compute neural vectors
+        % Neural Data loop
+        % neural response is a vector that compile all spike counts starting
+        % at 200ms (-Delay(1)) before stim onset and stop at 200ms (Delay(2)) after
+        % stim offset
+        Delay = [-CoherencyT_DelayAtzero(cc) CoherencyT_DelayAtzero(cc)];
+        YPerStim = get_y_4Coherence(Cell.SpikesArrivalTimes_Behav(IndVoc), Cell.Duration(IndVoc),Delay,TR, TR/2);
+        Y = [YPerStim{:}]'; 
+        
+        % Get the vector of call type
+        Ind = [0 cumsum(cellfun('length',YPerStim))];
+        Trill1_Bark0_local = nan(size(Y));
+        for ss = 1:NStims
+            Trill1_Bark0_local((Ind(ss)+1):Ind(ss+1)) = Trill1_Bark0(ss) .* ones(Ind(ss+1)-Ind(ss),1);
+        end
+        
+
+        % Calculate acoustic features input to the models
+        % acoustic data is a vector of the value of the acoustic feature sampled
+        % at 1000Hz starting 200ms (-Delay(1)) before stim onset and stop at 200ms (Delay(2)) after
+        % stim offset
+        Delay = [0 0];
+        DefaultVal = 0;%zero should be the default value for the amplitude, we know here that there is no sound
+        XAmpPerStim = get_x_4coherence(Cell.BioSound(IndVoc,2), Cell.Duration(IndVoc), Delay,TR,DefaultVal,'amp', TR/2);
+        XAmp = [XAmpPerStim{:}]';
+        
+        DefaultVal = 0;%zero should be the default value for the saliency, we know here that there is no sound
+        XSalPerStim = get_x_4coherence(Cell.BioSound(IndVoc,2), Cell.Duration(IndVoc), Delay,TR,DefaultVal,'sal', TR/2);
+        XSal = [XSalPerStim{:}]';
+        
+        DefaultVal = 'mean';%mean of specmean should be the default value for the saliency, we know here that there is no sound
+        XSpecMeanPerStim = get_x_4coherence(Cell.BioSound(IndVoc,2), Cell.Duration(IndVoc), Delay,TR,DefaultVal,'SpectralMean', TR/2);
+        XSpecMean = [XSpecMeanPerStim{:}]';
+        XSpecMean(isnan(XSpecMean)) = nanmean(XSpecMean);
+        
+        figure(3+tr)
+        clf
+        subplot(1,3,1)
+        scatter(XAmp, Y./10^3, 20,[Trill1_Bark0_local zeros(size(Trill1_Bark0_local)) zeros(size(Trill1_Bark0_local))],'filled')
+        YLim = get(gca, 'YLim');
+        XLim = get(gca, 'XLim');
+        text(XLim(2)*3/4, YLim(2)*9.5/10,'Trill','Color',[1 0 0], 'FontWeight','bold')
+        text(XLim(2)*3/4, YLim(2)*9/10,'Bark','Color',[0 0 0], 'FontWeight','bold')
+        xlabel('Sound Amplitude')
+        ylabel('Spike Rate (Hz)')
+        
+        subplot(1,3,2)
+        scatter(XSal, Y./10^3, 20,[Trill1_Bark0_local zeros(size(Trill1_Bark0_local)) zeros(size(Trill1_Bark0_local))],'filled')
+        YLim = get(gca, 'YLim');
+        XLim = get(gca, 'XLim');
+        text(XLim(2)*3/4, YLim(2)*9.5/10,'Trill','Color',[1 0 0], 'FontWeight','bold')
+        text(XLim(2)*3/4, YLim(2)*9/10,'Bark','Color',[0 0 0], 'FontWeight','bold')
+        xlabel('Sound Pitch Saliency')
+        ylabel('Spike Rate (Hz)')
+        
+        subplot(1,3,3)
+        scatter(XSpecMean, Y./10^3, 20,[Trill1_Bark0_local zeros(size(Trill1_Bark0_local)) zeros(size(Trill1_Bark0_local))],'filled')
+        YLim = get(gca, 'YLim');
+        XLim = get(gca, 'XLim');
+        text(XLim(2)*3/4, YLim(2)*9.5/10,'Trill','Color',[1 0 0], 'FontWeight','bold')
+        text(XLim(2)*3/4, YLim(2)*9/10,'Bark','Color',[0 0 0], 'FontWeight','bold')
+        xlabel('Sound Spectral Mean')
+        ylabel('Spike Rate (Hz)')
+        
+        suplabel(sprintf('Cell %s TR = %d  ms', CellsPath(cc).name, TR),'t');
+        
+        
+        
+    end
+    keyboard
+    
+end
 
 
 %% Motor Models parameters
@@ -1221,22 +1394,22 @@ parfor cc=1:NCells
     MotorModels{cc}.BAmpSpecMean = BSpecMean;
     MotorModels{cc}.BAmpSal = BSal;
     MotorModels{cc}.BNull = BNull;
-    MotorModels{cc}.TicToc = TicTocGLM;
+    MotorModels{cc}.TicToc = TicToc;
     MotorModels{cc}.MeanY = MeanY;
         
 end
 %
 save(fullfile(Path,'MotorModelsGLM'),'MotorModels','CellsPath', 'GoodInfo');
 
-%% Plot issues with no convergence
-load(fullfile(Path,'MotorModelsAllCells'),'MotorModels','CellsPath');
-TicToc = nan(NCells*11,1);
-MeanY = nan(NCells*11,1);
-TRs = nan(NCells*11,1);
-BestDevAmp = nan(NCells*11,1);
-BestDevSpecMean = nan(NCells*11,1);
-BestDevSal = nan(NCells*11,1);
-BestDevNull = nan(NCells*11,1);
+%% Plot issues with no convergence and results of Poisson GLM
+% load(fullfile(Path,'MotorModelsAllCells'),'MotorModels','CellsPath');
+TicToc = nan(NCells*2,1);
+MeanY = nan(NCells*2,1);
+TRs = nan(NCells*2,1);
+BestDevAmp = nan(NCells*2,1);
+BestDevSpecMean = nan(NCells*2,1);
+BestDevSal = nan(NCells*2,1);
+BestDevNull = nan(NCells*2,1);
 
 F10=figure(10);
 F20 = figure(20);
@@ -1306,13 +1479,13 @@ end
 
 figure()
 subplot(1,2,1)
-scatter(MeanY,TicToc/(60*60), 'MarkerFaceColor','k')
+scatter(MeanY,TicToc/(60), 'MarkerFaceColor','k')
 xlabel('MeanRate')
-ylabel('Model Time consumption (h)')
+ylabel('Model Time consumption (min)')
 subplot(1,2,2)
-scatter(TRs,TicToc/(60*60), 'MarkerFaceColor','k')
+scatter(TRs,TicToc/(60), 'MarkerFaceColor','k')
 xlabel('Models Time Resolution (ms)')
-ylabel('Model Time consumption (h)')
+ylabel('Model Time consumption (min)')
 
 
 figure()
@@ -1354,138 +1527,71 @@ legend({'SpecMean contribution' 'Sal contribution' 'Amp contribution'})
 ylabel('R2')
 xlabel('Time resolution in ms')
 
+% Now plot only results of the GLM for the time resolution dictated by
+% width of time coherency peak
+DevianceDifference = nan(NCells,3); % this matrix will contain the contribution of each parameter to the performance of the models predicting Y
+R2_Models = nan(NCells,3); % this matrix will contain the contribution of each parameter to the performance of the models predicting Y
 
-%% Explore Cell by cell the profile of coherence and scatter plots of cell tuning
-for nc=1:NCells
-    cc=GoodInfo(nc);
-    
-    % Figure on coherence values with sound Amplitude
-    figure(3)
-    clf
-    subplot(1,3,1)
-    plot(CoherencyT_xTimeDelay{cc}, CoherencyT_filt{cc}, 'LineWidth',2)
-    if ~isnan(CoherencyT_DelayAtzero(cc))
-        hold on
-        P = CoherencyT_filt{cc}(CoherencyT_xTimeDelay{cc} == CoherencyT_DelayAtzero(cc));
-        plot(CoherencyT_DelayAtzero(cc),P,'ro', 'MarkerSize',16, 'MarkerFaceColor','r')
-        text(max(CoherencyT_xTimeDelay{cc})/5, 4.5/5*P, sprintf('Delay at zero = %.2f ms', CoherencyT_DelayAtzero(cc)))
-        text(max(CoherencyT_xTimeDelay{cc})/5, 4/5*P, sprintf('Width at y=mean(coherencyT) = %.2f ms', CoherencyT_WidthAtMaxPeak(cc)))
-        hold off
+for cc=1:NCells
+    if ~isempty(MotorModels{cc})
+        DevianceDifference(cc,1) = MotorModels{cc}.DevNull(1) - MotorModels{cc}.DevAmp(1);
+        DevianceDifference(cc,2) = MotorModels{cc}.DevAmp(1) - MotorModels{cc}.DevAmpSpecMean(1);
+        DevianceDifference(cc,3) = MotorModels{cc}.DevAmp(1) - MotorModels{cc}.DevAmpSal(1);
+        R2_Models(cc,1) = (MotorModels{cc}.DevNull(1) - MotorModels{cc}.DevAmp(1))/MotorModels{cc}.DevNull(1);
+        R2_Models(cc,2) = (MotorModels{cc}.DevAmp(1) - MotorModels{cc}.DevAmpSpecMean(1))/MotorModels{cc}.DevAmp(1);
+        R2_Models(cc,3) = (MotorModels{cc}.DevAmp(1) - MotorModels{cc}.DevAmpSal(1))/MotorModels{cc}.DevAmp(1);
     end
-    xlabel('Time Delay')
-    ylabel('Coherency')
-
-    subplot(1,3,2)
-    shadedErrorBar(Freqs{cc}, Coherence{cc},[(Coherence_up{cc}-Coherence{cc})'; (-Coherence_low{cc}+Coherence{cc})'], {'LineWidth',2,'Color','k'})
-    hold on
-    plot([Freqs{cc}(1) Freqs{cc}(end)], [0 0], 'r--', 'LineWidth',2)
-    hold on
-    plot(CoherencePeaksF{cc}, CoherencePeaks{cc}, 'go', 'MarkerSize',6,'MarkerFaceColor','g')
-    hold on
-    plot(MaxCoherence(cc,2), MaxCoherence(cc,1), 'ro', 'MarkerSize',6,'MarkerFaceColor','r')
-    MaxY = 0.4;
-    ylim([-0.1 MaxY])
-    text(Freqs{cc}(end)/3,0.8*MaxY,sprintf('Info = %.2f   InfoUp = %.2f    InfoLow = %.2f', Info(cc), Info_up(cc), Info_low(cc)))
-    hold on
-    text(Freqs{cc}(end)/3,0.9*MaxY,sprintf('MaxCoherence = %.2f', MaxCoherence(cc)))
-    hold on
-    text(Freqs{cc}(end)/3,0.85*MaxY,sprintf('FreqCutOff = %.2f Hz -> TimeResolution = %.2f ms', FirstNonSigCoherenceFreq(cc),1/FirstNonSigCoherenceFreq(cc)*10^3))
-    hold off
-    xlabel('Frequencies (Hz)')
-    ylabel('Coherence')
-    
-    
-    if ~isempty(FirstNonSigCoherenceFreq(cc))
-        if ~isempty(CoherencePeaksF{cc})
-            maxFreqInd = max(find(Freqs{cc} == max(CoherencePeaksF{cc})), find(FirstNonSigCoherenceFreq(cc)==Freqs{cc})) +2;
-        else
-            maxFreqInd = find(FirstNonSigCoherenceFreq(cc)==Freqs{cc}) +2;
-        end
-        subplot(1,3,3)
-        shadedErrorBar(Freqs{cc}(1:maxFreqInd), Coherence{cc}(1:maxFreqInd),[(Coherence_up{cc}(1:maxFreqInd)-Coherence{cc}(1:maxFreqInd))'; (-Coherence_low{cc}(1:maxFreqInd)+Coherence{cc}(1:maxFreqInd))'], {'LineWidth',2,'Color','k'})
-        hold on
-        plot([Freqs{cc}(1) Freqs{cc}(maxFreqInd)], [0 0], 'r--', 'LineWidth',2)
-        hold on
-        plot(CoherencePeaksF{cc}, CoherencePeaks{cc}, 'go', 'MarkerSize',6,'MarkerFaceColor','g')
-        hold on
-        plot(MaxCoherence(cc,2), MaxCoherence(cc,1), 'ro', 'MarkerSize',6,'MarkerFaceColor','r')
-        hold off
-        xlabel('Frequencies (Hz)')
-        ylabel('Coherence')
-    end
-    
-    % Now plot the scatter tuning curves
-    % load data
-    Cell = load(fullfile(CellsPath(cc).folder,CellsPath(cc).name));
-    
-    % Number of vocalizations in the dataset
-    if ~isfield(Cell, 'What')
-        fprintf(1,'*** . Problem with Cell %d, no what field!! ****\n', cc)
-        continue
-    else
-        IndVoc = find(contains(Cell.What, 'Voc'));
-        NStims = length(IndVoc);
-        StimDura = nan(NStims,1);
-        for ss=1:NStims
-            StimDura(ss) = round(length(Cell.BioSound{IndVoc(ss),2}.sound) ./(Cell.BioSound{IndVoc(ss),2}.samprate)*10^3);
-        end
-        if any(StimDura ~= Cell.Duration(IndVoc))
-            fprintf(1,'*** . Problem with Cell %d, duration inconcistency!! ****\n', cc)
-            continue
-        end
-    end
-    for tr = 1:length(TRs{cc})
-        TR = TRs{cc}(tr);
-       % Compute neural vectors
-        % Neural Data loop
-        % neural response is a vector that compile all spike counts starting
-        % at -200ms (Delay) before stim onset and stop at 200ms (Delay) after
-        % stim offset
-        YPerStim = get_y_4Coherence(Cell.SpikesArrivalTimes_Behav(IndVoc), Cell.Duration(IndVoc),Delay,TR, TR/2);
-        Y = [YPerStim{:}]';    
-
-        % Calculate acoustic features input to the models
-        % acoustic data is a vector of the value of the acoustic feature sampled
-        % at 1000Hz starting -200ms (Delay) before stim onset and stop at 200ms (Delay) after
-        % stim offset
-        DefaultVal = 0;%zero should be the default value for the amplitude, we know here that there is no sound
-        XAmpPerStim = get_x_4coherence(Cell.BioSound(IndVoc,2), Cell.Duration(IndVoc), Delay,TR,DefaultVal,'amp', TR/2);
-        XAmp = [XAmpPerStim{:}]';
-        
-        DefaultVal = 0;%zero should be the default value for the saliency, we know here that there is no sound
-        XSalPerStim = get_x_4coherence(Cell.BioSound(IndVoc,2), Cell.Duration(IndVoc), Delay,TR,DefaultVal,'sal', TR/2);
-        XSal = [XSalPerStim{:}]';
-        
-        DefaultVal = nan;%mean of specmean should be the default value for the saliency, we know here that there is no sound
-        XSpecMeanPerStim = get_x_4coherence(Cell.BioSound(IndVoc,2), Cell.Duration(IndVoc), Delay,TR,DefaultVal,'SpectralMean', TR/2);
-        XSpecMean = [XSpecMeanPerStim{:}]';
-        XSpecMean(isnan(XSpecMean)) = nanmean(XSpecMean);
-        
-        figure(3+tr)
-        clf
-        subplot(1,3,1)
-        scatter(XAmp, Y.*10^3,'filled','Color','k')
-        xlabel('Sound Amplitude')
-        ylabel('Spike Rate (Hz)')
-        
-        subplot(1,3,2)
-        scatter(XSal, Y.*10^3,'filled','Color','k')
-        xlabel('Sound Pitch Saliency')
-        ylabel('Spike Rate (Hz)')
-        
-        subplot(1,3,3)
-        scatter(XSpecMean, Y.*10^3,'filled','Color','k')
-        xlabel('Sound Spectral Mean')
-        ylabel('Spike Rate (Hz)')
-        
-        suplabel(sprintf('Cell %s TR = %d  ms', CellsPath(cc).name, TR))
-        
-        
-        
-    end
-    keyboard
-    
 end
+
+figure(30)
+clf
+subplot(1,2,1)
+imagesc(DevianceDifference)
+colorbar()
+set(gca,'XTick',1:3, 'XTickLabel', {'Amp' 'SpecMean' 'Sal'})
+ylabel('Cell #')
+xlabel('Contribution to - Deviance')
+
+subplot(1,2,2)
+imagesc(R2_Models)
+colorbar()
+set(gca,'XTick',1:3, 'XTickLabel', {'Amp' 'SpecMean' 'Sal'})
+%caxis([0 1])
+colorbar()
+ylabel('Cell #')
+xlabel('Contribution to - Deviance in R2')
+
+% Plot first cell example
+figure(22)
+clf
+cc=1;
+ColorCode = get(groot, 'DefaultAxesColorOrder');
+X = categorical({ 'Null' 'Amp' 'Amp + SpecMean' 'Amp + Sal'});
+X = reordercats(X,{ 'Null' 'Amp' 'Amp + SpecMean' 'Amp + Sal'});
+bar(X,[MotorModels{cc}.DevNull(1) MotorModels{cc}.DevAmp(1) MotorModels{cc}.DevAmpSpecMean(1) MotorModels{cc}.DevAmpSal(1)],'k')
+ylabel('Deviance = sum of errors')
+title('Sum of errors (SSE for LM)')
+
+figure(23)
+clf
+cc=1;
+X = categorical({ 'Null - Amp' '(Amp + SpecMean) - Amp' '(Amp + Sal) - Amp'});
+X = reordercats(X,{ 'Null - Amp' '(Amp + SpecMean) - Amp' '(Amp + Sal) - Amp'});
+bar(X,[MotorModels{cc}.DevNull(1)-MotorModels{cc}.DevAmp(1) MotorModels{cc}.DevAmp(1)-MotorModels{cc}.DevAmpSpecMean(1) MotorModels{cc}.DevAmp(1)-MotorModels{cc}.DevAmpSal(1)],'k')
+ylabel('Reduction in Deviance')
+title('Absolute contribution of acoustic parameters to error reduction')
+
+figure(24)
+clf
+cc=1;
+ColorCode = get(groot, 'DefaultAxesColorOrder');
+X = categorical({ 'Null - Amp' '(Amp + SpecMean) - Amp' '(Amp + Sal) - Amp'});
+X = reordercats(X,{ 'Null - Amp' '(Amp + SpecMean) - Amp' '(Amp + Sal) - Amp'});
+bar(X,[(MotorModels{cc}.DevNull(1)-MotorModels{cc}.DevAmp(1))/MotorModels{cc}.DevNull(1) (MotorModels{cc}.DevAmp(1)-MotorModels{cc}.DevAmpSpecMean(1))/MotorModels{cc}.DevAmp(1) (MotorModels{cc}.DevAmp(1)-MotorModels{cc}.DevAmpSal(1))/MotorModels{cc}.DevAmp(1)],'k')
+ylabel('R2')
+title('Relative contribution of acoustic parameters to error reduction')
+
+
 
         
 
@@ -1701,23 +1807,38 @@ function [XPerStim] = get_x_4coherence(BioSound, Duration, Delay,TR,DefaultVal,F
 if nargin<7
     Overlap = 0;
 end
+if length(Delay)==1
+    Delay = [Delay Delay];
+end
 % calculate the cell array of acoustic data for each cell. For each
 % voc, XPerStim is a vector where each column correspond to the values of
 % the acoustic feature in the window Win starting Delay ms before time onset
 % of the vocalization.
-Fs = 1/((TR-Overlap).*10^-3);
+Fs = round(1/((TR-Overlap).*10^-3));
 % Vectors of the acoustic features
 XPerStim = cell(1,length(Duration));
+if ischar(DefaultVal) && strcmp(DefaultVal, 'mean')
+    DefaultValue = 1;
+else
+    DefaultValue = DefaultVal;
+end
+    
 for stim = 1:length(Duration)
     if round(length(BioSound{stim}.sound)/BioSound{stim}.samprate*10^3) ~= Duration(stim)
         keyboard
     end
     % Get ready an output vector for the stim acoustic features that was sampled at 1000Hz
-    XPerStim_temp = DefaultVal.*ones(1,round(1000 .* (Delay + Duration(stim) + Delay).*10^-3));
+    XPerStim_temp = DefaultValue.*ones(1,round(1000 .* (Delay(1) + Duration(stim) + Delay(2)).*10^-3));
     FeatureVal = BioSound{stim}.(sprintf('%s',Feature));
-    XPerStim_temp(Delay+(1:length(FeatureVal)))=FeatureVal;
+    XPerStim_temp(Delay(1)+(1:length(FeatureVal)))=FeatureVal;
+    if ~ischar(DefaultVal)
+        XPerStim_temp(isnan(XPerStim_temp)) = DefaultValue;
+    else
+        XPerStim_temp(isnan(XPerStim_temp)) = nanmean(XPerStim_temp);
+    end
     XPerStim{stim} = resample(XPerStim_temp, Fs, 1000); 
 end
+
 
 end
 
@@ -1777,28 +1898,31 @@ function [YPerStim] = get_y_4Coherence(SAT, Duration,Delay,TR,Overlap)
 if nargin<5
     Overlap = 0;
 end
+if length(Delay)==1
+    Delay = [Delay Delay];
+end
 % Calculate the time varying rate applying a gaussian window TR on the
 % spike pattern. The spike pattern considered starts -Delay ms
 % before the onset of the vocalization and stops Delay ms after the
 % offset of the vocalization
 YPerStim = cell(1,length(Duration));
 % Gaussian window of 2*std equal to TR (68% of Gaussian centered in TR)
-nStd =max(Duration) + Delay + Delay; % before set as 4
+nStd =max(Duration) + Delay(1) + Delay(2); % before set as 4
 Tau = (TR/2);
 T_pts = (0:2*nStd*Tau) - nStd*Tau; % centered tpoints around the mean = 0 and take data into account up to nstd away on each side
 Expwav = exp(-0.5*(T_pts).^2./Tau^2)/(Tau*(2*pi)^0.5);
 Expwav = Expwav./sum(Expwav);
 % Frequency at which the neural data should be sampled
-Fs = 1/((TR-Overlap).*10^-3);
+Fs = round(1/((TR-Overlap).*10^-3));
 % Loop through the stimuli and fill in the matrix
 for stim=1:length(Duration)
     % Time slots for the neural response
-    TimeBinsY = -Delay : (Delay + Duration(stim));
+    TimeBinsY = -Delay(1) : (Delay(2) + Duration(stim));
     SpikePattern = zeros(1,length(TimeBinsY)-1);
     for isp = 1:length(SAT{stim})
         SpikeInd = round(SAT{stim}(isp));
-        if (SpikeInd>=-Delay) && (SpikeInd<(Delay + Duration(stim)))
-            SpikePattern(SpikeInd + Delay +1) = SpikePattern(SpikeInd + Delay +1) +1;
+        if (SpikeInd>=-Delay(1)) && (SpikeInd<(Delay(2) + Duration(stim)))
+            SpikePattern(SpikeInd + Delay(1) +1) = SpikePattern(SpikeInd + Delay(1) +1) +1;
         end
     end
     if Fs~=1000
