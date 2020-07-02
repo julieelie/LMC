@@ -525,8 +525,13 @@ xlabel('Time resolution of Coherency with sound Amplitude (ms)')
 ylabel('Time resolution of Coherency with pitch saliency (ms)')
 %% Explore Cell by cell the profile of coherence and scatter plots of cell tuning for Good Cells
 
-load(fullfile(Path,'MotorModelsCoherencyAmp.mat'))
+load(fullfile(Path,'MotorModelsCoherency_amp.mat'))
 NCells = length(GoodInfo);
+AmpPredictor = nan(NCells,2); % first element is difference of deviance with full model, second is pvalue of chisquare test
+SalPredictor = nan(NCells,2); % first element is difference of deviance with full model, second is pvalue of chisquare test
+SpecMeanPredictor = nan(NCells,2); % first element is difference of deviance with full model, second is pvalue of chisquare test
+CallTypePredictor = nan(NCells,2); % first element is difference of deviance with full model, second is pvalue of chisquare test
+
 for nc=1:NCells
     cc=GoodInfo(nc);
     fprintf(1,'Cell %d/%d\n',nc,NCells)
@@ -613,9 +618,9 @@ for nc=1:NCells
     % Get the optimal Time resolution values
     TRs=[];
     TRs(1) = CoherencyT_WidthAtMaxPeak(cc);
-    if ~isnan(SecondCoherenceFreqCutOff(cc))
-        TRs(2) = round(1/SecondCoherenceFreqCutOff(cc)*10^3);
-    end
+%     if ~isnan(SecondCoherenceFreqCutOff(cc))
+%         TRs(2) = round(1/SecondCoherenceFreqCutOff(cc)*10^3);
+%     end
     
     
     for tr = 1:length(TRs)
@@ -686,17 +691,44 @@ for nc=1:NCells
         
         suplabel(sprintf('Cell %s TR = %d  ms', CellsPath(cc).name, TR),'t');
         
+        % Run some GLM to establish the effect of acoustic features
+        % formula Y~ XAmp + XSal + XSpecMean
+%         TermsMatrix = [0 0 0 0; 1 0 0 0; 0 1 0 0; 0 0 1 0; 0 0 0 1; 1 1 0 ];
+        TableFull = table(Xamp, XSal, XSPecMean, categorical(Trill1_Bark0_local),Y,'VariableNames',{'Amplitude' 'Saliency' 'SpectralMean' 'CallType' 'Rate'});
+        FullModel = fitglm(TableFull, 'Rate ~ Amplitude + Saliency + SpectralMean + CallType + Amplitude:Saliency + Amplitude:SpectralMean + Amplitude:CallType + Saliency:SpectralMean + Saliency:CallType + SpectralMean:CallType' , 'Distribution', 'Poisson','CategoricalVars', [0 0 0 1 0]);
         
+        ModelwoAmp = fitglm(TableFull, 'Rate ~ Saliency + SpectralMean + CallType + Saliency:SpectralMean + Saliency:CallType + SpectralMean:CallType' , 'Distribution', 'Poisson','CategoricalVars', [0 0 0 1 0]);
         
+        ModelwoSal = fitglm(TableFull, 'Rate ~ Amplitude + SpectralMean + CallType +  Amplitude:SpectralMean + Amplitude:CallType +  SpectralMean:CallType' , 'Distribution', 'Poisson','CategoricalVars', [0 0 0 1 0]);
+        
+        ModelwoSpecMean = fitglm(TableFull, 'Rate ~ Amplitude + Saliency + CallType + Amplitude:Saliency +  Amplitude:CallType +  Saliency:CallType' , 'Distribution', 'Poisson','CategoricalVars', [0 0 0 1 0]);
+        
+        ModelwoCallType = fitglm(TableFull, 'Rate ~ Amplitude + Saliency + SpectralMean +  Amplitude:Saliency + Amplitude:SpectralMean + Saliency:SpectralMean + SpectralMean:CallType' , 'Distribution', 'Poisson','CategoricalVars', [0 0 0 1 0]);
+        
+        AmpPredictor(cc,1) = ModelwoAmp.Deviance - FullModel.Deviance;
+        AmpPredictor(cc,2) = chi2cdf(AmpPredictor(cc,1), FullModel.DFE - ModelwoAmp.DFE, 'upper');
+        
+        SalPredictor(cc,1) = ModelwoSal.Deviance - FullModel.Deviance;
+        SalPredictor(cc,2) = chi2cdf(SalPredictor(cc,1), FullModel.DFE - ModelwoSal.DFE, 'upper');
+        
+        SpecMeanPredictor(cc,1) = ModelwoSpecMean.Deviance - FullModel.Deviance;
+        SpecMeanPredictor(cc,2) = chi2cdf(SpecMeanPredictor(cc,1), FullModel.DFE - ModelwoSpecMean.DFE, 'upper');
+        
+        CallTypePredictor(cc,1) = ModelwoCallType.Deviance - FullModel.Deviance;
+        CallTypePredictor(cc,2) = chi2cdf(CallTypePredictor(cc,1), FullModel.DFE - ModelwoCallType.DFE, 'upper');
     end
     keyboard
     
 end
 
 
-%% Motor Models parameters
+%% MRFS: Motor Models parameters Ridge regression
+load(fullfile(Path,'MotorModelsCoherency_amp.mat'))
 % Assumption of stationarity over time
 
+% Running through cells to find the optimal time resolution of the neural response for acoustic feature predicion from the neural response
+% here we use a ridge regularization with an MSE optimization on the
+% prediction of spike rate
 Win =300; %value in ms for the duration of the snippet of sound which
 % acoustic features are used to predict the neural response at a given time
 % t. This will be the size of the xaxis of the MRF.
@@ -704,19 +736,6 @@ Win =300; %value in ms for the duration of the snippet of sound which
 Delay = 100;% ms
 %The neural activity at time t is predicted by a time varying
 % acoustic feature that starts at t-Delay ms
-
-% parameters of the Poisson GLM Models
-ParamModel.LAMBDARATIO=1e-4;
-ParamModel.NUMLAMBDA=10;%25?
-ParamModel.LINK='log';
-ParamModel.DISTR='poisson';
-% Determine a list of alpha (parameter that range the regularization
-% betweeen ridge (L2, alpha=0) and lasso (L1, alpha =1))
-ParamModel.Alpha=0.001; % STRFs are easier to interpret using ridge than using Lasso and deviances are similar.
-
-%% Running through cells to find the optimal time resolution of the neural response for acoustic feature predicion from the neural response
-% here we use a ridge regularization with an MSE optimization on the
-% prediction of spike rate
 NCells = length(GoodInfo);
 % Define the time resolution at which neural density estimates should be calculated
 TRs = cell(NCells,1); % time in ms with first column being the optimal time according to coherency peak width and second column being the optimal time according to last peak in coherence
@@ -1167,9 +1186,23 @@ ylabel('R2 Saliency')
 
 suplabel('R2 Ridge regression models','t')
 
+%% GLM on acoutsic features and call type
 
-%% Run ridge GLM Poisson on acoustic features for cells with high values of Info on coherence (Channel capacity with Amplitude)
+
+
+%% MRFS: Run ridge GLM Poisson on acoustic features for cells with high values of Info on coherence (Channel capacity with Amplitude)
+% These did not work well...
 %load(fullfile(Path,'MotorModelsGLM'),'MotorModels','CellsPath', 'GoodInfo');
+load(fullfile(Path,'MotorModelsCoherency_amp.mat'))
+% parameters of the Poisson GLM Models
+ParamModel.LAMBDARATIO=1e-4;
+ParamModel.NUMLAMBDA=10;%25?
+ParamModel.LINK='log';
+ParamModel.DISTR='poisson';
+% Determine a list of alpha (parameter that range the regularization
+% betweeen ridge (L2, alpha=0) and lasso (L1, alpha =1))
+ParamModel.Alpha=0.001; % STRFs are easier to interpret using ridge than using Lasso and deviances are similar.
+
 NCells = length(GoodInfo);
 
 MotorModels = cell(NCells,1);
