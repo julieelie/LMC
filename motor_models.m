@@ -760,43 +760,43 @@ for nc=1:NCells
         TableFull = table(XAmp, XSal, XSpecMean, categorical(Trill1_Bark0_local),Y,'VariableNames',{'Amplitude' 'Saliency' 'SpectralMean' 'CallType' 'Rate'});
         FullModel = fitlm(TableFull, 'Rate ~ Amplitude + Saliency + SpectralMean + CallType + Amplitude:Saliency + Amplitude:SpectralMean + Amplitude:CallType + Saliency:SpectralMean + Saliency:CallType + SpectralMean:CallType' , 'CategoricalVars', 4);
         FullModelR2(nc,3) = FullModel.Rsquared.Adjusted;
-        AnovaF = FullModel.anova;
-        FullModelR2(nc,1) = AnovaF.F;
-        FullModelR2(nc,2) = AnovaF.pValue;
+        AnovaF = anova(FullModel, 'summary');
+        FullModelR2(nc,1) = AnovaF.F(contains(AnovaF.Properties.RowNames, 'Model'));
+        FullModelR2(nc,2) = AnovaF.pValue(contains(AnovaF.Properties.RowNames, 'Model'));
         
         ModelwoAmp = fitlm(TableFull, 'Rate ~ Saliency + SpectralMean + CallType + Saliency:SpectralMean + Saliency:CallType + SpectralMean:CallType' , 'CategoricalVars', 4);
         ModelAmp = fitlm(XAmp, Y );
         ModelAmpR2(nc,3) = ModelAmp.Rsquared.Adjusted;
-        AnovaAmp = ModelAmp.anova;
-        ModelAmpR2(nc,1) = AnovaAmp.F;
-        ModelAmpR2(nc,2) = AnovaAmp.pValue;
+        AnovaAmp = anova(ModelAmp, 'summary');
+        ModelAmpR2(nc,1) = AnovaAmp.F(contains(AnovaAmp.Properties.RowNames, 'Model'));
+        ModelAmpR2(nc,2) = AnovaAmp.pValue(contains(AnovaAmp.Properties.RowNames, 'Model'));
         XPredictAmp = min(XAmp):(max(XAmp)-min(XAmp))/10:max(XAmp);
         [YPredictAmp,YPredictAmpci] = predict(ModelAmp,XPredictAmp');
         
         ModelwoSal = fitlm(TableFull, 'Rate ~ Amplitude + SpectralMean + CallType +  Amplitude:SpectralMean + Amplitude:CallType +  SpectralMean:CallType' , 'CategoricalVars', 4);
         ModelSal = fitlm(XSal,Y);
         ModelSalR2(nc,3) = ModelSal.Rsquared.Adjusted;
-        AnovaSal = ModelSal.anova;
-        ModelSalR2(nc,1) = AnovaSal.F;
-        ModelSalR2(nc,2) = AnovaSal.pValue;
+        AnovaSal = anova(ModelSal, 'summary');
+        ModelSalR2(nc,1) = AnovaSal.F(contains(AnovaSal.Properties.RowNames, 'Model'));
+        ModelSalR2(nc,2) = AnovaSal.pValue(contains(AnovaSal.Properties.RowNames, 'Model'));
         XPredictSal = min(XSal):(max(XSal)-min(XSal))/10:max(XSal);
         [YPredictSal,YPredictSalci] = predict(ModelSal,XPredictSal');
         
         ModelwoSpecMean = fitlm(TableFull, 'Rate ~ Amplitude + Saliency + CallType + Amplitude:Saliency +  Amplitude:CallType +  Saliency:CallType' , 'CategoricalVars', 4);
         ModelSpecMean = fitlm(XSpecMean,Y);
         ModelSpecMeanR2(nc,3) = ModelSpecMean.Rsquared.Adjusted;
-        AnovaSpecMean = ModelSpecMean.anova;
-        ModelSpecMeanR2(nc,1) = AnovaSpecMean.F;
-        ModelSpecMeanR2(nc,2) = AnovaSpecMean.pValue;
+        AnovaSpecMean = anova(ModelSpecMean, 'summary');
+        ModelSpecMeanR2(nc,1) = AnovaSpecMean.F(contains(AnovaSpecMean.Properties.RowNames, 'Model'));
+        ModelSpecMeanR2(nc,2) = AnovaSpecMean.pValue(contains(AnovaSpecMean.Properties.RowNames, 'Model'));
         XPredictSpecMean = min(XSpecMean):(max(XSpecMean)-min(XSpecMean))/10:max(XSpecMean);
         [YPredictSpecMean,YPredictSpecMeanci] = predict(ModelSpecMean,XPredictSpecMean');
         
         ModelwoCallType = fitlm(TableFull, 'Rate ~ Amplitude + Saliency + SpectralMean +  Amplitude:Saliency + Amplitude:SpectralMean + Saliency:SpectralMean ' , 'CategoricalVars', 4);
         ModelCallType = fitlm(categorical(Trill1_Bark0_local),Y);
         ModelCallTypeR2(nc,3) = ModelCallType.Rsquared.Adjusted;
-        AnovaCallType = ModelCallType.anova;
-        ModelCallTypeR2(nc,1) = AnovaCallType.F;
-        ModelCallTypeR2(nc,2) = AnovaCallType.pValue;
+        AnovaCallType = anova(ModelCallType, 'summary');
+        ModelCallTypeR2(nc,1) = AnovaCallType.F(contains(AnovaCallType.Properties.RowNames, 'Model'));
+        ModelCallTypeR2(nc,2) = AnovaCallType.pValue(contains(AnovaCallType.Properties.RowNames, 'Model'));
         
         % calculate the significance of the difference in Error according
         % to F distribution and the adjusted R2
