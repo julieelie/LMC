@@ -26,20 +26,20 @@ CellsPath = AllFiles(logical(Files2run));
 % acoustic features
 StimXYDataPlot=0;
 FeatureName = {'amp' 'SpectralMean' 'sal'};
-for fn=1:length(FeatureName)
-    TR=2; % 2ms is chosen as the Time resolution for the neural data
-    Fs = 1/(TR*10^-3); % the data is then sampled at the optimal frequency given the neural time resolution choosen
-    % find the closest power of 2 for the number of FFT window points that
-    % correspond to the Nyquist limit
-    Nyquist = Fs * 0.5;
-    nFFT = 2^ceil(log2(Nyquist));
+TR=2; % 2ms is chosen as the Time resolution for the neural data
+Fs = 1/(TR*10^-3); % the data is then sampled at the optimal frequency given the neural time resolution choosen
+% find the closest power of 2 for the number of FFT window points that
+% correspond to the Nyquist limit
+Nyquist = Fs * 0.5;
+nFFT = 2^ceil(log2(Nyquist));
+NCells = length(CellsPath);
+%Delay = nFFT/(2*Fs)*10^3;
+Delay=200;
+MinCoherence4peaks = 0.01;
     
-    NCells = length(CellsPath);
-    %Delay = nFFT/(2*Fs)*10^3;
-    Delay=200;
+for fn=1:length(FeatureName)
     % Lags = -Delay:Delay;
     % Freqs = (0:ceil(length(Lags)/2)).* (2*Nyquist/length(Lags)); % Lags is a uneven number so F(i) = i*2*Nyquist/length(Lags)
-    MinCoherence4peaks = 0.01;
     CoherencyT = cell(NCells,1);
     CoherencyT_filt = cell(NCells,1);
     CoherencyT_xTimeDelay = cell(NCells,1);
@@ -304,13 +304,15 @@ for fn=1:length(FeatureName)
 end
 
 %% Plots results of coherence calculations for the population
-
+FeatureName = {'amp' 'SpectralMean' 'sal'};
 for fn = 1:length(FeatureName)
     load(fullfile(Path,sprintf('MotorModelsCoherency_%s.mat', FeatureName{fn})))
     if strcmp(FeatureName{fn}, 'amp')
         FeatureName2 = 'Amplitude';
     elseif strcmp(FeatureName{fn}, 'sal')
         FeatureName2 = 'Pitch Saliency';
+    elseif strcmp(FeatureName{fn}, 'SpectralMean')
+        FeatureName2 = 'Spectral Mean';
     end
     figure(1)
     clf
@@ -462,6 +464,9 @@ for fn = 1:length(FeatureName)
     suplabel(sprintf('%s', FeatureName2), 't');
     
     fprintf(1,'Cell with highest Info Value: %s', CellsPath(Info == max(Info)).name)
+    %Amplitude: 59834_20190614_SSS_1-100.mat
+    % SpectralMean 59834_20190610_SSS_1-130.mat
+    % Saliency: 59834_20190708_SSM_1-228.mat
     
     % Plot the values of the secondary peaks found for some cells
     figure(4)
@@ -472,51 +477,54 @@ for fn = 1:length(FeatureName)
     
     
     
-    % plot again the histograms for high Info subset of cells
-    figure(5)
-    clf
-    subplot(1,5,1)
-    histogram(CoherencyT_DelayAtzero(GoodInfo),'BinWidth',TR/2,'FaceColor','k')
-    xlabel('Phase of coherency (ms)')
-    ylabel('Number of cells with Info > 1bit')
-    hold on
-    v=vline(0, 'r:');
-    v.LineWidth = 2;
-    
-    subplot(1,5,2)
-    histogram(CoherencyT_WidthAtMaxPeak(GoodInfo),'BinWidth',TR/2,'FaceColor','k')
-    xlabel('Time resolution of Coherency (ms)')
-    ylabel('Number of cells with Info > 1bit')
-    
-    
-    subplot(1,5,3)
-    histogram(FirstNonSigCoherenceFreq(GoodInfo), 'BinWidth',ceil(nFFT/Nyquist),'FaceColor','k')
-    xlabel('Max significant Frequency (Hz)')
-    ylabel('Number of cells with Info > 1bit')
-    
-    subplot(1,5,4)
-    histogram(SecondCoherenceFreqCutOff(GoodInfo), 'BinWidth',ceil(nFFT/Nyquist),'FaceColor','k')
-    xlabel('Max 2nd peaks significant Frequency (Hz)')
-    ylabel('Number of Cells')
-    
-    subplot(1,5,5)
-    histogram(MaxCoherence(find(GoodInfo),2), 'BinWidth',ceil(nFFT/Nyquist),'FaceColor','k')
-    % Some points with very low values of info have high values of frequency of
-    % Max coherence, keep the plot focused on the majority of points
-    xlim([0 50])
-    xlabel('Frequency of Max Coherence (Hz)')
-    ylabel('Number of cells with Info > 1bit')
-    
-    suplabel(sprintf('%s',FeatureName2),'t');
+%     % plot again the histograms for high Info subset of cells
+%     figure(5)
+%     clf
+%     subplot(1,5,1)
+%     histogram(CoherencyT_DelayAtzero(GoodInfo),'BinWidth',TR/2,'FaceColor','k')
+%     xlabel('Phase of coherency (ms)')
+%     ylabel('Number of cells with Info > 1bit')
+%     hold on
+%     v=vline(0, 'r:');
+%     v.LineWidth = 2;
+%     
+%     subplot(1,5,2)
+%     histogram(CoherencyT_WidthAtMaxPeak(GoodInfo),'BinWidth',TR/2,'FaceColor','k')
+%     xlabel('Time resolution of Coherency (ms)')
+%     ylabel('Number of cells with Info > 1bit')
+%     
+%     
+%     subplot(1,5,3)
+%     histogram(FirstNonSigCoherenceFreq(GoodInfo), 'BinWidth',ceil(nFFT/Nyquist),'FaceColor','k')
+%     xlabel('Max significant Frequency (Hz)')
+%     ylabel('Number of cells with Info > 1bit')
+%     
+%     subplot(1,5,4)
+%     histogram(SecondCoherenceFreqCutOff(GoodInfo), 'BinWidth',ceil(nFFT/Nyquist),'FaceColor','k')
+%     xlabel('Max 2nd peaks significant Frequency (Hz)')
+%     ylabel('Number of Cells')
+%     
+%     subplot(1,5,5)
+%     histogram(MaxCoherence(find(GoodInfo),2), 'BinWidth',ceil(nFFT/Nyquist),'FaceColor','k')
+%     % Some points with very low values of info have high values of frequency of
+%     % Max coherence, keep the plot focused on the majority of points
+%     xlim([0 50])
+%     xlabel('Frequency of Max Coherence (Hz)')
+%     ylabel('Number of cells with Info > 1bit')
+%     
+%     suplabel(sprintf('%s',FeatureName2),'t');
+pause();
+end
     
     % Comparing values of information, Delay and Time resolution for saliency and amplitude
     
     
     CoherenceSal = load(fullfile(Path,sprintf('MotorModelsCoherency_%s.mat', 'sal')));
     CoherenceAmp = load(fullfile(Path,sprintf('MotorModelsCoherency_%s.mat', 'amp')));
+    CoherenceSpecMean = load(fullfile(Path,sprintf('MotorModelsCoherency_%s.mat', 'SpectralMean')));
     figure(6)
     clf
-    subplot(1,3,1)
+    subplot(3,3,1)
     scatter(CoherenceAmp.Info, CoherenceSal.Info,40,[0 0 0], 'filled')
     hold on
     plot([0 5], [0 5], 'r:', 'LineWidth',2)
@@ -525,7 +533,7 @@ for fn = 1:length(FeatureName)
     ylabel('Information on Coherence with pitch saliency (bits)')
     
     
-    subplot(1,3,2)
+    subplot(3,3,2)
     scatter(CoherenceAmp.CoherencyT_DelayAtzero, CoherenceSal.CoherencyT_DelayAtzero,40,[0 0 0], 'filled')
     hold on
     plot([-60 60], [-60 60], 'r:', 'LineWidth',2)
@@ -533,32 +541,82 @@ for fn = 1:length(FeatureName)
     xlabel('Phase of Coherency with sound Amplitude (ms)')
     ylabel('Phase of Coherency with pitch saliency (ms)')
     
-    subplot(1,3,3)
+    subplot(3,3,3)
     scatter(CoherenceAmp.CoherencyT_WidthAtMaxPeak, CoherenceSal.CoherencyT_WidthAtMaxPeak,40,[0 0 0], 'filled')
     hold on
     plot([40 350], [50 350], 'r:', 'LineWidth',2)
     hold off
     xlabel('Time resolution of Coherency with sound Amplitude (ms)')
     ylabel('Time resolution of Coherency with pitch saliency (ms)')
-    pause()
-end
+    
+    subplot(3,3,4)
+    scatter(CoherenceAmp.Info, CoherenceSpecMean.Info,40,[0 0 0], 'filled')
+    hold on
+    plot([0 5], [0 5], 'r:', 'LineWidth',2)
+    hold off
+    xlabel('Information on Coherence with sound Amplitude (bits)')
+    ylabel('Information on Coherence with Spectral Mean (bits)')
+    
+    
+    subplot(3,3,5)
+    scatter(CoherenceAmp.CoherencyT_DelayAtzero, CoherenceSpecMean.CoherencyT_DelayAtzero,40,[0 0 0], 'filled')
+    hold on
+    plot([-60 60], [-60 60], 'r:', 'LineWidth',2)
+    hold off
+    xlabel('Phase of Coherency with sound Amplitude (ms)')
+    ylabel('Phase of Coherency with Spectral Mean (ms)')
+    
+    subplot(3,3,6)
+    scatter(CoherenceAmp.CoherencyT_WidthAtMaxPeak, CoherenceSpecMean.CoherencyT_WidthAtMaxPeak,40,[0 0 0], 'filled')
+    hold on
+    plot([40 350], [50 350], 'r:', 'LineWidth',2)
+    hold off
+    xlabel('Time resolution of Coherency with sound Amplitude (ms)')
+    ylabel('Time resolution of Coherency with Spectral Mean (ms)')
+    
+    subplot(3,3,7)
+    scatter(CoherenceSal.Info, CoherenceSpecMean.Info,40,[0 0 0], 'filled')
+    hold on
+    plot([0 5], [0 5], 'r:', 'LineWidth',2)
+    hold off
+    xlabel('Information on Coherence with pitch saliency (bits)')
+    ylabel('Information on Coherence with Spectral Mean (bits)')
+    
+    
+    subplot(3,3,8)
+    scatter(CoherenceSal.CoherencyT_DelayAtzero, CoherenceSpecMean.CoherencyT_DelayAtzero,40,[0 0 0], 'filled')
+    hold on
+    plot([-60 60], [-60 60], 'r:', 'LineWidth',2)
+    hold off
+    xlabel('Phase of Coherency with pitch saliency (ms)')
+    ylabel('Phase of Coherency with Spectral Mean (ms)')
+    
+    subplot(3,3,9)
+    scatter(CoherenceSal.CoherencyT_WidthAtMaxPeak, CoherenceSpecMean.CoherencyT_WidthAtMaxPeak,40,[0 0 0], 'filled')
+    hold on
+    plot([40 350], [50 350], 'r:', 'LineWidth',2)
+    hold off
+    xlabel('Time resolution of Coherency with pitch saliency (ms)')
+    ylabel('Time resolution of Coherency with Spectral Mean (ms)')
+    
+    suplabel('Coherence of Pitch saliency vs Amplitude vs Spectral Mean', 't')
 
 %% Explore Cell by cell the profile of coherence and scatter plots of cell tuning for Good Cells
 %% Then for all cells
-
+InputFig=0;
 load(fullfile(Path,'MotorModelsCoherency_amp.mat'))
 [~,GoodInfo] = sort(Info, 'descend');
 GoodInfo(isnan(Info(GoodInfo)))=[];
 NCells = length(GoodInfo);
-AmpPredictor = nan(NCells,3); % first element is the LR statistic with full model, second is pvalue of Loglikelihood ratio test, third is the partial adjusted R2
-SalPredictor = nan(NCells,3);% first element is the LR statistic with full model, second is pvalue of Loglikelihood ratio test, third is the partial adjusted R2
-SpecMeanPredictor = nan(NCells,3); % first element is the LR statistic with full model, second is pvalue of Loglikelihood ratio test, third is the partial adjusted R2
-CallTypePredictor = nan(NCells,3); % first element is the LR statistic with full model, second is pvalue of Loglikelihood ratio test, third is the partial adjusted R2
-FullModelR2 = nan(NCells,1);
-ModelAmpR2 = nan(NCells,1);
-ModelSalR2 = nan(NCells,1);
-ModelSpecMeanR2 = nan(NCells,1);
-ModelCallTypeR2 = nan(NCells,1);
+AmpPredictor = nan(NCells,3); % first element is the F statistic with full model, second is pvalue, third is the partial adjusted R2
+SalPredictor = nan(NCells,3);% first element is the F statistic with full model, second is pvalue, third is the partial adjusted R2
+SpecMeanPredictor = nan(NCells,3); % first element is the F statistic with full model, second is pvalue, third is the partial adjusted R2
+CallTypePredictor = nan(NCells,3); % first element is the F statistic with full model, second is pvalue, third is the partial adjusted R2
+FullModelR2 = nan(NCells,3); % first element is the F statistic with Null model, second is pvalue, third is the partial adjusted R2
+ModelAmpR2 = nan(NCells,3); % first element is the F statistic with Null model, second is pvalue, third is the partial adjusted R2
+ModelSalR2 = nan(NCells,3); % first element is the F statistic with Null model, second is pvalue, third is the partial adjusted R2
+ModelSpecMeanR2 = nan(NCells,3); % first element is the F statistic with Null model, second is pvalue, third is the partial adjusted R2
+ModelCallTypeR2 = nan(NCells,3); % first element is the F statistic with Null model, second is pvalue, third is the partial adjusted R2
 for nc=1:NCells
     cc=GoodInfo(nc);
     fprintf(1,'Cell %d/%d\n',nc,NCells)
@@ -658,9 +716,12 @@ for nc=1:NCells
         % at 200ms (-Delay(1)) before stim onset and stop at 200ms (Delay(2)) after
         % stim offset
         Delay = [-CoherencyT_DelayAtzero(cc) CoherencyT_DelayAtzero(cc)];
-        YPerStim = get_y_4Coherence(Cell.SpikesArrivalTimes_Behav(IndVoc), Cell.Duration(IndVoc),Delay,TR, TR/2);
+        [YPerStim, YPerStimt] = get_y_4Coherence(Cell.SpikesArrivalTimes_Behav(IndVoc), Cell.Duration(IndVoc),Delay,TR, TR/2);
         Y = [YPerStim{:}]'; 
-        
+        if isempty(Y)
+            fprintf(1,'no spike during vocalization! No model!\n')
+            continue
+        end
         % Get the vector of call type
         Ind = [0 cumsum(cellfun('length',YPerStim))];
         Trill1_Bark0_local = nan(size(Y));
@@ -687,68 +748,94 @@ for nc=1:NCells
         XSpecMean = [XSpecMeanPerStim{:}]';
         XSpecMean(isnan(XSpecMean)) = nanmean(XSpecMean);
         
-            plotxyfeaturescoherence(Cell.BioSound(IndVoc,1),YPerStim,XSpecMeanPerStim,XSpecMeanPerStimt,TR,Win,Delay,Cell.Duration(IndVoc), 50000,'Spectral Mean')
-            plotxyfeaturescoherence(Cell.BioSound(IndVoc,2),YPerStim,XSalPerStim,XSalPerStimt,TR,Win,Delay,Cell.Duration(IndVoc), 10000,'Saliency')
-            plotxyfeaturescoherence(Cell.BioSound(IndVoc,2),YPerStim,XAmpPerStim,XAmpPerStimt,TR,Win,Delay,Cell.Duration(IndVoc), 10000,'Amp')
-            %         plotxyfeatures(BioSound(IndVoc,1),YPerStim,XSpecMedPerStim,TR,Delay,Duration(IndVoc), 50000,'Spectral Median')
-        
+        if InputFig
+            plotxyfeaturescoherence(Cell.BioSound(IndVoc,1),YPerStim,YPerStimt,XSpecMeanPerStim,XSpecMeanPerStimt,TR,Delay,Cell.Duration(IndVoc), 50000,'Spectral Mean')
+            plotxyfeaturescoherence(Cell.BioSound(IndVoc,2),YPerStim,YPerStimt,XSalPerStim,XSalPerStimt,TR,Delay,Cell.Duration(IndVoc), 10000,'Saliency')
+            plotxyfeaturescoherence(Cell.BioSound(IndVoc,2),YPerStim,YPerStimt,XAmpPerStim,XAmpPerStimt,TR,Delay,Cell.Duration(IndVoc), 10000,'Amplitude')
+        end
         
         % Run some GLM to establish the effect of acoustic features
         % formula Y~ XAmp + XSal + XSpecMean
 %         TermsMatrix = [0 0 0 0; 1 0 0 0; 0 1 0 0; 0 0 1 0; 0 0 0 1; 1 1 0 ];
         TableFull = table(XAmp, XSal, XSpecMean, categorical(Trill1_Bark0_local),Y,'VariableNames',{'Amplitude' 'Saliency' 'SpectralMean' 'CallType' 'Rate'});
         FullModel = fitlm(TableFull, 'Rate ~ Amplitude + Saliency + SpectralMean + CallType + Amplitude:Saliency + Amplitude:SpectralMean + Amplitude:CallType + Saliency:SpectralMean + Saliency:CallType + SpectralMean:CallType' , 'CategoricalVars', 4);
-        FullModelR2(nc) = FullModel.Rsquared.Adjusted;
+        FullModelR2(nc,3) = FullModel.Rsquared.Adjusted;
+        AnovaF = FullModel.anova;
+        FullModelR2(nc,1) = AnovaF.F;
+        FullModelR2(nc,2) = AnovaF.pValue;
         
         ModelwoAmp = fitlm(TableFull, 'Rate ~ Saliency + SpectralMean + CallType + Saliency:SpectralMean + Saliency:CallType + SpectralMean:CallType' , 'CategoricalVars', 4);
         ModelAmp = fitlm(XAmp, Y );
-        ModelAmpR2(nc) = ModelAmp.Rsquared.Adjusted;
+        ModelAmpR2(nc,3) = ModelAmp.Rsquared.Adjusted;
+        AnovaAmp = ModelAmp.anova;
+        ModelAmpR2(nc,1) = AnovaAmp.F;
+        ModelAmpR2(nc,2) = AnovaAmp.pValue;
         XPredictAmp = min(XAmp):(max(XAmp)-min(XAmp))/10:max(XAmp);
         [YPredictAmp,YPredictAmpci] = predict(ModelAmp,XPredictAmp');
         
         ModelwoSal = fitlm(TableFull, 'Rate ~ Amplitude + SpectralMean + CallType +  Amplitude:SpectralMean + Amplitude:CallType +  SpectralMean:CallType' , 'CategoricalVars', 4);
         ModelSal = fitlm(XSal,Y);
-        ModelSalR2(nc) = ModelSal.Rsquared.Adjusted;
+        ModelSalR2(nc,3) = ModelSal.Rsquared.Adjusted;
+        AnovaSal = ModelSal.anova;
+        ModelSalR2(nc,1) = AnovaSal.F;
+        ModelSalR2(nc,2) = AnovaSal.pValue;
         XPredictSal = min(XSal):(max(XSal)-min(XSal))/10:max(XSal);
         [YPredictSal,YPredictSalci] = predict(ModelSal,XPredictSal');
         
         ModelwoSpecMean = fitlm(TableFull, 'Rate ~ Amplitude + Saliency + CallType + Amplitude:Saliency +  Amplitude:CallType +  Saliency:CallType' , 'CategoricalVars', 4);
         ModelSpecMean = fitlm(XSpecMean,Y);
-        ModelSpecMeanR2(nc) = ModelSpecMean.Rsquared.Adjusted;
+        ModelSpecMeanR2(nc,3) = ModelSpecMean.Rsquared.Adjusted;
+        AnovaSpecMean = ModelSpecMean.anova;
+        ModelSpecMeanR2(nc,1) = AnovaSpecMean.F;
+        ModelSpecMeanR2(nc,2) = AnovaSpecMean.pValue;
         XPredictSpecMean = min(XSpecMean):(max(XSpecMean)-min(XSpecMean))/10:max(XSpecMean);
         [YPredictSpecMean,YPredictSpecMeanci] = predict(ModelSpecMean,XPredictSpecMean');
         
         ModelwoCallType = fitlm(TableFull, 'Rate ~ Amplitude + Saliency + SpectralMean +  Amplitude:Saliency + Amplitude:SpectralMean + Saliency:SpectralMean ' , 'CategoricalVars', 4);
         ModelCallType = fitlm(categorical(Trill1_Bark0_local),Y);
-        ModelCallTypeR2(nc) = ModelCallType.Rsquared.Adjusted;
+        ModelCallTypeR2(nc,3) = ModelCallType.Rsquared.Adjusted;
+        AnovaCallType = ModelCallType.anova;
+        ModelCallTypeR2(nc,1) = AnovaCallType.F;
+        ModelCallTypeR2(nc,2) = AnovaCallType.pValue;
         
-        [~,AmpPredictor(nc,2),AmpPredictor(nc,1),~] = lratiotest(FullModel.LogLikelihood, ModelwoAmp.LogLikelihood,FullModel.NumEstimatedCoefficients - ModelwoAmp.NumEstimatedCoefficients);
-         if FullModel.NumObservations ~= ModelwoAmp.NumObservations
+        % calculate the significance of the difference in Error according
+        % to F distribution and the adjusted R2
+        if FullModel.NumObservations ~= ModelwoAmp.NumObservations
             fprintf('Different number of observations')
             keyboard
-        end
-        AmpPredictor(nc,3) = 1 - (FullModel.SSE * (FullModel.NumObservations - FullModel.NumEstimatedCoefficients))/(ModelwoAmp.SSE * (ModelwoAmp.NumObservations - ModelwoAmp.NumEstimatedCoefficients));
+         end
+        kAmp = ModelwoAmp.NumEstimatedCoefficients;
+        kFull = FullModel.NumEstimatedCoefficients;
+        AmpPredictor(nc,1) = ((ModelwoAmp.SSE - FullModel.SSE)/(kFull - kAmp))/(FullModel.SSE/(FullModel.NumObservations - kFull));
+        AmpPredictor(nc,2) = fcdf(AmpPredictor(nc,1), kFull - kAmp, (FullModel.NumObservations - kFull), 'upper');
+        AmpPredictor(nc,3) = 1 - (FullModel.SSE / (FullModel.NumObservations - FullModel.NumEstimatedCoefficients))/(ModelwoAmp.SSE / (ModelwoAmp.NumObservations - ModelwoAmp.NumEstimatedCoefficients));
         
-        [~,SalPredictor(nc,2),SalPredictor(nc,1),~] = lratiotest(FullModel.LogLikelihood, ModelwoSal.LogLikelihood,FullModel.NumEstimatedCoefficients - ModelwoSal.NumEstimatedCoefficients);
         if FullModel.NumObservations ~= ModelwoSal.NumObservations
             fprintf('Different number of observations')
             keyboard
         end
-        SalPredictor(nc,3) = 1 - (FullModel.SSE * (FullModel.NumObservations - FullModel.NumEstimatedCoefficients))/(ModelwoSal.SSE * (ModelwoSal.NumObservations - ModelwoSal.NumEstimatedCoefficients));
+        kSal = ModelwoSal.NumEstimatedCoefficients;
+        SalPredictor(nc,1) = ((ModelwoSal.SSE - FullModel.SSE)/(kFull - kSal))/(FullModel.SSE/(FullModel.NumObservations - kFull));
+        SalPredictor(nc,2) = fcdf(SalPredictor(nc,1), kFull - kSal, (FullModel.NumObservations - kFull), 'upper');
+        SalPredictor(nc,3) = 1 - (FullModel.SSE / (FullModel.NumObservations - FullModel.NumEstimatedCoefficients))/(ModelwoSal.SSE / (ModelwoSal.NumObservations - ModelwoSal.NumEstimatedCoefficients));
         
-        [~,SpecMeanPredictor(nc,2),SpecMeanPredictor(nc,1),~] = lratiotest(FullModel.LogLikelihood, ModelwoSpecMean.LogLikelihood,FullModel.NumEstimatedCoefficients - ModelwoSpecMean.NumEstimatedCoefficients);
         if FullModel.NumObservations ~= ModelwoSpecMean.NumObservations
             fprintf('Different number of observations')
             keyboard
         end
-        SpecMeanPredictor(nc,3) = 1 - (FullModel.SSE * (FullModel.NumObservations - FullModel.NumEstimatedCoefficients))/(ModelwoSpecMean.SSE * (ModelwoSpecMean.NumObservations - ModelwoSpecMean.NumEstimatedCoefficients));
+        kSpecMean = ModelwoSpecMean.NumEstimatedCoefficients;
+        SpecMeanPredictor(nc,1) = ((ModelwoSpecMean.SSE - FullModel.SSE)/(kFull - kSpecMean))/(FullModel.SSE/(FullModel.NumObservations - kFull));
+        SpecMeanPredictor(nc,2) = fcdf(SpecMeanPredictor(nc,1), kFull - kSpecMean, (FullModel.NumObservations - kFull), 'upper');
+        SpecMeanPredictor(nc,3) = 1 - (FullModel.SSE / (FullModel.NumObservations - FullModel.NumEstimatedCoefficients))/(ModelwoSpecMean.SSE / (ModelwoSpecMean.NumObservations - ModelwoSpecMean.NumEstimatedCoefficients));
         
-        [~,CallTypePredictor(nc,2),CallTypePredictor(nc,1),~] = lratiotest(FullModel.LogLikelihood, ModelwoCallType.LogLikelihood,FullModel.NumEstimatedCoefficients - ModelwoCallType.NumEstimatedCoefficients);
-        if FullModel.NumObservations ~= ModelwoAmp.NumObservations
+        if FullModel.NumObservations ~= ModelwoCallType.NumObservations
             fprintf('Different number of observations')
             keyboard
         end
-        CallTypePredictor(nc,3) = 1 - (FullModel.SSE * (FullModel.NumObservations - FullModel.NumEstimatedCoefficients))/(ModelwoCallType.SSE * (ModelwoCallType.NumObservations - ModelwoCallType.NumEstimatedCoefficients));
+        kCallType = ModelwoCallType.NumEstimatedCoefficients;
+        CallTypePredictor(nc,1) = ((ModelwoCallType.SSE - FullModel.SSE)/(kFull - kCallType))/(FullModel.SSE/(FullModel.NumObservations - kFull));
+        CallTypePredictor(nc,2) = fcdf(CallTypePredictor(nc,1), kFull - kCallType, (FullModel.NumObservations - kFull), 'upper');
+        CallTypePredictor(nc,3) = 1 - (FullModel.SSE / (FullModel.NumObservations - FullModel.NumEstimatedCoefficients))/(ModelwoCallType.SSE / (ModelwoCallType.NumObservations - ModelwoCallType.NumEstimatedCoefficients));
         
         figure(3+tr)
         clf
@@ -762,7 +849,7 @@ for nc=1:NCells
         text(XLim1(2)*3/4, YLim1(2)*9/10,'Bark','Color',[0 0 0], 'FontWeight','bold')
         xlabel('Sound Amplitude')
         ylabel('Spike Rate (Hz)')
-        title(sprintf('R2 = %.2f Partial R2 = %.2f p=%.2f', ModelAmpR2(nc), AmpPredictor(nc,[3 2])))
+        title(sprintf('R2 = %.2f Partial R2 = %.2f p=%.2f', ModelAmpR2(nc,3), AmpPredictor(nc,[3 2])))
         hold off
         
         subplot(1,3,2)
@@ -775,7 +862,7 @@ for nc=1:NCells
         text(XLim2(2)*3/4, YLim2(2)*9/10,'Bark','Color',[0 0 0], 'FontWeight','bold')
         xlabel('Sound Pitch Saliency')
         ylabel('Spike Rate (Hz)')
-        title(sprintf('R2 = %.2f Partial R2 = %.2f p=%.2f', ModelSalR2(nc),SalPredictor(nc,[3 2])))
+        title(sprintf('R2 = %.2f Partial R2 = %.2f p=%.2f', ModelSalR2(nc,3),SalPredictor(nc,[3 2])))
         hold off
         
         subplot(1,3,3)
@@ -788,11 +875,11 @@ for nc=1:NCells
         text(diff(XLim3)*3/4 + XLim3(1), YLim3(2)*9/10,'Bark','Color',[0 0 0], 'FontWeight','bold')
         xlabel('Sound Spectral Mean')
         ylabel('Spike Rate (Hz)')
-        title(sprintf('R2 = %.2f Partial R2 = %.2f p=%.2f', ModelSpecMeanR2(nc), SpecMeanPredictor(nc,[3 2])))
+        title(sprintf('R2 = %.2f Partial R2 = %.2f p=%.2f', ModelSpecMeanR2(nc,3), SpecMeanPredictor(nc,[3 2])))
         hold off
         
         suplabel(sprintf('Cell %s TR = %d  ms R2 = %.2f', CellsPath(cc).name, TR,FullModelR2(nc)),'t');
-        suplabel(sprintf('CallType R2 = %.2f Partial R2 = %.2f p=%.2f', ModelCallTypeR2(nc), CallTypePredictor(nc,[3 2])),'x');
+        suplabel(sprintf('CallType R2 = %.2f Partial R2 = %.2f p=%.2f', ModelCallTypeR2(nc,3), CallTypePredictor(nc,[3 2])),'x');
         
     end
     pause(1)
@@ -808,90 +895,762 @@ for cc=1:length(CellsPath)
     SU1MU0(cc) = contains(CellsPath(cc).name, 'SSS');
 end
 
+
+
 % first figure of the R2 values for the full model
 figure(31)
 clf
-subplot(2,1,1)
-scatter(Info(GoodInfo), FullModelR2, 30, [SU1MU0(GoodInfo) zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+subplot(2,2,1)
+scatter(Info(GoodInfo), FullModelR2(:,3), 30, [SU1MU0(GoodInfo) zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
 xlabel('Info on Coherence with Amplitude (bits)')
-ylabel('R2 full linear Model')
+ylabel('Adjusted R2 full linear Model')
 xlim([0 5])
 YLim = get(gca, 'YLim');
 XLim = get(gca, 'XLim');
 text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
 text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'MU','Color',[0 0 0], 'FontWeight','bold')
-subplot(2,1,2)
-histogram(FullModelR2, 'BinWidth',0.01,'FaceColor','k')
+
+subplot(2,2,2)
+scatter(Info(GoodInfo), FullModelR2(:,3), 30, [FullModelR2(:,2)<0.01 zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlabel('Info on Coherence with Amplitude (bits)')
+ylabel('Adjusted R2 full linear Model')
+xlim([0 5])
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Significant','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'Non-Sig','Color',[0 0 0], 'FontWeight','bold')
+
+subplot(2,2,3)
+histogram(FullModelR2(:,3), 'BinWidth',0.01,'FaceColor','k')
 ylabel('# High Info Cells')
-xlabel('R2 full linear model')
+xlabel('Adjusted R2 full linear model')
+suplabel('Full acoustic model performance','t')
 
 figure(32)
 clf
-subplot(2,3,1)
-scatter(ModelCallTypeR2, ModelAmpR2,30,[SU1MU0(GoodInfo) zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
-xlim([0 0.6])
-ylim([0 0.6])
+subplot(3,4,1)
+scatter(FullModelR2(:,3), ModelAmpR2(:,3),30,[SU1MU0(GoodInfo) zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
 YLim = get(gca, 'YLim');
 XLim = get(gca, 'XLim');
 text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
 text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'MU','Color',[0 0 0], 'FontWeight','bold')
-xlabel('R2 Call Type')
+xlabel('R2 Full Model')
 ylabel('R2 Amplitude')
 
-subplot(2,3,2)
-scatter(ModelCallTypeR2, ModelSalR2,30,[SU1MU0(GoodInfo) zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
-xlim([0 0.6])
-ylim([0 0.6])
+subplot(3,4,2)
+scatter(FullModelR2(:,3), ModelSalR2(:,3),30,[SU1MU0(GoodInfo) zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
 YLim = get(gca, 'YLim');
 XLim = get(gca, 'XLim');
 text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
 text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'MU','Color',[0 0 0], 'FontWeight','bold')
-xlabel('R2 Call Type')
+xlabel('R2 Full Model')
 ylabel('R2 Pitch Saliency')
 
-subplot(2,3,3)
-scatter(ModelCallTypeR2, ModelSpecMeanR2,30,[SU1MU0(GoodInfo) zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
-xlim([0 0.6])
-ylim([0 0.6])
+subplot(3,4,3)
+scatter(FullModelR2(:,3), ModelSpecMeanR2(:,3),30,[SU1MU0(GoodInfo) zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
 YLim = get(gca, 'YLim');
 XLim = get(gca, 'XLim');
 text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
 text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'MU','Color',[0 0 0], 'FontWeight','bold')
-xlabel('R2 Call Type')
+xlabel('R2 Full Model')
 ylabel('R2 Spectral Mean')
 
-subplot(2,3,4)
-scatter(CallTypePredictor(:,3), AmpPredictor(:,3),30,[SU1MU0(GoodInfo) zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
-xlim([0 0.6])
-ylim([0 0.6])
+subplot(3,4,4)
+scatter(FullModelR2(:,3), ModelCallTypeR2(:,3),30,[SU1MU0(GoodInfo) zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
 YLim = get(gca, 'YLim');
 XLim = get(gca, 'XLim');
 text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
 text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'MU','Color',[0 0 0], 'FontWeight','bold')
-xlabel('Partial R2 Call Type')
+xlabel('R2 Full Model')
+ylabel('R2 CallType')
+
+subplot(3,4,5)
+scatter(FullModelR2(:,3), AmpPredictor(:,3),30,[SU1MU0(GoodInfo) zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'MU','Color',[0 0 0], 'FontWeight','bold')
+xlabel('Full Model R2')
 ylabel('Partial R2 Amplitude')
 
-subplot(2,3,5)
-scatter(CallTypePredictor(:,3), SalPredictor(:,3),30,[SU1MU0(GoodInfo) zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
-xlim([0 0.6])
-ylim([0 0.6])
+subplot(3,4,6)
+scatter(FullModelR2(:,3), SalPredictor(:,3),30,[SU1MU0(GoodInfo) zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
 YLim = get(gca, 'YLim');
 XLim = get(gca, 'XLim');
 text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
 text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'MU','Color',[0 0 0], 'FontWeight','bold')
-xlabel('Partial R2 Call Type')
+xlabel('Full Model R2')
+ylabel('Partial R2 Pitch Saliency')
+
+subplot(3,4,7)
+scatter(FullModelR2(:,3), SpecMeanPredictor(:,3),30,[SU1MU0(GoodInfo) zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'MU','Color',[0 0 0], 'FontWeight','bold')
+xlabel('Full Model R2')
+ylabel('Partial R2 Spectral Mean')
+
+subplot(3,4,8)
+scatter(FullModelR2(:,3), CallTypePredictor(:,3),30,[SU1MU0(GoodInfo) zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'MU','Color',[0 0 0], 'FontWeight','bold')
+ylabel('Partial R2 Call Type')
+xlabel('Full Model R2')
+
+subplot(3,4,9)
+scatter(ModelAmpR2(:,3), AmpPredictor(:,3),30,[SU1MU0(GoodInfo) zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'MU','Color',[0 0 0], 'FontWeight','bold')
+xlabel('R2 Amplitude')
+ylabel('Partial R2 Amplitude')
+
+subplot(3,4,10)
+scatter(ModelSalR2(:,3), SalPredictor(:,3),30,[SU1MU0(GoodInfo) zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'MU','Color',[0 0 0], 'FontWeight','bold')
+xlabel('R2 Pitch Saliency')
+ylabel('Partial R2 Pitch Saliency')
+
+subplot(3,4,11)
+scatter(ModelSpecMeanR2(:,3), SpecMeanPredictor(:,3),30,[SU1MU0(GoodInfo) zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'MU','Color',[0 0 0], 'FontWeight','bold')
+xlabel('R2 Spectral Mean')
+ylabel('Partial R2 Spectral Mean')
+
+subplot(3,4,12)
+scatter(ModelCallTypeR2(:,3), CallTypePredictor(:,3),30,[SU1MU0(GoodInfo) zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'MU','Color',[0 0 0], 'FontWeight','bold')
+ylabel('Partial R2 Call Type')
+xlabel('R2 Call Type')
+
+suplabel('Adjusted R-squared','t')
+
+
+% Same figure as 32 but now color coded is significance
+figure(33)
+clf
+subplot(3,4,1)
+scatter(FullModelR2(:,3), ModelAmpR2(:,3),30,[ModelAmpR2(:,2)<0.01 zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Sig','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'Non-Sig','Color',[0 0 0], 'FontWeight','bold')
+xlabel('R2 Full Model')
+ylabel('R2 Amplitude')
+
+subplot(3,4,2)
+scatter(FullModelR2(:,3), ModelSalR2(:,3),30,[ModelSalR2(:,2)<0.01 zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Sig','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'Non-Sig','Color',[0 0 0], 'FontWeight','bold')
+xlabel('R2 Full Model')
 ylabel('R2 Pitch Saliency')
 
-subplot(2,3,6)
-scatter(CallTypePredictor(:,3), SpecMeanPredictor(:,3),30,[SU1MU0(GoodInfo) zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
-xlim([0 0.6])
-ylim([0 0.6])
+subplot(3,4,3)
+scatter(FullModelR2(:,3), ModelSpecMeanR2(:,3),30,[ModelSpecMeanR2(:,2)<0.01 zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Sig','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'Non-Sig','Color',[0 0 0], 'FontWeight','bold')
+xlabel('R2 Full Model')
+ylabel('R2 Spectral Mean')
+
+subplot(3,4,4)
+scatter(FullModelR2(:,3), ModelCallTypeR2(:,3),30,[ModelCallTypeR2(:,2)<0.01 zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Sig','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'Non-Sig','Color',[0 0 0], 'FontWeight','bold')
+xlabel('R2 Full Model')
+ylabel('R2 CallType')
+
+subplot(3,4,5)
+scatter(FullModelR2(:,3), AmpPredictor(:,3),30,[AmpPredictor(:,2)<0.01 zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Sig','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'Non-Sig','Color',[0 0 0], 'FontWeight','bold')
+xlabel('Full Model R2')
+ylabel('Partial R2 Amplitude')
+
+subplot(3,4,6)
+scatter(FullModelR2(:,3), SalPredictor(:,3),30,[SalPredictor(:,2)<0.01 zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Sig','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'Non-Sig','Color',[0 0 0], 'FontWeight','bold')
+xlabel('Full Model R2')
+ylabel('Partial R2 Pitch Saliency')
+
+subplot(3,4,7)
+scatter(FullModelR2(:,3), SpecMeanPredictor(:,3),30,[SpecMeanPredictor(:,2)<0.01 zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Sig','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'Non-Sig','Color',[0 0 0], 'FontWeight','bold')
+xlabel('Full Model R2')
+ylabel('Partial R2 Spectral Mean')
+
+subplot(3,4,8)
+scatter(FullModelR2(:,3), CallTypePredictor(:,3),30,[CallTypePredictor(:,2)<0.01 zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Sig','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'Non-Sig','Color',[0 0 0], 'FontWeight','bold')
+ylabel('Partial R2 Call Type')
+xlabel('Full Model R2')
+
+subplot(3,4,9)
+scatter(ModelAmpR2(:,3), AmpPredictor(:,3),30,[AmpPredictor(:,2)<0.01 zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Sig','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'Non-Sig','Color',[0 0 0], 'FontWeight','bold')
+xlabel('R2 Amplitude')
+ylabel('Partial R2 Amplitude')
+
+subplot(3,4,10)
+scatter(ModelSalR2(:,3), SalPredictor(:,3),30,[SalPredictor(:,2)<0.01 zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Sig','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'Non-Sig','Color',[0 0 0], 'FontWeight','bold')
+xlabel('R2 Pitch Saliency')
+ylabel('Partial R2 Pitch Saliency')
+
+subplot(3,4,11)
+scatter(ModelSpecMeanR2(:,3), SpecMeanPredictor(:,3),30,[SpecMeanPredictor(:,2)<0.01 zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Sig','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'Non-Sig','Color',[0 0 0], 'FontWeight','bold')
+xlabel('R2 Spectral Mean')
+ylabel('Partial R2 Spectral Mean')
+
+subplot(3,4,12)
+scatter(ModelCallTypeR2(:,3), CallTypePredictor(:,3),30,[CallTypePredictor(:,2)<0.01 zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Sig','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'Non-Sig','Color',[0 0 0], 'FontWeight','bold')
+ylabel('Partial R2 Call Type')
+xlabel('R2 Call Type')
+
+suplabel('Adjusted R-squared','t')
+
+
+% Cells with negative values of Full model R2 are actually not different
+% than zero
+% Negative values of R2 adj conrespond to 0 values. Adjusted turns negative
+% as soon as the ratio of SSE/SSTot > (n-k-1)/(n-1) for instance 0.92 for
+% n=100 and k=7
+FullModelR2_0corr = FullModelR2(:,3);
+FullModelR2_0corr(FullModelR2(:,3)<0) = 0;
+
+% Then cells with higher values of adjusted R2 for single acoustic
+% parameter compared to Full Model R2 should be set at the value of Full
+% model R2, they are higher just by the mechanism of the adjusted
+% correction (more parameters on the full  model)
+ModelCallTypeR2_corr = ModelCallTypeR2(:,3);
+ModelCallTypeR2_corr(ModelCallTypeR2(:,3)>FullModelR2(:,3)) = FullModelR2_0corr(ModelCallTypeR2(:,3)>FullModelR2(:,3));
+ModelCallTypeR2_corr(ModelCallTypeR2_corr<0) = 0;
+
+ModelSalR2_corr = ModelSalR2(:,3);
+ModelSalR2_corr(ModelSalR2(:,3)>FullModelR2(:,3)) = FullModelR2_0corr(ModelSalR2(:,3)>FullModelR2(:,3));
+ModelSalR2_corr(ModelSalR2_corr<0) = 0;
+
+ModelAmpR2_corr = ModelAmpR2(:,3);
+ModelAmpR2_corr(ModelAmpR2(:,3)>FullModelR2(:,3)) = FullModelR2_0corr(ModelAmpR2(:,3)>FullModelR2(:,3));
+ModelAmpR2_corr(ModelAmpR2_corr<0) = 0;
+
+ModelSpecMeanR2_corr = ModelSpecMeanR2(:,3);
+ModelSpecMeanR2_corr(ModelSpecMeanR2(:,3)>FullModelR2(:,3)) = FullModelR2_0corr(ModelSpecMeanR2(:,3)>FullModelR2(:,3));
+ModelSpecMeanR2_corr(ModelSpecMeanR2_corr<0) = 0;
+
+
+% Then cells with higher values of adjusted R2 for restricted Full models by one single acoustic
+% parameter compared to Full Model R2 should be set at the value of Full
+% model R2, they are higher just by the mechanism of the adjusted
+% correction (more parameters on the full  model)
+ModelCallTypePartialR2_corr = CallTypePredictor(:,3);
+ModelCallTypePartialR2_corr(CallTypePredictor(:,3)>FullModelR2(:,3)) = FullModelR2_0corr(CallTypePredictor(:,3)>FullModelR2(:,3));
+ModelCallTypePartialR2_corr(ModelCallTypePartialR2_corr<0) = 0;
+
+ModelSalPartialR2_corr = SalPredictor(:,3);
+ModelSalPartialR2_corr(SalPredictor(:,3)>FullModelR2(:,3)) = FullModelR2_0corr(SalPredictor(:,3)>FullModelR2(:,3));
+ModelSalPartialR2_corr(ModelSalPartialR2_corr<0) = 0;
+
+ModelAmpPartialR2_corr = AmpPredictor(:,3);
+ModelAmpPartialR2_corr(AmpPredictor(:,3)>FullModelR2(:,3)) = FullModelR2_0corr(AmpPredictor(:,3)>FullModelR2(:,3));
+ModelAmpPartialR2_corr(ModelAmpPartialR2_corr<0) = 0;
+
+ModelSpecMeanPartialR2_corr = SpecMeanPredictor(:,3);
+ModelSpecMeanPartialR2_corr(SpecMeanPredictor(:,3)>FullModelR2(:,3)) = FullModelR2_0corr(SpecMeanPredictor(:,3)>FullModelR2(:,3));
+ModelSpecMeanPartialR2_corr(ModelSpecMeanPartialR2_corr<0) = 0;
+
+% Plot again figure 31
+figure(34)
+clf
+subplot(2,2,1)
+scatter(Info(GoodInfo), FullModelR2_0corr, 30, [SU1MU0(GoodInfo) zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlabel('Info on Coherence with Amplitude (bits)')
+ylabel('Adjusted R2 full linear Model')
+xlim([0 5])
 YLim = get(gca, 'YLim');
 XLim = get(gca, 'XLim');
 text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
 text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'MU','Color',[0 0 0], 'FontWeight','bold')
-xlabel('Partial R2 Call Type')
+
+subplot(2,2,2)
+scatter(Info(GoodInfo), FullModelR2_0corr, 30, [FullModelR2(:,2)<0.01 zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlabel('Info on Coherence with Amplitude (bits)')
+ylabel('Adjusted R2 full linear Model')
+xlim([0 5])
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Significant','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'Non-significant','Color',[0 0 0], 'FontWeight','bold')
+
+subplot(2,2,3)
+histogram(FullModelR2_0corr, 'BinWidth',0.01,'FaceColor','k')
+ylabel('# High Info Cells')
+xlabel('Adjusted R2 full linear model')
+suplabel('Full acoustic model performance','t')
+
+% Plot again figure 32
+figure(35)
+clf
+subplot(3,4,1)
+scatter(FullModelR2_0corr, ModelAmpR2_corr,30,[SU1MU0(GoodInfo) zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'MU','Color',[0 0 0], 'FontWeight','bold')
+xlabel('R2 Full Model')
+ylabel('R2 Amplitude')
+
+subplot(3,4,2)
+scatter(FullModelR2_0corr, ModelSalR2_corr,30,[SU1MU0(GoodInfo) zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'MU','Color',[0 0 0], 'FontWeight','bold')
+xlabel('R2 Full Model')
+ylabel('R2 Pitch Saliency')
+
+subplot(3,4,3)
+scatter(FullModelR2_0corr, ModelSpecMeanR2_corr,30,[SU1MU0(GoodInfo) zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'MU','Color',[0 0 0], 'FontWeight','bold')
+xlabel('R2 Full Model')
+ylabel('R2 Spectral Mean')
+
+subplot(3,4,4)
+scatter(FullModelR2_0corr, ModelCallTypeR2_corr,30,[SU1MU0(GoodInfo) zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'MU','Color',[0 0 0], 'FontWeight','bold')
+xlabel('R2 Full Model')
+ylabel('R2 CallType')
+
+subplot(3,4,5)
+scatter(FullModelR2_0corr, ModelAmpPartialR2_corr,30,[SU1MU0(GoodInfo) zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'MU','Color',[0 0 0], 'FontWeight','bold')
+xlabel('Full Model R2')
+ylabel('Partial R2 Amplitude')
+
+subplot(3,4,6)
+scatter(FullModelR2_0corr, ModelSalPartialR2_corr,30,[SU1MU0(GoodInfo) zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'MU','Color',[0 0 0], 'FontWeight','bold')
+xlabel('Full Model R2')
+ylabel('R2 Pitch Saliency')
+
+subplot(3,4,7)
+scatter(FullModelR2_0corr, ModelSpecMeanPartialR2_corr,30,[SU1MU0(GoodInfo) zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'MU','Color',[0 0 0], 'FontWeight','bold')
+xlabel('Full Model R2')
 ylabel('Partial R2 Spectral Mean')
+
+subplot(3,4,8)
+scatter(FullModelR2_0corr, ModelCallTypePartialR2_corr,30,[SU1MU0(GoodInfo) zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'MU','Color',[0 0 0], 'FontWeight','bold')
+ylabel('Partial R2 Call Type')
+xlabel('Full Model R2')
+
+
+subplot(3,4,9)
+scatter(ModelAmpR2_corr, ModelAmpPartialR2_corr,30,[SU1MU0(GoodInfo) zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'MU','Color',[0 0 0], 'FontWeight','bold')
+xlabel('R2 Amplitude')
+ylabel('Partial R2 Amplitude')
+
+subplot(3,4,10)
+scatter(ModelSalR2_corr, ModelSalPartialR2_corr,30,[SU1MU0(GoodInfo) zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'MU','Color',[0 0 0], 'FontWeight','bold')
+xlabel('R2 Saliency')
+ylabel('R2 Pitch Saliency')
+
+subplot(3,4,11)
+scatter(ModelSpecMeanR2_corr, ModelSpecMeanPartialR2_corr,30,[SU1MU0(GoodInfo) zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'MU','Color',[0 0 0], 'FontWeight','bold')
+xlabel('R2 Spectral Mean')
+ylabel('Partial R2 Spectral Mean')
+
+subplot(3,4,12)
+scatter(ModelCallTypeR2_corr, ModelCallTypePartialR2_corr,30,[SU1MU0(GoodInfo) zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'MU','Color',[0 0 0], 'FontWeight','bold')
+ylabel('Partial R2 Call Type')
+xlabel('R2 Call Type')
+
+suplabel('Corrected Adjusted R-squared','t')
+
+
+% plot again figure 33
+figure(36)
+clf
+subplot(3,4,1)
+scatter(FullModelR2_0corr, ModelAmpR2_corr,30,[ModelAmpR2(:,2)<0.01 zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Sig','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'Non-Sig','Color',[0 0 0], 'FontWeight','bold')
+xlabel('R2 Full Model')
+ylabel('R2 Amplitude')
+
+subplot(3,4,2)
+scatter(FullModelR2_0corr, ModelSalR2_corr,30,[ModelSalR2(:,2)<0.01 zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Sig','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'Non-Sig','Color',[0 0 0], 'FontWeight','bold')
+xlabel('R2 Full Model')
+ylabel('R2 Pitch Saliency')
+
+subplot(3,4,3)
+scatter(FullModelR2_0corr, ModelSpecMeanR2_corr,30,[ModelSpecMeanR2(:,2)<0.01 zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Sig','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'Non-Sig','Color',[0 0 0], 'FontWeight','bold')
+xlabel('R2 Full Model')
+ylabel('R2 Spectral Mean')
+
+subplot(3,4,4)
+scatter(FullModelR2_0corr, ModelCallTypeR2_corr,30,[ModelCallTypeR2(:,2)<0.01 zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'MU','Color',[0 0 0], 'FontWeight','bold')
+xlabel('R2 Full Model')
+ylabel('R2 CallType')
+
+subplot(3,4,5)
+scatter(FullModelR2_0corr, ModelAmpPartialR2_corr,30,[AmpPredictor(:,2)<0.01 zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Sig','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'Non_Sig','Color',[0 0 0], 'FontWeight','bold')
+xlabel('Full Model R2')
+ylabel('Partial R2 Amplitude')
+
+subplot(3,4,6)
+scatter(FullModelR2_0corr, ModelSalPartialR2_corr,30,[SalPredictor(:,2)<0.01 zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Sig','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'Non-Sig','Color',[0 0 0], 'FontWeight','bold')
+xlabel('Full Model R2')
+ylabel('R2 Pitch Saliency')
+
+subplot(3,4,7)
+scatter(FullModelR2_0corr, ModelSpecMeanPartialR2_corr,30,[SpecMeanPredictor(:,2)<0.01 zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Sig','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'Non-Sig','Color',[0 0 0], 'FontWeight','bold')
+xlabel('Full Model R2')
+ylabel('Partial R2 Spectral Mean')
+
+subplot(3,4,8)
+scatter(FullModelR2_0corr, ModelCallTypePartialR2_corr,30,[CallTypePredictor(:,2)<0.01 zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Sig','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'Non-Sig','Color',[0 0 0], 'FontWeight','bold')
+ylabel('Partial R2 Call Type')
+xlabel('Full Model R2')
+
+
+subplot(3,4,9)
+scatter(ModelAmpR2_corr, ModelAmpPartialR2_corr,30,[AmpPredictor(:,2)<0.01 zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Sig','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'Non-Sig','Color',[0 0 0], 'FontWeight','bold')
+xlabel('R2 Amplitude')
+ylabel('Partial R2 Amplitude')
+
+subplot(3,4,10)
+scatter(ModelSalR2_corr, ModelSalPartialR2_corr,30,[SalPredictor(:,2)<0.01 zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Sig','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'Non-Sig','Color',[0 0 0], 'FontWeight','bold')
+xlabel('R2 Saliency')
+ylabel('R2 Pitch Saliency')
+
+subplot(3,4,11)
+scatter(ModelSpecMeanR2_corr, ModelSpecMeanPartialR2_corr,30,[SpecMeanPredictor(:,2)<0.01 zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Sig','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'Non-Sig','Color',[0 0 0], 'FontWeight','bold')
+xlabel('R2 Spectral Mean')
+ylabel('Partial R2 Spectral Mean')
+
+subplot(3,4,12)
+scatter(ModelCallTypeR2_corr, ModelCallTypePartialR2_corr,30,[CallTypePredictor(:,2)<0.01 zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Sig','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'Non-Sig','Color',[0 0 0], 'FontWeight','bold')
+ylabel('Partial R2 Call Type')
+xlabel('R2 Call Type')
+
+suplabel('Corrected Adjusted R-squared','t')
 
 %% MRFS: Motor Models parameters Ridge regression
 load(fullfile(Path,'MotorModelsCoherency_amp.mat'))
@@ -2252,7 +3011,7 @@ end
 YPerStim = cell(1,length(Duration));
 YPerStimt = cell(1,length(Duration));
 % Gaussian window of 2*std equal to TR (68% of Gaussian centered in TR)
-nStd =max(Duration) + Delay(1) + Delay(2); % before set as 4
+nStd =(max(Duration) + Delay(1) + Delay(2))/10; % before set as 4
 Tau = (TR/2);
 T_pts = (0:2*nStd*Tau) - nStd*Tau; % centered tpoints around the mean = 0 and take data into account up to nstd away on each side
 Expwav = exp(-0.5*(T_pts).^2./Tau^2)/(Tau*(2*pi)^0.5);
@@ -2278,6 +3037,7 @@ for stim=1:length(Duration)
         YPerStimt{stim} = TimeBinsY;
     else
         YPerStim_local = conv(SpikePattern, Expwav,'same');
+        YPerStim_local = YPerStim_local/sum(YPerStim_local)*sum(SpikePattern); % Make sure we keep the right number of sipkes after convolution!
     
         % resampling function is really doing weird things at edges...
         % doing my own resampling
@@ -2332,9 +3092,10 @@ for stim=1:length(Duration)
 %     end
     
     % Make sure that the output mean(Y) = input mean(Y)
-    if abs(round(sum(YPerStim{stim})*TR) - sum(SpikePattern))>1
-        warning('discrepancy in spike rate calculations?')
-    end
+%     if abs(round(sum(YPerStim{stim})*TR) - sum(SpikePattern))>TR/5
+%         warning('discrepancy in spike rate calculations larger than TR/5= %d?', TR/5)
+%         keyboard
+%     end
     
 %     if any(YPerStim{stim}<0)
 %         keyboard
@@ -2503,11 +3264,18 @@ for stim =1:length(BioSound)
     
     hold on
     yyaxis right
-    plot(XPerStimt{stim}, XPerStim{stim}, 'Color',ColorCode(2,:),'LineStyle','-', 'LineWidth',2)
+    plot(XPerStimt{stim}, XPerStim{stim}, 'Color',ColorCode(2,:),'LineStyle','-', 'Marker','*', 'LineWidth',2)
     ylabel(sprintf('%s', FeatureName))
     if strcmp(FeatureName,'Spectral Mean')
         ylim(v_axis(3:4))
+    elseif strcmp(FeatureName,'Saliency')
+        YLim = get(gca, 'YLim');
+        ylim([0 YLim(2)])
+    elseif strcmp(FeatureName,'Amplitude')
+        YLim = get(gca, 'YLim');
+        ylim([0 YLim(2)])
     end
+        
     xlim([-Delay(1) Duration(stim) + Delay(2)])
     hold off
     
@@ -2523,9 +3291,18 @@ for stim =1:length(BioSound)
     text(0,0.975,'Vocalization', 'Color', [1 1 1])
     hold on
     yyaxis right
-    plot(XPerStimt{stim}, XPerStim{stim}, 'Color',ColorCode(2,:),'LineStyle','-', 'LineWidth',2)
+    plot(XPerStimt{stim}, XPerStim{stim}, 'Color',ColorCode(2,:),'LineStyle','-', 'Marker','*', 'LineWidth',2)
     %     plot(TR/2 + (0:TR:((IndMax-1)*TR)), StimFeature(1:IndMax), 'Color',ColorCode(2,:),'LineStyle','-', 'LineWidth',2)
     ylabel(sprintf('%s', FeatureName))
+    if strcmp(FeatureName,'Spectral Mean')
+        ylim(v_axis(3:4))
+    elseif strcmp(FeatureName,'Saliency')
+        YLim = get(gca, 'YLim');
+        ylim([0 YLim(2)])
+    elseif strcmp(FeatureName,'Amplitude')
+        YLim = get(gca, 'YLim');
+        ylim([0 YLim(2)])
+    end
     xlim([-Delay(1) Duration(stim) + Delay(2)])
     hold off
     pause(1)
