@@ -897,7 +897,7 @@ end
 
 
 
-% first figure of the R2 values for the full model
+% first figure of the R2 values for the full model with all cells
 figure(31)
 clf
 subplot(2,2,1)
@@ -926,6 +926,7 @@ ylabel('# High Info Cells')
 xlabel('Adjusted R2 full linear model')
 suplabel('Full acoustic model performance','t')
 
+% Now figure of individual models with all cells
 figure(32)
 clf
 subplot(3,4,1)
@@ -1248,8 +1249,298 @@ xlabel('R2 Call Type')
 
 suplabel('Adjusted R-squared','t')
 
+% Only keep cells that are significant for at least one model (Full or
+% individual feature)
 
-% Cells with negative values of Full model R2 are actually not different
+SigCells = find(logical((FullModelR2(:,2)<0.01) + (ModelCallTypeR2(:,2)<0.01) + (ModelSalR2(:,2)<0.01) + (ModelSpecMeanR2(:,2)< 0.01) + (ModelAmpR2(:,2)<0.01)));
+% first figure of the R2 values for the full model with all significant cells
+figure(34)
+clf
+subplot(2,2,1)
+scatter(Info(GoodInfo(SigCells)), FullModelR2((SigCells),3), 60, [SU1MU0(GoodInfo(SigCells)) zeros(size(SigCells)) zeros(size(SigCells))], 'filled')
+xlabel('Info on Coherence with Amplitude (bits)')
+ylabel('Adjusted R2 full linear Model')
+xlim([0 5])
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'MU','Color',[0 0 0], 'FontWeight','bold')
+
+subplot(2,2,2)
+scatter(Info(GoodInfo(SigCells)), FullModelR2((SigCells),3), 60, [FullModelR2((SigCells),2)<0.01 zeros(size(SigCells)) zeros(size(SigCells))], 'filled')
+xlabel('Info on Coherence with Amplitude (bits)')
+ylabel('Adjusted R2 full linear Model')
+xlim([0 5])
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Significant','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'Non-Sig','Color',[0 0 0], 'FontWeight','bold')
+
+
+
+subplot(2,2,3)
+histogram(FullModelR2((SigCells),3), 'BinWidth',0.01,'FaceColor','k')
+ylabel('# High Info Cells')
+xlabel('Adjusted R2 full linear model')
+
+subplot(2,2,4)
+SigCellsCT = SigCells(CallTypePredictor(SigCells,2)<0.01);
+NSigCellsCT = SigCells(CallTypePredictor(SigCells,2)>=0.01);
+scatter(Info(GoodInfo(SigCellsCT)), FullModelR2((SigCellsCT),3), 60, [0.8*(AmpPredictor((SigCellsCT),2)<0.01) 0.8*(SalPredictor(SigCellsCT,2)<0.01) 0.8*(SpecMeanPredictor(SigCellsCT,2)<0.01)], 'filled','d')
+legend('Call-Type')
+legend('AutoUpdate', 'off')
+hold on
+scatter(Info(GoodInfo(NSigCellsCT)), FullModelR2((NSigCellsCT),3), 60, [0.8*(AmpPredictor((NSigCellsCT),2)<0.01) 0.8*(SalPredictor(NSigCellsCT,2)<0.01) 0.8*(SpecMeanPredictor(NSigCellsCT,2)<0.01)], 'filled','o')
+
+xlabel('Info on Coherence with Amplitude (bits)')
+ylabel('Adjusted R2 full linear Model')
+xlim([0 5])
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*8.5/10,'Amp','Color',[0.8 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*8/10,'Sal','Color',[0 0.8 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*7.5/10,'SpecMean','Color',[0 0 0.8], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*7/10,'Amp + Sal','Color',[0.8 0.8 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*6.5/10,'Amp + SpecMean','Color',[0.8 0 0.8], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*6/10,'Sal + SpecMean','Color',[0 0.8 0.8], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*5.5/10,'Amp + Sal + SpecMean','Color',[0.8 0.8 0.8], 'FontWeight','bold')
+
+suplabel('Full acoustic model performance Significant Cells','t')
+
+
+% Now figure of individual models with all significant cells
+figure(36)
+clf
+subplot(2,4,1)
+scatter(FullModelR2((SigCells),3), ModelAmpR2((SigCells),3),30,[SU1MU0(GoodInfo(SigCells)) zeros(size(SigCells)) zeros(size(SigCells))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'MU','Color',[0 0 0], 'FontWeight','bold')
+xlabel('R2 Full Model')
+ylabel('R2 Amplitude')
+
+subplot(2,4,2)
+scatter(FullModelR2((SigCells),3), ModelSalR2((SigCells),3),30,[SU1MU0(GoodInfo(SigCells)) zeros(size(SigCells)) zeros(size(SigCells))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'MU','Color',[0 0 0], 'FontWeight','bold')
+xlabel('R2 Full Model')
+ylabel('R2 Pitch Saliency')
+
+subplot(2,4,3)
+scatter(FullModelR2((SigCells),3), ModelSpecMeanR2((SigCells),3),30,[SU1MU0(GoodInfo(SigCells)) zeros(size(SigCells)) zeros(size(SigCells))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'MU','Color',[0 0 0], 'FontWeight','bold')
+xlabel('R2 Full Model')
+ylabel('R2 Spectral Mean')
+
+subplot(2,4,4)
+scatter(FullModelR2((SigCells),3), ModelCallTypeR2((SigCells),3),30,[SU1MU0(GoodInfo(SigCells)) zeros(size(SigCells)) zeros(size(SigCells))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'MU','Color',[0 0 0], 'FontWeight','bold')
+xlabel('R2 Full Model')
+ylabel('R2 CallType')
+
+subplot(2,4,5)
+scatter(FullModelR2((SigCells),3), AmpPredictor((SigCells),3),30,[SU1MU0(GoodInfo(SigCells)) zeros(size(SigCells)) zeros(size(SigCells))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'MU','Color',[0 0 0], 'FontWeight','bold')
+xlabel('Full Model R2')
+ylabel('Partial R2 Amplitude')
+
+subplot(2,4,6)
+scatter(FullModelR2((SigCells),3), SalPredictor((SigCells),3),30,[SU1MU0(GoodInfo(SigCells)) zeros(size(SigCells)) zeros(size(SigCells))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'MU','Color',[0 0 0], 'FontWeight','bold')
+xlabel('Full Model R2')
+ylabel('Partial R2 Pitch Saliency')
+
+subplot(2,4,7)
+scatter(FullModelR2((SigCells),3), SpecMeanPredictor((SigCells),3),30,[SU1MU0(GoodInfo(SigCells)) zeros(size(SigCells)) zeros(size(SigCells))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'MU','Color',[0 0 0], 'FontWeight','bold')
+xlabel('Full Model R2')
+ylabel('Partial R2 Spectral Mean')
+
+subplot(2,4,8)
+scatter(FullModelR2((SigCells),3), CallTypePredictor((SigCells),3),30,[SU1MU0(GoodInfo(SigCells)) zeros(size(SigCells)) zeros(size(SigCells))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'MU','Color',[0 0 0], 'FontWeight','bold')
+ylabel('Partial R2 Call Type')
+xlabel('Full Model R2')
+
+
+suplabel('Adjusted R-squared Significant Cells','t')
+
+
+% Same figure as 35 but now color coded is significance
+figure(36)
+clf
+subplot(2,4,1)
+scatter(FullModelR2((SigCells),3), ModelAmpR2((SigCells),3),30,[ModelAmpR2((SigCells),2)<0.01 zeros(size(SigCells)) zeros(size(SigCells))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Sig','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'Non-Sig','Color',[0 0 0], 'FontWeight','bold')
+xlabel('R2 Full Model')
+ylabel('R2 Amplitude')
+
+subplot(2,4,2)
+scatter(FullModelR2((SigCells),3), ModelSalR2((SigCells),3),30,[ModelSalR2((SigCells),2)<0.01 zeros(size(SigCells)) zeros(size(SigCells))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Sig','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'Non-Sig','Color',[0 0 0], 'FontWeight','bold')
+xlabel('R2 Full Model')
+ylabel('R2 Pitch Saliency')
+
+subplot(2,4,3)
+scatter(FullModelR2((SigCells),3), ModelSpecMeanR2((SigCells),3),30,[ModelSpecMeanR2((SigCells),2)<0.01 zeros(size(SigCells)) zeros(size(SigCells))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Sig','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'Non-Sig','Color',[0 0 0], 'FontWeight','bold')
+xlabel('R2 Full Model')
+ylabel('R2 Spectral Mean')
+
+subplot(2,4,4)
+scatter(FullModelR2((SigCells),3), ModelCallTypeR2((SigCells),3),30,[ModelCallTypeR2((SigCells),2)<0.01 zeros(size(SigCells)) zeros(size(SigCells))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Sig','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'Non-Sig','Color',[0 0 0], 'FontWeight','bold')
+xlabel('R2 Full Model')
+ylabel('R2 CallType')
+
+subplot(2,4,5)
+scatter(FullModelR2((SigCells),3), AmpPredictor((SigCells),3),30,[AmpPredictor((SigCells),2)<0.01 zeros(size(SigCells)) zeros(size(SigCells))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Sig','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'Non-Sig','Color',[0 0 0], 'FontWeight','bold')
+xlabel('Full Model R2')
+ylabel('Partial R2 Amplitude')
+
+subplot(2,4,6)
+scatter(FullModelR2((SigCells),3), SalPredictor((SigCells),3),30,[SalPredictor((SigCells),2)<0.01 zeros(size(SigCells)) zeros(size(SigCells))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Sig','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'Non-Sig','Color',[0 0 0], 'FontWeight','bold')
+xlabel('Full Model R2')
+ylabel('Partial R2 Pitch Saliency')
+
+subplot(2,4,7)
+scatter(FullModelR2((SigCells),3), SpecMeanPredictor((SigCells),3),30,[SpecMeanPredictor((SigCells),2)<0.01 zeros(size(SigCells)) zeros(size(SigCells))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Sig','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'Non-Sig','Color',[0 0 0], 'FontWeight','bold')
+xlabel('Full Model R2')
+ylabel('Partial R2 Spectral Mean')
+
+subplot(2,4,8)
+scatter(FullModelR2((SigCells),3), CallTypePredictor((SigCells),3),30,[CallTypePredictor((SigCells),2)<0.01 zeros(size(SigCells)) zeros(size(SigCells))], 'filled')
+xlim([-0.2 1])
+ylim([-0.2 1])
+hold on
+plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Sig','Color',[1 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'Non-Sig','Color',[0 0 0], 'FontWeight','bold')
+ylabel('Partial R2 Call Type')
+xlabel('Full Model R2')
+
+
+
+suplabel('Adjusted R-squared Significant Cells','t')
+
+
+
+
+
+
+
+
+
+
+
+%% Cells with negative values of Full model R2 are actually not different
 % than zero
 % Negative values of R2 adj conrespond to 0 values. Adjusted turns negative
 % as soon as the ratio of SSE/SSTot > (n-k-1)/(n-1) for instance 0.92 for
