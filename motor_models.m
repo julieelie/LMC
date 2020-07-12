@@ -24,7 +24,7 @@ CellsPath = AllFiles(logical(Files2run));
 %% Running through cells to find the optimal time resolution of the neural response for acoustic feature predicion from the neural response
 % here we calculate the coherency between the neural response and the
 % acoustic features
-StimXYDataPlot=0;
+StimXYDataPlot=1;
 FeatureName = {'amp' 'SpectralMean' 'sal'};
 TR=2; % 2ms is chosen as the Time resolution for the neural data
 Fs = 1/(TR*10^-3); % the data is then sampled at the optimal frequency given the neural time resolution choosen
@@ -115,7 +115,14 @@ for fn=1:length(FeatureName)
             ColBiosound = 2;
         end
         if StimXYDataPlot
-            plotxyfeaturescoherence(Cell.BioSound(IndVoc,ColBiosound),YPerStim,YPerStimt, XPerStim,XPerStimt,TR,Delay,Cell.Duration(IndVoc),F_high,FeatureName{fn})
+            if strcmp(FeatureName{fn}, 'amp')
+                FeatureNameLocal = 'Amplitude';
+            elseif strcmp(FeatureName{fn}, 'SpectralMean')
+                FeatureNameLocal = 'Spectral Mean';
+            elseif strcmp(FeatureName{fn}, 'sal')
+                FeatureNameLocal = 'saliency';
+            end
+            plotxyfeaturescoherence(Cell.BioSound(IndVoc,ColBiosound),YPerStim,YPerStimt, XPerStim,XPerStimt,TR,Delay,Cell.Duration(IndVoc),F_high,FeatureNameLocal)
         end
         
         % Calculate coherence and coherency between the signals
@@ -464,9 +471,9 @@ for fn = 1:length(FeatureName)
     suplabel(sprintf('%s', FeatureName2), 't');
     
     fprintf(1,'Cell with highest Info Value: %s', CellsPath(Info == max(Info)).name)
-    %Amplitude: 59834_20190614_SSS_1-100.mat
-    % SpectralMean 59834_20190610_SSS_1-130.mat
-    % Saliency: 59834_20190708_SSM_1-228.mat
+    % Amplitude: 59834_20190614_SSS_1-100.mat (cc=91/488)
+    % SpectralMean 59834_20190610_SSS_1-130.mat (cc=43/488)
+    % Saliency: 59834_20190708_SSM_1-228.mat (cc=454/488)
     
     % Plot the values of the secondary peaks found for some cells
     figure(4)
@@ -605,18 +612,17 @@ end
 %% Then for all cells
 InputFig=0;
 load(fullfile(Path,'MotorModelsCoherency_amp.mat'))
-[~,GoodInfo] = sort(Info, 'descend');
-GoodInfo(isnan(Info(GoodInfo)))=[];
+GoodInfo=find(~isnan(Info));
 NCells = length(GoodInfo);
 AmpPredictor = nan(NCells,3); % first element is the F statistic with full model, second is pvalue, third is the partial adjusted R2
 SalPredictor = nan(NCells,3);% first element is the F statistic with full model, second is pvalue, third is the partial adjusted R2
 SpecMeanPredictor = nan(NCells,3); % first element is the F statistic with full model, second is pvalue, third is the partial adjusted R2
 CallTypePredictor = nan(NCells,3); % first element is the F statistic with full model, second is pvalue, third is the partial adjusted R2
 FullModelR2 = nan(NCells,3); % first element is the F statistic with Null model, second is pvalue, third is the partial adjusted R2
-ModelAmpR2 = nan(NCells,3); % first element is the F statistic with Null model, second is pvalue, third is the partial adjusted R2
-ModelSalR2 = nan(NCells,3); % first element is the F statistic with Null model, second is pvalue, third is the partial adjusted R2
-ModelSpecMeanR2 = nan(NCells,3); % first element is the F statistic with Null model, second is pvalue, third is the partial adjusted R2
-ModelCallTypeR2 = nan(NCells,3); % first element is the F statistic with Null model, second is pvalue, third is the partial adjusted R2
+ModelAmpR2 = nan(NCells,3); % first element is the F statistic with Null model, second is pvalue, third is the adjusted R2, Fourth is the coefficient in the model
+ModelSalR2 = nan(NCells,3); % first element is the F statistic with Null model, second is pvalue, third is the adjusted R2, Fourth is the coefficient in the model
+ModelSpecMeanR2 = nan(NCells,3); % first element is the F statistic with Null model, second is pvalue, third is the adjusted R2, Fourth is the coefficient in the model
+ModelCallTypeR2 = nan(NCells,3); % first element is the F statistic with Null model, second is pvalue, third is the adjusted R2, Fourth is the coefficient in the model
 for nc=1:NCells
     cc=GoodInfo(nc);
     fprintf(1,'Cell %d/%d\n',nc,NCells)
@@ -770,6 +776,9 @@ for nc=1:NCells
         AnovaAmp = anova(ModelAmp, 'summary');
         ModelAmpR2(nc,1) = AnovaAmp.F(contains(AnovaAmp.Properties.RowNames, 'Model'));
         ModelAmpR2(nc,2) = AnovaAmp.pValue(contains(AnovaAmp.Properties.RowNames, 'Model'));
+        if ModelAmp.Rsquared.Adjusted>0
+            ModelAmpR2(nc,4) =  ModelAmp.Coefficients.Estimate(2);
+        end
         XPredictAmp = min(XAmp):(max(XAmp)-min(XAmp))/10:max(XAmp);
         [YPredictAmp,YPredictAmpci] = predict(ModelAmp,XPredictAmp');
         
@@ -779,6 +788,9 @@ for nc=1:NCells
         AnovaSal = anova(ModelSal, 'summary');
         ModelSalR2(nc,1) = AnovaSal.F(contains(AnovaSal.Properties.RowNames, 'Model'));
         ModelSalR2(nc,2) = AnovaSal.pValue(contains(AnovaSal.Properties.RowNames, 'Model'));
+        if ModelSal.Rsquared.Adjusted>0
+            ModelSalR2(nc,4) =  ModelSal.Coefficients.Estimate(2);
+        end
         XPredictSal = min(XSal):(max(XSal)-min(XSal))/10:max(XSal);
         [YPredictSal,YPredictSalci] = predict(ModelSal,XPredictSal');
         
@@ -788,6 +800,9 @@ for nc=1:NCells
         AnovaSpecMean = anova(ModelSpecMean, 'summary');
         ModelSpecMeanR2(nc,1) = AnovaSpecMean.F(contains(AnovaSpecMean.Properties.RowNames, 'Model'));
         ModelSpecMeanR2(nc,2) = AnovaSpecMean.pValue(contains(AnovaSpecMean.Properties.RowNames, 'Model'));
+        if ModelSpecMean.Rsquared.Adjusted>0
+            ModelSpecMeanR2(nc,4) =  ModelSpecMean.Coefficients.Estimate(2);
+        end
         XPredictSpecMean = min(XSpecMean):(max(XSpecMean)-min(XSpecMean))/10:max(XSpecMean);
         [YPredictSpecMean,YPredictSpecMeanci] = predict(ModelSpecMean,XPredictSpecMean');
         
@@ -797,6 +812,9 @@ for nc=1:NCells
         AnovaCallType = anova(ModelCallType, 'summary');
         ModelCallTypeR2(nc,1) = AnovaCallType.F(contains(AnovaCallType.Properties.RowNames, 'Model'));
         ModelCallTypeR2(nc,2) = AnovaCallType.pValue(contains(AnovaCallType.Properties.RowNames, 'Model'));
+        if ModelCallType.Rsquared.Adjusted>0
+            ModelCallTypeR2(nc,4) =  ModelCallType.Coefficients.Estimate(2);
+        end
         
         % calculate the significance of the difference in Error according
         % to F distribution and the adjusted R2
@@ -878,7 +896,7 @@ for nc=1:NCells
         title(sprintf('R2 = %.2f Partial R2 = %.2f p=%.2f', ModelSpecMeanR2(nc,3), SpecMeanPredictor(nc,[3 2])))
         hold off
         
-        suplabel(sprintf('Cell %s TR = %d  ms R2 = %.2f', CellsPath(cc).name, TR,FullModelR2(nc)),'t');
+        suplabel(sprintf('Cell %s TR = %d  ms R2 = %.2f', CellsPath(cc).name, TR,FullModelR2(nc,3)),'t');
         suplabel(sprintf('CallType R2 = %.2f Partial R2 = %.2f p=%.2f', ModelCallTypeR2(nc,3), CallTypePredictor(nc,[3 2])),'x');
         
     end
@@ -3572,14 +3590,19 @@ for stim =1:length(BioSound)
     
     subplot(2,1,2)
     yyaxis left
-    bar(YPerStimt{stim},YPerStim{stim})
-    ylabel(sprintf('Spikes/ms or kHz (%d ms Gauss win)', TR))
-    ylim([0 1])
+    if length(YPerStim{stim})<4
+        bar(YPerStimt{stim},YPerStim{stim}*10^3, 'BarWidth',0.2)
+    else
+        bar(YPerStimt{stim},YPerStim{stim}*10^3)
+    end
+    ylabel(sprintf('Spikes/s or Hz (%d ms Gauss win)', TR))
+    YLIM = [0 500];
+    ylim(YLIM)
     xlabel('Time (ms)')
     hold on
-    line([0 Duration(stim)], [0.975 0.975], 'Color',[0 0.4470 0.7410], 'LineWidth',12)
+    line([0 Duration(stim)], [0.975 0.975].*YLIM(2), 'Color','k', 'LineWidth',12)
     hold on
-    text(0,0.975,'Vocalization', 'Color', [1 1 1])
+    text(Duration(stim)/2.3,0.975.*YLIM(2),'Vocalization', 'Color', [1 1 1])
     hold on
     yyaxis right
     plot(XPerStimt{stim}, XPerStim{stim}, 'Color',ColorCode(2,:),'LineStyle','-', 'Marker','*', 'LineWidth',2)
