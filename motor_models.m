@@ -858,9 +858,9 @@ for nc=1:NCells
         figure(3+tr)
         clf
         subplot(1,3,1)
-        shadedErrorBar(XPredictAmp,YPredictAmp/(TR*10^-3),[YPredictAmp-YPredictAmpci(:,1) YPredictAmpci(:,2)- YPredictAmp]'./(TR*10^-3))
+        shadedErrorBar(XPredictAmp,YPredictAmp/(10^-3),[YPredictAmp-YPredictAmpci(:,1) YPredictAmpci(:,2)- YPredictAmp]'./(10^-3))
         hold on
-        scatter(XAmp, Y./(TR*10^-3), 20,[Trill1_Bark0_local zeros(size(Trill1_Bark0_local)) zeros(size(Trill1_Bark0_local))],'filled')
+        scatter(XAmp, Y./(10^-3), 20,[Trill1_Bark0_local zeros(size(Trill1_Bark0_local)) zeros(size(Trill1_Bark0_local))],'filled')
         YLim1 = get(gca, 'YLim');
         XLim1 = get(gca, 'XLim');
         text(XLim1(2)*3/4, YLim1(2)*9.5/10,'Trill','Color',[1 0 0], 'FontWeight','bold')
@@ -871,9 +871,9 @@ for nc=1:NCells
         hold off
         
         subplot(1,3,2)
-        shadedErrorBar(XPredictSal,YPredictSal/(TR*10^-3),[YPredictSal-YPredictSalci(:,1) YPredictSalci(:,2)- YPredictSal]'./(TR*10^-3))
+        shadedErrorBar(XPredictSal,YPredictSal/(10^-3),[YPredictSal-YPredictSalci(:,1) YPredictSalci(:,2)- YPredictSal]'./(10^-3))
         hold on
-        scatter(XSal, Y./(TR*10^-3), 20,[Trill1_Bark0_local zeros(size(Trill1_Bark0_local)) zeros(size(Trill1_Bark0_local))],'filled')
+        scatter(XSal, Y./(10^-3), 20,[Trill1_Bark0_local zeros(size(Trill1_Bark0_local)) zeros(size(Trill1_Bark0_local))],'filled')
         YLim2 = get(gca, 'YLim');
         XLim2 = get(gca, 'XLim');
         text(XLim2(2)*3/4, YLim2(2)*9.5/10,'Trill','Color',[1 0 0], 'FontWeight','bold')
@@ -884,9 +884,9 @@ for nc=1:NCells
         hold off
         
         subplot(1,3,3)
-        shadedErrorBar(XPredictSpecMean,YPredictSpecMean/(TR*10^-3),[YPredictSpecMean-YPredictSpecMeanci(:,1) YPredictSpecMeanci(:,2)- YPredictSpecMean]'./(TR*10^-3))
+        shadedErrorBar(XPredictSpecMean,YPredictSpecMean/(10^-3),[YPredictSpecMean-YPredictSpecMeanci(:,1) YPredictSpecMeanci(:,2)- YPredictSpecMean]'./(10^-3))
         hold on
-        scatter(XSpecMean, Y./(TR*10^-3), 20,[Trill1_Bark0_local zeros(size(Trill1_Bark0_local)) zeros(size(Trill1_Bark0_local))],'filled')
+        scatter(XSpecMean, Y./(10^-3), 20,[Trill1_Bark0_local zeros(size(Trill1_Bark0_local)) zeros(size(Trill1_Bark0_local))],'filled')
         YLim3 = get(gca, 'YLim');
         XLim3 = get(gca, 'XLim');
         text(diff(XLim3)*3/4 + XLim3(1), YLim3(2)*9.5/10,'Trill','Color',[1 0 0], 'FontWeight','bold')
@@ -1053,12 +1053,10 @@ xlabel('Full Model R2')
 
 subplot(3,4,9)
 scatter(ModelAmpR2(:,4), AmpPredictor(:,3),30,[SU1MU0(GoodInfo) zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
-xlim([-0.2 1])
 ylim([-0.2 1])
-hold on
-plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
 YLim = get(gca, 'YLim');
 XLim = get(gca, 'XLim');
+hold on
 text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
 text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'MU','Color',[0 0 0], 'FontWeight','bold')
 xlabel('Coefficient Amplitude')
@@ -1066,12 +1064,11 @@ ylabel('Partial R2 Amplitude')
 
 subplot(3,4,10)
 scatter(ModelSalR2(:,4), SalPredictor(:,3),30,[SU1MU0(GoodInfo) zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
-xlim([-0.2 1])
 ylim([-0.2 1])
-hold on
-plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
 YLim = get(gca, 'YLim');
 XLim = get(gca, 'XLim');
+hold on
+
 text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
 text(diff(XLim)*3/4 + XLim(1), YLim(2)*9/10,'MU','Color',[0 0 0], 'FontWeight','bold')
 xlabel('Coefficient Pitch Saliency')
@@ -1079,10 +1076,8 @@ ylabel('Partial R2 Pitch Saliency')
 
 subplot(3,4,11)
 scatter(ModelSpecMeanR2(:,4), SpecMeanPredictor(:,3),30,[SU1MU0(GoodInfo) zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
-xlim([-0.2 1])
 ylim([-0.2 1])
 hold on
-plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
 YLim = get(gca, 'YLim');
 XLim = get(gca, 'XLim');
 text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
@@ -1092,10 +1087,8 @@ ylabel('Partial R2 Spectral Mean')
 
 subplot(3,4,12)
 scatter(ModelCallTypeR2(:,4), CallTypePredictor(:,3),30,[SU1MU0(GoodInfo) zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
-xlim([-0.2 1])
 ylim([-0.2 1])
 hold on
-plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
 YLim = get(gca, 'YLim');
 XLim = get(gca, 'XLim');
 text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
@@ -1215,10 +1208,8 @@ xlabel('Full Model R2')
 
 subplot(3,4,9)
 scatter(ModelAmpR2(:,4), AmpPredictor(:,3),30,[AmpPredictor(:,2)<0.01 zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
-xlim([-0.2 1])
 ylim([-0.2 1])
 hold on
-plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
 YLim = get(gca, 'YLim');
 XLim = get(gca, 'XLim');
 text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Sig','Color',[1 0 0], 'FontWeight','bold')
@@ -1228,10 +1219,8 @@ ylabel('Partial R2 Amplitude')
 
 subplot(3,4,10)
 scatter(ModelSalR2(:,4), SalPredictor(:,3),30,[SalPredictor(:,2)<0.01 zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
-xlim([-0.2 1])
 ylim([-0.2 1])
 hold on
-plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
 YLim = get(gca, 'YLim');
 XLim = get(gca, 'XLim');
 text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Sig','Color',[1 0 0], 'FontWeight','bold')
@@ -1241,10 +1230,8 @@ ylabel('Partial R2 Pitch Saliency')
 
 subplot(3,4,11)
 scatter(ModelSpecMeanR2(:,4), SpecMeanPredictor(:,3),30,[SpecMeanPredictor(:,2)<0.01 zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
-xlim([-0.2 1])
 ylim([-0.2 1])
 hold on
-plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
 YLim = get(gca, 'YLim');
 XLim = get(gca, 'XLim');
 text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Sig','Color',[1 0 0], 'FontWeight','bold')
@@ -1254,10 +1241,8 @@ ylabel('Partial R2 Spectral Mean')
 
 subplot(3,4,12)
 scatter(ModelCallTypeR2(:,4), CallTypePredictor(:,3),30,[CallTypePredictor(:,2)<0.01 zeros(size(GoodInfo)) zeros(size(GoodInfo))], 'filled')
-xlim([-0.2 1])
 ylim([-0.2 1])
 hold on
-plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
 YLim = get(gca, 'YLim');
 XLim = get(gca, 'XLim');
 text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Sig','Color',[1 0 0], 'FontWeight','bold')
@@ -1435,10 +1420,9 @@ xlabel('Full Model R2')
 
 subplot(3,4,9)
 scatter(ModelAmpR2((SigCells),4), AmpPredictor((SigCells),3),30,[SU1MU0(GoodInfo(SigCells)) zeros(size(SigCells)) zeros(size(SigCells))], 'filled')
-xlim([-0.2 1])
 ylim([-0.2 1])
 hold on
-plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+plot([0 0], [-0.2 1],'k--', 'LineWidth',2)
 YLim = get(gca, 'YLim');
 XLim = get(gca, 'XLim');
 text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
@@ -1448,10 +1432,9 @@ ylabel('Partial R2 Amplitude')
 
 subplot(3,4,10)
 scatter(ModelSalR2((SigCells),4), SalPredictor((SigCells),3),30,[SU1MU0(GoodInfo(SigCells)) zeros(size(SigCells)) zeros(size(SigCells))], 'filled')
-xlim([-0.2 1])
 ylim([-0.2 1])
 hold on
-plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+plot([0 0], [-0.2 1],'k--', 'LineWidth',2)
 YLim = get(gca, 'YLim');
 XLim = get(gca, 'XLim');
 text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
@@ -1461,10 +1444,9 @@ ylabel('Partial R2 Pitch Saliency')
 
 subplot(3,4,11)
 scatter(ModelSpecMeanR2((SigCells),4), SpecMeanPredictor((SigCells),3),30,[SU1MU0(GoodInfo(SigCells)) zeros(size(SigCells)) zeros(size(SigCells))], 'filled')
-xlim([-0.2 1])
 ylim([-0.2 1])
 hold on
-plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+plot([0 0], [-0.2 1],'k--', 'LineWidth',2)
 YLim = get(gca, 'YLim');
 XLim = get(gca, 'XLim');
 text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
@@ -1474,10 +1456,9 @@ ylabel('Partial R2 Spectral Mean')
 
 subplot(3,4,12)
 scatter(ModelCallTypeR2((SigCells),4), CallTypePredictor((SigCells),3),30,[SU1MU0(GoodInfo(SigCells)) zeros(size(SigCells)) zeros(size(SigCells))], 'filled')
-xlim([-0.2 1])
 ylim([-0.2 1])
 hold on
-plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+plot([0 0], [-0.2 1],'k--', 'LineWidth',2)
 YLim = get(gca, 'YLim');
 XLim = get(gca, 'XLim');
 text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'SU','Color',[1 0 0], 'FontWeight','bold')
@@ -1488,8 +1469,8 @@ xlabel('Coefficient Call Type')
 suplabel('Adjusted R-squared Significant Cells','t')
 
 
-% Same figure as 35 but now color coded is significance
-figure(36)
+% Same figure as 36 but now color coded is significance
+figure(37)
 clf
 subplot(3,4,1)
 scatter(FullModelR2((SigCells),3), ModelAmpR2((SigCells),3),30,[ModelAmpR2((SigCells),2)<0.01 zeros(size(SigCells)) zeros(size(SigCells))], 'filled')
@@ -1597,10 +1578,9 @@ xlabel('Full Model R2')
 
 subplot(3,4,9)
 scatter(ModelAmpR2((SigCells),4), AmpPredictor((SigCells),3),30,[AmpPredictor((SigCells),2)<0.01 zeros(size(SigCells)) zeros(size(SigCells))], 'filled')
-xlim([-0.2 1])
 ylim([-0.2 1])
 hold on
-plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+plot([0 0], [-0.2 1],'k--', 'LineWidth',2)
 YLim = get(gca, 'YLim');
 XLim = get(gca, 'XLim');
 text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Sig','Color',[1 0 0], 'FontWeight','bold')
@@ -1610,10 +1590,9 @@ ylabel('Partial R2 Amplitude')
 
 subplot(3,4,10)
 scatter(ModelSalR2((SigCells),4), SalPredictor((SigCells),3),30,[SalPredictor((SigCells),2)<0.01 zeros(size(SigCells)) zeros(size(SigCells))], 'filled')
-xlim([-0.2 1])
 ylim([-0.2 1])
 hold on
-plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+plot([0 0], [-0.2 1],'k--', 'LineWidth',2)
 YLim = get(gca, 'YLim');
 XLim = get(gca, 'XLim');
 text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Sig','Color',[1 0 0], 'FontWeight','bold')
@@ -1623,10 +1602,9 @@ ylabel('Partial R2 Pitch Saliency')
 
 subplot(3,4,11)
 scatter(ModelSpecMeanR2((SigCells),4), SpecMeanPredictor((SigCells),3),30,[SpecMeanPredictor((SigCells),2)<0.01 zeros(size(SigCells)) zeros(size(SigCells))], 'filled')
-xlim([-0.2 1])
 ylim([-0.2 1])
 hold on
-plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+plot([0 0], [-0.2 1],'k--', 'LineWidth',2)
 YLim = get(gca, 'YLim');
 XLim = get(gca, 'XLim');
 text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Sig','Color',[1 0 0], 'FontWeight','bold')
@@ -1636,10 +1614,9 @@ ylabel('Partial R2 Spectral Mean')
 
 subplot(3,4,12)
 scatter(ModelCallTypeR2((SigCells),4), CallTypePredictor((SigCells),3),30,[CallTypePredictor((SigCells),2)<0.01 zeros(size(SigCells)) zeros(size(SigCells))], 'filled')
-xlim([-0.2 1])
 ylim([-0.2 1])
 hold on
-plot([-0.2 1], [-0.2 1],'k--', 'LineWidth',2)
+plot([0 0], [-0.2 1],'k--', 'LineWidth',2)
 YLim = get(gca, 'YLim');
 XLim = get(gca, 'XLim');
 text(diff(XLim)*3/4 + XLim(1), YLim(2)*9.5/10,'Sig','Color',[1 0 0], 'FontWeight','bold')

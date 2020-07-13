@@ -47,7 +47,7 @@ IndVocHDF = intersect(IndVocHD, IndVocF);
 %% Time Raster plot alligned to vocalization production onset/offset self vocalizations Operant + Free First voc of sequence only
 if ~isempty(IndVocPD) && ~isempty(IndVocPDO) && ~isempty(IndVocPDF)
     Fig1 = figure();% TrCol = [0.9290, 0.6940, 0.1250];BaCol = [1, 0, 0];
-    Color = [0/255 191/255 255/255].*contains(Data.What, 'Tr') + [1 0.7 0.7].*contains(Data.What, 'Ba');
+    Color = [0/255 191/255 255/255].*contains(Data.What, 'Ba') + [1 0.7 0.7].*contains(Data.What, 'Tr');
     if isfield(Data.KDE_onset,'SelfVocAll')
         ColKDE = [186/255 85/255 211/255];
         timerasterkde(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPD,Color,Data.KDE_onset.SelfVocAll,Data.KDE_offset.SelfVocAll,ColKDE,Data.RewardTime,DurOrd);
@@ -74,12 +74,14 @@ end
 %% Time Raster plot alligned to vocalization production onset/offset during Operant conditioning First voc of sequence only
 if ~isempty(IndVocPDO)
     Fig6 = figure();
-    Color = [0/255 191/255 255/255].*contains(Data.What, 'Tr') + [1 0.7 0.7].*contains(Data.What, 'Ba');
+    ColorLegend.name = {'Ba' 'Tr'};
+    ColorLegend.color = {[0/255 191/255 255/255]; [1 0.7 0.7]};
+    Color = ColorLegend.color{1}.*contains(Data.What, ColorLegend.name{1}) + ColorLegend.color{2}.*contains(Data.What, ColorLegend.name{2});
     if isfield(Data.KDE_onset, 'SelfVocOp')
         ColKDE = [186/255 85/255 211/255];
-        timerasterkde(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPDO,Color,Data.KDE_onset.SelfVocOp,Data.KDE_offset.SelfVocOp,ColKDE,Data.RewardTime,DurOrd)
+        timerasterkde(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPDO,Color,ColorLegend,Data.KDE_onset.SelfVocOp,Data.KDE_offset.SelfVocOp,ColKDE,Data.RewardTime,DurOrd)
     else
-        timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPDO,Color)
+        timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPDO,Color,ColorLegend)
     end
     suplabel(sprintf('CALLS FROM SUBJECT OPERANT   %s on %s Raster T%s SS%s %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{3},NeuralInputID{2}),'t');
     print(Fig6,fullfile(OutputPath,sprintf('%s_RasterVocSelfOp_%d.pdf', FileNameBase, Delay(1))),'-dpdf','-fillpage')
@@ -229,12 +231,12 @@ if PlotDyn
 end
 
 %% INTERNAL FUNCTION
-    function timeraster(SpikesArrivalTimes,Duration,Delay,Indices, Color)
+    function timeraster(SpikesArrivalTimes,Duration,Delay,Indices, Color, ColorLegend)
         % We want to plot data with increasing duration of
         % vocalizations.
         [~,IDur] = sort(Duration(Indices));
 
-        subplot(1,2,1)
+        ss1=subplot(1,2,1);
 
         % First alligned to vocalization onset
         for oo=1:length(Indices)
@@ -257,11 +259,12 @@ end
         ylim([0 length(Indices)+1])
         xlim(XLIM)
         ylabel('Vocalization renditions')
+        title(ss1, ['\fontsize{16} {\color[rgb]' sprintf('{%.1f %.1f %.1f}%s',ColorLegend.color{1}, ColorLegend.name{1}) ' \color[rgb]' sprintf('{%.1f %.1f %.1f}%s}', ColorLegend.color{2}, ColorLegend.name{2})]);
         hold off
         
         
         % then alligned to vocalization offset
-        subplot(1,2,2)
+        ss2= subplot(1,2,2);
 
         for oo=1:length(Indices)
             cc=IDur(oo);
@@ -283,11 +286,12 @@ end
         ylim([0 length(Indices)+1])
         xlim(XLIM)
         ylabel('Vocalization renditions')
+        title(ss2, ['\fontsize{16} {\color[rgb]' sprintf('{%.1f %.1f %.1f}%s',ColorLegend.color{1}, ColorLegend.name{1}) ' \color[rgb]' sprintf('{%.1f %.1f %.1f}%s}', ColorLegend.color{2}, ColorLegend.name{2})]);
         hold off
     end
 
 
-function timerasterkde(SpikesArrivalTimes,Duration,Delay,Indices, Color, Dat1, Dat2, Col1, RewardTime,DurOrd)
+function timerasterkde(SpikesArrivalTimes,Duration,Delay,Indices, Color, ColorLegend, Dat1, Dat2, Col1, RewardTime,DurOrd)
     if nargin<9
         RewardTime = nan(length(Duration),1);
     end
@@ -302,7 +306,7 @@ function timerasterkde(SpikesArrivalTimes,Duration,Delay,Indices, Color, Dat1, D
         IDur = 1:length(Indices);
     end
     
-        subplot(4,2,[1 3 5])
+        ss1=subplot(4,2,[1 3 5]);
 
         % First alligned to vocalization onset
         for oo=1:length(Indices)
@@ -337,6 +341,7 @@ function timerasterkde(SpikesArrivalTimes,Duration,Delay,Indices, Color, Dat1, D
         ylim([0 length(Indices)+1])
         xlim(XLIM)
         ylabel('Vocalization renditions')
+        title(ss1, ['\fontsize{16} {\color[rgb]' sprintf('{%.1f %.1f %.1f}%s',ColorLegend.color{1}, ColorLegend.name{1}) ' \color[rgb]' sprintf('{%.1f %.1f %.1f}%s}', ColorLegend.color{2}, ColorLegend.name{2})]);
         hold off
         
         subplot(4,2,7)
@@ -352,7 +357,7 @@ function timerasterkde(SpikesArrivalTimes,Duration,Delay,Indices, Color, Dat1, D
         ylabel('Rate (Hz)')
         
         % then alligned to vocalization offset
-        subplot(4,2,[2 4 6])
+        ss2=subplot(4,2,[2 4 6]);
 
         for oo=1:length(Indices)
             cc=IDur(oo);
@@ -386,6 +391,7 @@ function timerasterkde(SpikesArrivalTimes,Duration,Delay,Indices, Color, Dat1, D
         ylim([0 length(Indices)+1])
         xlim(XLIM)
         ylabel('Vocalization renditions')
+        title(ss2, ['\fontsize{16} {\color[rgb]' sprintf('{%.1f %.1f %.1f}%s',ColorLegend.color{1}, ColorLegend.name{1}) ' \color[rgb]' sprintf('{%.1f %.1f %.1f}%s}', ColorLegend.color{2}, ColorLegend.name{2})]);
         hold off
         
         subplot(4,2,8)
