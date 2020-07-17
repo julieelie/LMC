@@ -99,6 +99,7 @@ for ss=1:length(CellsPath)
         end
     end
     CV_ISI = STD_ISI ./ Mean_ISI;
+    CV_ISI(Rate==0) = 0; % Correct NaN values of CV when Rate =0;
     % remove points due to lost cell
     % Define deadtime for the cell as 1 min of rate =0
     DeadPoints = strfind(((Rate(1:end-1)==0).*(diff(Rate)==0))', ones(1,round((60*10^3)/NeuralWin)));
@@ -116,6 +117,10 @@ for ss=1:length(CellsPath)
         Trill01 = Trill01(1:(FirstDead-2));
     end
     
+    % Run an HDBSCAN on the Rate and CV data to find the different
+    % "states" of the cell
+    Clusterer = HDBSCAN([LogRate CV_ISI]);
+    Clusterer.run_hdbscan(5,5,[],0.9);
     
     % Construct a time varying vector of the neural activity and calculate
     % its spectrum
@@ -130,11 +135,13 @@ for ss=1:length(CellsPath)
 %     SpikePattern = conv(SpikePattern, Expwav,'same');
     [Spectrum, Freqs] = pwelch(SpikePattern - mean(SpikePattern), 4096,2048, 4096,1000);
     
-    
+    LogRate = Rate;
+    LogRate(LogRate == 0) = 0.1; % Estimate the minimum rate at 0.1 spike per second
+    LogRate = log10(LogRate);
     if sum(contains(VocRank, 'first')) == size(VocDataTime,1)
         figure(1)
         clf
-        H=histogram2(log10(Rate), CV_ISI, 'FaceColor','flat', 'XBinLimits', [0 2],'YBinLimits', [0 5], 'NumBins',[24 36]);
+        H=histogram2(LogRate, CV_ISI, 'FaceColor','flat', 'XBinLimits', [-1 2],'YBinLimits', [0 5], 'NumBins',[24 36]);
         XBinEdges = H.XBinEdges;
         YBinEdges = H.YBinEdges;
         Rate_CVISI_All{ss,1} = H.Values;
@@ -146,41 +153,41 @@ for ss=1:length(CellsPath)
 %         title('all time points')
 
         subplot(2,2,1)
-        H=histogram2(log10(Rate(logical(Voc01))), CV_ISI(logical(Voc01)), 'FaceColor','flat', 'XBinLimits', [0 2],'YBinLimits', [0 5], 'XBinEdges',XBinEdges, 'YBinEdges',YBinEdges);
+        H=histogram2(LogRate(logical(Voc01)), CV_ISI(logical(Voc01)), 'FaceColor','flat', 'XBinLimits', [-1 2],'YBinLimits', [0 5], 'XBinEdges',XBinEdges, 'YBinEdges',YBinEdges);
         Rate_CVISI_Voc{ss,1} = H.Values;
         Rate_CVISI_Voc{ss,2} = H.XBinEdges;
         Rate_CVISI_Voc{ss,3} = H.YBinEdges;
-        set(gca,'XTick',log10([1:1:10 20:10:100]), 'XTickLabel',[1:1:10 20:10:100])
+        set(gca,'XTick',log10([0.1 1:1:10 20:10:100]), 'XTickLabel',[0:1:10 20:10:100])
         xlabel('Spike Rate (Hz)')
         ylabel('CV of ISI')
         title(sprintf('Time points around vocalizations (within %d ms)', Buffer+Overlap))
 
         subplot(2,2,2)
-        H=histogram2(log10(Rate(~Voc01)), CV_ISI(~Voc01), 'FaceColor','flat', 'XBinLimits', [0 2],'YBinLimits', [0 5], 'XBinEdges',XBinEdges, 'YBinEdges',YBinEdges);
+        H=histogram2(LogRate(~Voc01), CV_ISI(~Voc01), 'FaceColor','flat', 'XBinLimits', [-1 2],'YBinLimits', [0 5], 'XBinEdges',XBinEdges, 'YBinEdges',YBinEdges);
         Rate_CVISI_NonVoc{ss,1} = H.Values;
         Rate_CVISI_NonVoc{ss,2} = H.XBinEdges;
         Rate_CVISI_NonVoc{ss,3} = H.YBinEdges;
-        set(gca,'XTick',log10([1:1:10 20:10:100]), 'XTickLabel',[1:1:10 20:10:100])
+        set(gca,'XTick',log10([0.1 1:1:10 20:10:100]), 'XTickLabel',[0:1:10 20:10:100])
         xlabel('Spike Rate (Hz)')
         ylabel('CV of ISI')
         title('Time points outside of vocalizations')
         
         subplot(2,2,3)
-        H=histogram2(log10(Rate(logical(Voc01.*Trill01))), CV_ISI(logical(Voc01.*Trill01)), 'FaceColor','flat', 'XBinLimits', [0 2],'YBinLimits', [0 5], 'XBinEdges',XBinEdges, 'YBinEdges',YBinEdges);
+        H=histogram2(LogRate(logical(Voc01.*Trill01)), CV_ISI(logical(Voc01.*Trill01)), 'FaceColor','flat', 'XBinLimits', [-1 2],'YBinLimits', [0 5], 'XBinEdges',XBinEdges, 'YBinEdges',YBinEdges);
         Rate_CVISI_Trill{ss,1} = H.Values;
         Rate_CVISI_Trill{ss,2} = H.XBinEdges;
         Rate_CVISI_Trill{ss,3} = H.YBinEdges;
-        set(gca,'XTick',log10([1:1:10 20:10:100]), 'XTickLabel',[1:1:10 20:10:100])
+        set(gca,'XTick',log10([0.1 1:1:10 20:10:100]), 'XTickLabel',[0:1:10 20:10:100])
         xlabel('Spike Rate (Hz)')
         ylabel('CV of ISI')
         title(sprintf('Time points around Trills (within %d ms)', Buffer+Overlap))
         
         subplot(2,2,4)
-        H=histogram2(log10(Rate(logical(Voc01.*~Trill01))), CV_ISI(logical(Voc01.*~Trill01)), 'FaceColor','flat', 'XBinLimits', [0 2],'YBinLimits', [0 5], 'XBinEdges',XBinEdges, 'YBinEdges',YBinEdges);
+        H=histogram2(LogRate(logical(Voc01.*~Trill01)), CV_ISI(logical(Voc01.*~Trill01)), 'FaceColor','flat', 'XBinLimits', [-1 2],'YBinLimits', [0 5], 'XBinEdges',XBinEdges, 'YBinEdges',YBinEdges);
         Rate_CVISI_Ba{ss,1} = H.Values;
         Rate_CVISI_Ba{ss,2} = H.XBinEdges;
         Rate_CVISI_Ba{ss,3} = H.YBinEdges;
-        set(gca,'XTick',log10([1:1:10 20:10:100]), 'XTickLabel',[1:1:10 20:10:100])
+        set(gca,'XTick',log10([0.1 1:1:10 20:10:100]), 'XTickLabel',[0:1:10 20:10:100])
         xlabel('Spike Rate (Hz)')
         ylabel('CV of ISI')
         title(sprintf('Time points around Barks (within %d ms)', Buffer+Overlap))
@@ -188,31 +195,31 @@ for ss=1:length(CellsPath)
         figure(1)
         clf
         subplot(1,3,1)
-        H=histogram2(log10(Rate), CV_ISI, 'FaceColor','flat', 'XBinLimits', [0 2],'YBinLimits', [0 5],'NumBins',[24 36]);
+        H=histogram2(LogRate, CV_ISI, 'FaceColor','flat', 'XBinLimits', [-1 2],'YBinLimits', [0 5],'NumBins',[24 36]);
         Rate_CVISI_All{ss,1} = H.Values;
         Rate_CVISI_All{ss,2} = H.XBinEdges;
         Rate_CVISI_All{ss,3} = H.YBinEdges;
-        set(gca,'XTick',log10([1:1:10 20:10:100]), 'XTickLabel',[1:1:10 20:10:100])
+        set(gca,'XTick',log10([0.1 1:1:10 20:10:100]), 'XTickLabel',[0:1:10 20:10:100])
         xlabel('Spike Rate (Hz)')
         ylabel('CV of ISI')
         title('all time points')
 
         subplot(1,3,2)
-        H=histogram2(log10(Rate(logical(Voc01))), CV_ISI(logical(Voc01)), 'FaceColor','flat', 'XBinLimits', [0 2],'YBinLimits', [0 5], 'XBinEdges',H.XBinEdges, 'YBinEdges',H.YBinEdges);
+        H=histogram2(LogRate(logical(Voc01)), CV_ISI(logical(Voc01)), 'FaceColor','flat', 'XBinLimits', [-1 2],'YBinLimits', [0 5], 'XBinEdges',H.XBinEdges, 'YBinEdges',H.YBinEdges);
         Rate_CVISI_Voc{ss,1} = H.Values;
         Rate_CVISI_Voc{ss,2} = H.XBinEdges;
         Rate_CVISI_Voc{ss,3} = H.YBinEdges;
-        set(gca,'XTick',log10([1:1:10 20:10:100]), 'XTickLabel',[1:1:10 20:10:100])
+        set(gca,'XTick',log10([0.1 1:1:10 20:10:100]), 'XTickLabel',[0:1:10 20:10:100])
         xlabel('Spike Rate (Hz)')
         ylabel('CV of ISI')
         title(sprintf('Time points around vocalizations (within %d ms)', Buffer+Overlap))
 
         subplot(1,3,3)
-        H=histogram2(log10(Rate(~Voc01)), CV_ISI(~Voc01), 'FaceColor','flat', 'XBinLimits', [0 2],'YBinLimits', [0 5], 'XBinEdges',H.XBinEdges, 'YBinEdges',H.YBinEdges);
+        H=histogram2(LogRate(~Voc01), CV_ISI(~Voc01), 'FaceColor','flat', 'XBinLimits', [-1 2],'YBinLimits', [0 5], 'XBinEdges',H.XBinEdges, 'YBinEdges',H.YBinEdges);
         Rate_CVISI_NonVoc{ss,1} = H.Values;
         Rate_CVISI_NonVoc{ss,2} = H.XBinEdges;
         Rate_CVISI_NonVoc{ss,3} = H.YBinEdges;
-        set(gca,'XTick',log10([1:1:10 20:10:100]), 'XTickLabel',[1:1:10 20:10:100])
+        set(gca,'XTick',log10([0.1 1:1:10 20:10:100]), 'XTickLabel',[0:1:10 20:10:100])
         xlabel('Spike Rate (Hz)')
         ylabel('CV of ISI')
         title('Time points outside of vocalizations')
@@ -241,23 +248,173 @@ for ss=1:length(CellsPath)
     ylabel('Log Power of the Spike Rate')
     xlabel('Frequency (Hz)')
     pause(1)
+    
 end
 fprintf(' DONE \n')
 save(fullfile(OutputPath, 'CellSpikingRegime.mat'),'ListSSU', 'CellsPath', 'NeuralWin','Overlap', 'Rate_CVISI_All', 'Rate_CVISI_Voc', 'Rate_CVISI_NonVoc', 'Rate_CVISI_Trill', 'Rate_CVISI_Ba');
 
 
 %% Run a umap on the CV_Rate plots
+CapCV = 36;
 RateCVISI_mat = nan(size(Rate_CVISI_All,1), numel(Rate_CVISI_All{1,1}));
 for cc=1:NCells
-    RateCVISI_mat(cc,:) = reshape(Rate_CVISI_All{cc,1}, 1, numel(Rate_CVISI_All{cc,1}));
+    RateCVISI_mat(cc,:) = reshape(Rate_CVISI_All{cc,1}, 1, numel(Rate_CVISI_All{cc,1}))./sum(sum(Rate_CVISI_All{cc,1}));
 end
-figure()
-imagesc(RateCVISI_mat)
+% Finding the good cell indices (some cells have no data)
+GoodCells = find(~isnan(RateCVISI_mat(:,1)));
+figure(4)
+clf
+imagesc(RateCVISI_mat(GoodCells,:))
+colorbar()
 xlabel('CV on ISI and Rate profile')
 ylabel('Cell#')
-[Reduction,UMAP,ClustID]= run_umap(RateCVISI_mat);
+
+% Project the data in UMAP space
+figure(5)
+clf
+[Reduction,UMAP,KMeans_ID]= run_umap(RateCVISI_mat(GoodCells,:), 'n_neighbors',9,'min_dist',0.051);
+
+% Cluster the projected data with HDBSCAN
+Cluster = HDBSCAN(Reduction);
+Cluster.run_hdbscan(5,5,[],0.9);
+
+figure(11)
+clf
+subplot(1,2,1)
+Cluster.plot_tree()
+subplot(1,2,2)
+Cluster.plot_clusters()
+suplabel('HDBSCAN clustering','t')
 
 
+Yval = Rate_CVISI_All{1,3}(1:end-1) + diff(Rate_CVISI_All{1,3});
+Xval = Rate_CVISI_All{1,2}(1:end-1) + diff(Rate_CVISI_All{1,2});
+
+UkID = unique(KMeans_ID);
+Cval = linspace(1,100,length(UkID));
+Cval = Cval(randperm(length(UkID)));
+Legend = cell(length(UkID),1);
+Nr = floor(length(UkID)^0.5);
+Nc = ceil(length(UkID)/Nr);
+figure(6)
+clf
+figure(7)
+clf
+for cc=1:length(UkID)
+   AvMap = mean(RateCVISI_mat(GoodCells(KMeans_ID==UkID(cc)),:));
+   AvMap = reshape(AvMap, size(Rate_CVISI_All{1,1}))';
+   figure(6)
+   subplot(Nr,Nc,cc)
+   imagesc(Xval, Yval, AvMap)
+   colormap("default")
+   axis xy
+   ylabel('CV_ISI')
+   set(gca, 'YLim',[0 2])
+   XLim = get(gca, 'XLim');
+   set(gca, 'XLim', [0 XLim(2)])
+   set(gca,'XTick',log10([1:1:10 20:10:100]), 'XTickLabel',[1:1:10 20:10:100])
+   xlabel('Spike Rate (Hz)')
+   title(sprintf('Cluster %d (n=%d)',UkID(cc), sum(KMeans_ID==UkID(cc)) )) 
+    
+   figure(7)
+   hold on
+   scatter(Reduction(KMeans_ID==UkID(cc),1), Reduction(KMeans_ID==UkID(cc),2), 30, Cval(cc)*ones(length(Reduction(KMeans_ID==UkID(cc),1)),1), 'filled')
+   Legend{cc} = (sprintf('Cluster %d (n=%d)',UkID(cc), sum(KMeans_ID==UkID(cc))));
+end
+figure(7)
+xlabel('UMAP D1')
+ylabel('UMAP D2')
+% scatter(0, 0, 30, Cval(cc+3), 'filled')
+% legend([Legend; ' '], 'Location','eastoutside')
+legend(Legend, 'Location','eastoutside')
+colormap(jet)
+title('KMeans clustering')
+hold off
+figure(6)
+suplabel('KMeans Average cluster map','t')
+
+
+UHID = unique(Cluster.labels);
+Cval = linspace(1,100,length(UHID));
+Cval = Cval(randperm(length(UHID)));
+Legend = cell(length(UHID),1);
+Nr = floor(length(UHID)^0.5);
+Nc = ceil(length(UHID)/Nr);
+figure(8)
+clf
+figure(9)
+clf
+
+for cc=1:length(UHID)
+   AvMap = mean(RateCVISI_mat(GoodCells(Cluster.labels==UHID(cc)),:));
+   AvMap = reshape(AvMap, size(Rate_CVISI_All{1,1}))';
+   figure(8)
+   subplot(Nr,Nc,cc)
+   imagesc(Xval, Yval, AvMap)
+   colormap("default")
+   axis xy
+   ylabel('CV_ISI')
+   set(gca, 'YLim',[0 2])
+   XLim = get(gca, 'XLim');
+   set(gca, 'XLim', [0 XLim(2)])
+   set(gca,'XTick',log10([1:1:10 20:10:100]), 'XTickLabel',[1:1:10 20:10:100])
+   xlabel('Spike Rate (Hz)')
+   title(sprintf('Cluster %d (n=%d)',UHID(cc),sum(Cluster.labels==UHID(cc))))
+   
+   figure(9)
+   hold on
+   scatter(Reduction(Cluster.labels==UHID(cc),1), Reduction(Cluster.labels==UHID(cc),2), 30, Cval(cc)*ones(length(Reduction(Cluster.labels==UHID(cc),1)),1), 'filled')
+   Legend{cc} = (sprintf('Cluster %d (n=%d)',UHID(cc),sum(Cluster.labels==UHID(cc))));
+end
+figure(9)
+xlabel('UMAP D1')
+ylabel('UMAP D2')
+% scatter(0, 0, 30, Cval(cc+3), 'filled')
+% legend([Legend; ' '], 'Location','eastoutside')
+legend(Legend, 'Location','eastoutside')
+colormap(jet)
+title('HDBSCAN clustering')
+hold off
+   
+figure(8)   
+suplabel('HDBSCAN Average cluster map','t')
+
+save(fullfile(OutputPath, 'CellSpikingRegime.mat'),'NCells', 'GoodCells','RateCVISI_mat','Reduction','UMAP','KMeans_ID','Cluster','-append');
+%% OLD
+figure()
+subplot(1,3,1)
+Yval = Rate_CVISI_All{122,3}(1:end-1) + diff(Rate_CVISI_All{122,3});
+Xval = Rate_CVISI_All{122,2}(1:end-1) + diff(Rate_CVISI_All{122,2});
+imagesc(Xval,Yval,Rate_CVISI_All{122,1}')
+axis xy
+ylabel('CV_ISI')
+   XLim = get(gca, 'XLim');
+   set(gca, 'XLim', [0 XLim(2)])
+   set(gca,'XTick',log10([1:1:10 20:10:100]), 'XTickLabel',[1:1:10 20:10:100])
+   xlabel('Spike Rate (Hz)')
+   colorbar()
+   
+   subplot(1,3,2)
+Yval = Rate_CVISI_All{122,3}(1:end-1) + diff(Rate_CVISI_All{122,3});
+Xval = Rate_CVISI_All{122,2}(1:end-1) + diff(Rate_CVISI_All{122,2});
+imagesc(Xval,Yval,Rate_CVISI_All{122,1}'./sum(sum(Rate_CVISI_All{122,1})))
+axis xy
+ylabel('CV_ISI')
+   XLim = get(gca, 'XLim');
+   set(gca, 'XLim', [0 XLim(2)])
+   set(gca,'XTick',log10([1:1:10 20:10:100]), 'XTickLabel',[1:1:10 20:10:100])
+   xlabel('Spike Rate (Hz)')
+   colorbar()
+   
+   subplot(1,3,3)
+imagesc(Xval, Yval,reshape(RateCVISI_mat(122,:), size(Rate_CVISI_All{122,1}))')
+axis xy
+   ylabel('CV_ISI')
+   XLim = get(gca, 'XLim');
+   set(gca, 'XLim', [0 XLim(2)])
+   set(gca,'XTick',log10([1:1:10 20:10:100]), 'XTickLabel',[1:1:10 20:10:100])
+   xlabel('Spike Rate (Hz)')
+   colorbar()
 %%   INTERNAL FUNCTIONS 
 function [ListSSU] = gather_neural_datapath(BasePath)
 fprintf(1,'*** Gathering paths to spike sorted units ***')
