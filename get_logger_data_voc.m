@@ -178,6 +178,23 @@ else
                     
                     % extract the data snippet
                     %         Piezo_wave.(sprintf('Logger%s', LData.logger_serial_number)){vv} = double(LData.AD_count_int16(IndSampOn:IndSampOff) - mean(LData.AD_count_int16))/std(LData.AD_count_int16);
+                    if isfield(VocExt, 'LoggerID') && strcmp(VocExt.LoggerID{vv}, sprintf('Logger%s', LData.logger_serial_number))
+                        % we can check the values of samples calculated
+                        % with the one obtained earlier
+                        
+                        if ~(IndSampOn<VocExt.Voc_loggerSamp_Idx(vv,1)) || ~(IndSampOff>VocExt.Voc_loggerSamp_Idx(vv,1))
+                            VocExt.Voc_loggerSamp_Idx(vv,:)
+                            IndSampOff
+                            IndSampOn
+                            keyboard
+                        end
+                        if (~(IndSampOff>VocExt.Voc_loggerSamp_Idx(vv,2))) && (((IndSampOff-IndSampOn)/50000)<0.5) % there is a discrepancy for the offset and this sequence was not obtained after a merge, that's a problem!!
+                            VocExt.Voc_loggerSamp_Idx(vv,:)
+                            IndSampOff
+                            IndSampOn
+                            keyboard
+                        end
+                    end
                     if IndSampOff<length(LData.AD_count_int16)
                         Piezo_wave.(sprintf('Logger%s', LData.logger_serial_number)){vv_out} = double(LData.AD_count_int16(IndSampOn:IndSampOff));
                     elseif IndSampOn<length(LData.AD_count_int16)% The piezo recording ended before the end of the call section requested
