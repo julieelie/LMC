@@ -1310,6 +1310,63 @@ text(diff(XLim)*3/4 + XLim(1), YLim(2)*5.5/10,'Amp + Sal + SpecMean','Color',[0.
 
 suplabel('Full acoustic model performance Significant Cells','t')
 
+% same plot of the population with the significance of the various models
+% as color codes on the left and the belonging to a cluster from the Trill
+% vs Bark analysis on the right
+figure(100)
+subplot(1,2,1)
+SigCellsCT = SigCells(CallTypePredictor(SigCells,2)<0.01);
+NSigCellsCT = SigCells(CallTypePredictor(SigCells,2)>=0.01);
+scatter(Info(GoodInfo(SigCellsCT)), FullModelR2((SigCellsCT),3), 60, [0.8*(AmpPredictor((SigCellsCT),2)<0.01) 0.8*(SalPredictor(SigCellsCT,2)<0.01) 0.8*(SpecMeanPredictor(SigCellsCT,2)<0.01)], 'filled','d')
+legend('Call-Type')
+legend('AutoUpdate', 'off')
+hold on
+scatter(Info(GoodInfo(NSigCellsCT)), FullModelR2((NSigCellsCT),3), 60, [0.8*(AmpPredictor((NSigCellsCT),2)<0.01) 0.8*(SalPredictor(NSigCellsCT,2)<0.01) 0.8*(SpecMeanPredictor(NSigCellsCT,2)<0.01)], 'filled','o')
+
+xlabel('Info on Coherence with Amplitude (bits)')
+ylabel('Adjusted R2 full linear Model')
+xlim([0 5])
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*8.5/10,'Amp','Color',[0.8 0 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*8/10,'Sal','Color',[0 0.8 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*7.5/10,'SpecMean','Color',[0 0 0.8], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*7/10,'Amp + Sal','Color',[0.8 0.8 0], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*6.5/10,'Amp + SpecMean','Color',[0.8 0 0.8], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*6/10,'Sal + SpecMean','Color',[0 0.8 0.8], 'FontWeight','bold')
+text(diff(XLim)*3/4 + XLim(1), YLim(2)*5.5/10,'Amp + Sal + SpecMean','Color',[0.8 0.8 0.8], 'FontWeight','bold')
+
+% retrieve the cluster number
+ColorCode = get(groot, 'DefaultAxesColorOrder');
+CellsPath(GoodInfo(SigCells))
+ClustNum = nan(size(SigCells));
+ClustCol = nan(length(SigCells),3);
+ClusRes = load('explore_populationSU_data_5000.mat');
+UClust = unique(T);
+for cc=1:length(SigCells)
+    for uu=1:length(UClust)
+        Clust = UClust(uu);
+        if sum(contains(ClusRes.ListSSU(ClusRes.GoodCellIndices(ClusRes.BaTr_ind(ClusRes.T==Clust))).name,CellsPath.name(GoodInfo(SigCells(cc)))))
+            ClustNum(cc) = Clust;
+            ClustCol(cc,:) = ColorCode(Clust,:);
+            break
+        end
+    end
+end
+
+subplot(1,2,2)
+scatter(Info(GoodInfo(SigCells)), FullModelR2((SigCells),3), 60, ClustCol, 'filled','o')
+legend('AutoUpdate', 'off')
+hold on
+xlabel('Info on Coherence with Amplitude (bits)')
+ylabel('Adjusted R2 full linear Model')
+xlim([0 5])
+YLim = get(gca, 'YLim');
+XLim = get(gca, 'XLim');
+for uu=1:length(UClust)
+    text(diff(XLim)*3/4 + XLim(1), YLim(2)*(9-0.5*uu)/10,sprintf('Cluster%d', UClust(uu)),'Color',ColorCode(UClust(uu),:), 'FontWeight','bold')
+end
+hold off
 
 % Now figure of individual models with all significant cells
 figure(36)
