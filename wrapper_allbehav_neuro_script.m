@@ -5,7 +5,7 @@ addpath(genpath('/Users/elie/Documents/CODE/Kilosort2'))
 addpath(genpath('/Users/elie/Documents/CODE/LoggerDataProcessing'))
 addpath(genpath('/Users/elie/Documents/CODE/SoundAnalysisBats'))
 Path2RecordingTable = '/Users/elie/Google Drive/BatmanData/RecordingLogs/recording_logs.xlsx';
-BasePath = '/Volumes/Julie4T';
+BasePath = '/Volumes/JulieE4T';
 %% RUN audio data extraction for the operant tests
 % BasePath = '/Volumes/server_home/users/JulieE/LMC';
 ListOfPaths = gather_operant_datapath(BasePath);
@@ -87,8 +87,11 @@ Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '201905'))=[];% No n
 Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '190605_1553'))=[]; % Clock jump, no data to extract
 Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190703'))=[];% No TTL Pulses
 Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190709'))=[];% No TTL Pulses
- 
-for pp=5:length(Path2RunRecOnly)
+
+for pp=4:length(Path2RunRecOnly)
+    if pp==7
+        keyboard
+    end
     Path2ParamFile = List2RecOnlyPath{Path2RunRecOnly(pp)};
     fprintf(1,'\n\n\n\nRunning result_reconly_bat on %s\n\n', Path2ParamFile)
     result_reconly_bat(Path2ParamFile)

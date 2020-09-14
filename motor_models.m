@@ -1338,15 +1338,20 @@ text(diff(XLim)*3/4 + XLim(1), YLim(2)*5.5/10,'Amp + Sal + SpecMean','Color',[0.
 
 % retrieve the cluster number
 ColorCode = get(groot, 'DefaultAxesColorOrder');
-CellsPath(GoodInfo(SigCells))
+% CellsPath(GoodInfo(SigCells))
 ClustNum = nan(size(SigCells));
 ClustCol = nan(length(SigCells),3);
 ClusRes = load('explore_populationSU_data_5000.mat');
-UClust = unique(T);
+UClust = unique(ClusRes.T);
 for cc=1:length(SigCells)
     for uu=1:length(UClust)
         Clust = UClust(uu);
-        if sum(contains(ClusRes.ListSSU(ClusRes.GoodCellIndices(ClusRes.BaTr_ind(ClusRes.T==Clust))).name,CellsPath.name(GoodInfo(SigCells(cc)))))
+        ClustCellIndices = ClusRes.GoodCellIndices(ClusRes.BaTr_ind(ClusRes.T==Clust));
+        CellClust = cell(length(ClustCellIndices),1);
+        for ii = 1:length(ClustCellIndices)
+            CellClust{ii} = ClusRes.ListSSU(ClustCellIndices(ii)).name;
+        end
+        if sum(contains(CellClust,CellsPath(GoodInfo(SigCells(cc))).name))
             ClustNum(cc) = Clust;
             ClustCol(cc,:) = ColorCode(Clust,:);
             break
