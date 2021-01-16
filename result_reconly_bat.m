@@ -7,10 +7,11 @@ ForceAllign = 0; % In case the TTL pulses allignment was already done but you wa
 ForceVocExt1 = 0; % In case the localization on raw files of vocalizations that were manually extracted was already done but you want to do it again set to 1
 ForceVocExt2 = 0; % In case the localization on Loggers of vocalizations that were manually extracted was already done but you want to do it again set to 1
 ReAllignment = 0; % Incase we don't have a logger on all animals, it's better not to reallign the vocal data by cross correlation between the Microphone and the loggers
-ForceWhoID = 0; % In case the identification of bats was already done but you want to re-do it again
+ForceWhoID = 1; % In case the identification of bats was already done but you want to re-do it again
 ForceWhat = 0; % In case running biosound was already done but you want to re-do it
 CorrectMic = 1;
 ForceBehav = 0;% Force extracting onset/offset time of other behaviors
+MergePatch = 0;
 close all
 
 % Get the recording date
@@ -203,7 +204,7 @@ else
     fprintf(1,'\n*** ALREADY DONE: Alligning TTL pulses for the free session ***\n');
 end
 
-%% Extracting voclaizations
+%% Extracting vocalizations
 if ManData && (isempty(VocExt_dir) || ForceVocExt1)
     fprintf(1,'\n*** Localizing and extracting vocalizations that were manually extracted ***\n');
     voc_localize(VocManExtDir, AudioDataPath,Date, ExpStartTime)
@@ -243,10 +244,24 @@ else
     save(Filename_ID, 'BatID','LoggerName')
 end
 
+%% correct for wrong merging in voc_localize_using_piezo
+if MergePatch
+    fprintf('\n*** Correct for wrong merging ***\n')
+    mergePatch(Logger_dir,AudioDataPath, Date, ExpStartTime)
+    fprintf('\n*** Identify who is calling for new sequences ***\n')
+    who_calls_playless(AudioDataPath,Logger_dir,Date, ExpStartTime,200,1,1,0,'CheckAfterMergePatch',1);
+end
+    
 %% Correct for wrong selection of wav files under voc_localize_using_piezo
 if CorrectMic
+    fprintf('\n*** Correct microphone ***\n')
     AnyCorrection = correctMicAllignment_beforeorafterWhoCalls(AudioDataPath,Logger_dir,Date, ExpStartTime);
+else
+    AnyCorrection=0;
 end
+
+
+    
 
 %% Explore what is said
 fprintf('\n*** Identify what is said ***\n')
