@@ -7,9 +7,9 @@ ForceAllign = 0; % In case the TTL pulses allignment was already done but you wa
 ForceVocExt1 = 0; % In case the localization on raw files of vocalizations that were manually extracted was already done but you want to do it again set to 1
 ForceVocExt2 = 0; % In case the localization on Loggers of vocalizations that were manually extracted was already done but you want to do it again set to 1
 ReAllignment = 0; % Incase we don't have a logger on all animals, it's better not to reallign the vocal data by cross correlation between the Microphone and the loggers
-ForceWhoID = 1; % In case the identification of bats was already done but you want to re-do it again
-ForceWhat = 0; % In case running biosound was already done but you want to re-do it
-CorrectMic = 1;
+ForceWhoID = 0; % In case the identification of bats was already done but you want to re-do it again
+ForceWhat = 1; % In case running biosound was already done but you want to re-do it
+CorrectMic = 0;
 ForceBehav = 0;% Force extracting onset/offset time of other behaviors
 MergePatch = 0;
 close all
@@ -20,7 +20,8 @@ Date = DataFile(6:11);
 
 % Set the path to the manual extracts
 if nargin<2
-    ManData = input('Working on manual extraction (1) or automatic (0)? ');
+%     ManData = input('Working on manual extraction (1) or automatic (0)? '); 
+    ManData=0;
     if ManData
         VocManExtDir = fullfile( '/Users/elie/Google Drive/BatmanData/BatmanCuts', ['20' Date]);
     end

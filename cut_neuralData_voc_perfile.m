@@ -184,22 +184,38 @@ elseif contains(DataFile,'SS')
     % load(fullfile(OutputPath, sprintf('%s_%s_SS%s_%s-%s.mat', SubjectID, Date,NeuralInputID{3},NeuralInputID{1},NeuralInputID{2}),'QualitySSU');
     
     % Loop through audio data
-    AudioDir = dir(fullfile(Loggers_dir, sprintf('%s*VocExtractData.mat', Date(3:end)))); % These are all the results of vocalization localization for both operant conditioning and free session
-    Nsession = length(AudioDir);
-    ExpStartTimes = cell(Nsession,1);
+    AudioDir_all = dir(fullfile(Loggers_dir, sprintf('%s*VocExtractData*.mat', Date(3:end)))); % These are all the results of vocalization localization for both operant conditioning and free session
+    TrueFiles = nan(length(AudioDir_all),1);
+    SessionTime_all = cell(length(AudioDir_all),1);
+    for ff=1:length(AudioDir_all)
+        TrueFiles(ff)=(length(strfind(AudioDir_all(ff).name, '_'))==2);
+        SessionTime_all{ff} = AudioDir_all(ff).name(8:11);
+    end
+    AudioDir = AudioDir_all(logical(TrueFiles));
+    SessionTime = SessionTime_all(logical(TrueFiles));
+    ExpStartTimes = unique(SessionTime);
+    Nsession = length(ExpStartTimes);
     for nn=1:Nsession
-        Idx_2 = strfind(AudioDir(nn).name, '_');
-        ExpStartTimes{nn} = AudioDir(nn).name((Idx_2(1)+1) : (Idx_2(2)-1));
-        load(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData.mat', Date(3:end), ExpStartTimes{nn})), 'Voc_transc_time_refined');
+        % Retrieve the transctime of vocalizations in all files
+        % corresponding to the session
+        FileInd = find(contains(SessionTime, ExpStartTimes{nn}));
+        Voc_transc_time_refined_All = cell(1,length(FileInd));
+        for ff=1:length(FileInd)
+            load(fullfile(AudioDir(FileInd(ff)).folder,AudioDir(FileInd(ff)).name), 'Voc_transc_time_refined');
+            Voc_transc_time_refined_All{ff} = Voc_transc_time_refined';
+        end
+        Voc_transc_time_refined = [Voc_transc_time_refined_All{:}]';
+        
         load(fullfile(AudioDataPath, sprintf('%s_%s_VocExtractTimes.mat', Date(3:end), ExpStartTimes{nn})),'Re_transc_time');
         if ~exist('Re_transc_time','var')
             Re_transc_time = nan(size(Voc_transc_time_refined,1),1);
         end
-        AudioDir2 = dir(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData_*.mat', Date(3:end), ExpStartTimes{nn}))); % These are the results of vocalization identificaion and merging with Who calls for this session
-        Idx_3 = strfind(AudioDir2.name, '_');
-        Idxmat = strfind(AudioDir2.name, '.mat');
+        
+        AudioDir2 = AudioDir_all(intersect(find(contains(SessionTime_all, ExpStartTimes{nn})), find(~TrueFiles))); % These are the results of vocalization identificaion and merging with Who calls for this session
+        Idx_3 = strfind(AudioDir2(1).name, '_');
+        Idxmat = strfind(AudioDir2(1).name, '.mat');
         if isempty(NeuroBuffer)
-            NeuroBuffer = str2double(AudioDir2.name((Idx_3(end)+1):(Idxmat-1))); % This is the merged threshold used in the extracted vocalization data in ms we want to use the same value as the neural buffer
+            NeuroBuffer = str2double(AudioDir2(1).name((Idx_3(end)+1):(Idxmat-1))); % This is the merged threshold used in the extracted vocalization data in ms we want to use the same value as the neural buffer
         end
         % Make sure to re-order values in chronological order
         [~,SortInd] = sort(Voc_transc_time_refined(:,1));
@@ -216,7 +232,7 @@ elseif contains(DataFile,'SS')
         else
             save(OutputFile, 'Voc_NeuroSSU');
         end
-        clear Re_transc_time
+        clear Re_transc_time Voc_transc_time_refined
     end
 end
 

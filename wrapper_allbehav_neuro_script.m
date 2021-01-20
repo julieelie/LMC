@@ -89,7 +89,7 @@ Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190703'))=[];% No
 Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190709'))=[];% No TTL Pulses
 Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190619'))=[];% Issue of clock drift for logger 49 and 12
 
-for pp=13:length(Path2RunRecOnly) %13
+for pp=7:12%3:length(Path2RunRecOnly) %13
     Path2ParamFile = List2RecOnlyPath{Path2RunRecOnly(pp)};
     fprintf(1,'\n\n\n\nRunning result_reconly_bat on %s\n\n', Path2ParamFile)
     result_reconly_bat(Path2ParamFile)
@@ -97,7 +97,7 @@ end
 
 %% Generate the list of paths to gather the data
 % BasePath = '/Volumes/server_home/users/JulieE/LMC';
-BasePath = '/Volumes/Julie4T';
+% BasePath = '/Volumes/Julie8T';
 OutputPath = '/Users/elie/Documents/LMCResults';
 [ListSSU] = gather_neural_datapath(BasePath);
 % Define the path were the data will be saved
@@ -153,8 +153,8 @@ NeuralBuffer = 5000; %duration of the time buffer in
 %       ms that should be added before and after the onset and offset time
 %       of vocalizations for extracting neural data.
 
-for ss=1:length(GoodCellIndices)
-    fprintf(1,'File %d/%d: %s \n',ss,length(GoodCellIndices),ListSSU{Files2Run(GoodCellIndices(ss))})
+for ss=1:137%length(GoodCellIndices)
+    fprintf(1,'Cell %d/%d: %s \n',ss,length(GoodCellIndices),ListSSU{Files2Run(GoodCellIndices(ss))})
     cut_neuralData_voc_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath,NeuralBuffer)
 end
 fprintf(' DONE \n')
@@ -164,8 +164,8 @@ fprintf(' DONE \n')
 fprintf(' EXTRACTING NEURAL DATA CORRESPONDING TO OTHER BEHAVIORS.... ')
 
 
-for ss=1:length(GoodCellIndices)
-    fprintf(1,'File %d/%d\n',ss,length(GoodCellIndices))
+for ss=1:137%length(GoodCellIndices)
+    fprintf(1,'Cell %d/%d\n',ss,length(GoodCellIndices))
     cut_neuralData_behav_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath)
 end
 fprintf(' DONE \n')
@@ -177,8 +177,8 @@ id = 'MATLAB:Python:UnsupportedLoad';
 warning('off',id)
 
 
-for ss=42:56 %length(GoodCellIndices)
-    fprintf(1,'File %d/%d\n',ss,length(GoodCellIndices))
+for ss=1:137 %length(GoodCellIndices)
+    fprintf(1,'Cell %d/%d  %s\n',ss,length(GoodCellIndices), ListSSU{Files2Run(GoodCellIndices(ss))})
     neuralData_compile_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath, NeuralBuffer)
 end
 warning('on',id)
@@ -188,7 +188,7 @@ fprintf(' DONE \n')
 fprintf(' CALCULATING SPIKE RATE CORRESPONDING TO ALL BEHAVIORS.... ')
 
 for ss=42:56%length(GoodCellIndices)
-    fprintf(1,'File %d/%d\n',ss,length(GoodCellIndices))
+    fprintf(1,'Cell %d/%d\n',ss,length(GoodCellIndices))
     cal_spikerate_perfile(ListSSU{Files2Run(GoodCellIndices(ss))},OutputPath)
 end
 fprintf(' DONE \n')
@@ -197,7 +197,7 @@ fprintf(' DONE \n')
 fprintf(1,' CALCULATING KDE OF THE TIME-VARYING SPIKE RATE CORRESPONDING TO VOCALIZATIONS\n');
 Delay = [5000 5000];
 for ss=42:56%length(GoodCellIndices)
-    fprintf(1,'File %d/%d\n',ss,length(GoodCellIndices))
+    fprintf(1,'Cell %d/%d\n',ss,length(GoodCellIndices))
     cal_kderatevoc_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath,Delay)
 end
 fprintf(' DONE \n')
@@ -205,7 +205,7 @@ fprintf(' DONE \n')
 fprintf(' PLOTING NEURAL DATA (Av RATE) CORRESPONDING TO ALL BEHAVIORS.... ')
 
 for ss=1:length(GoodCellIndices)
-    fprintf(1,'File %d/%d\n',ss,length(GoodCellIndices))
+    fprintf(1,'Cell %d/%d\n',ss,length(GoodCellIndices))
     plot_av_spikerate_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath)
 end
 fprintf(' DONE \n')
@@ -216,7 +216,7 @@ Delay = [200 200];
 PlotDyn = 0; %Set to 1 to plot dnamic plots
 DurOrd = 0; % set to 1 to order neural responses by increasing vocalization duration
 for ss=1:length(GoodCellIndices)
-    fprintf(1,'File %d/%d\n',ss,length(GoodCellIndices))
+    fprintf(1,'Cell %d/%d\n',ss,length(GoodCellIndices))
     plot_rastervoc_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath, Delay, PlotDyn, DurOrd)
     close all
 end
@@ -226,7 +226,7 @@ fprintf(' DONE \n')
 fprintf(1,' PLOTING KDE OF THE TIME-VARYING SPIKE RATE CORRESPONDING TO VOCALIZATIONS\n');
 
 for ss=1:length(GoodCellIndices)
-    fprintf(1,'File %d/%d\n',ss,length(GoodCellIndices))
+    fprintf(1,'Cell %d/%d\n',ss,length(GoodCellIndices))
     plot_kderatevoc_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath, Delay)
 end
 fprintf(' DONE \n')
