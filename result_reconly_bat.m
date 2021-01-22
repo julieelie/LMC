@@ -247,10 +247,12 @@ end
 
 %% correct for wrong merging in voc_localize_using_piezo
 if MergePatch
-    fprintf('\n*** Correct for wrong merging ***\n')
-    mergePatch(Logger_dir,AudioDataPath, Date, ExpStartTime)
-    fprintf('\n*** Identify who is calling for new sequences ***\n')
-    who_calls_playless(AudioDataPath,Logger_dir,Date, ExpStartTime,200,1,1,0,'CheckAfterMergePatch',1);
+%     fprintf('\n*** Correct for wrong merging ***\n')
+%     mergePatch(Logger_dir,AudioDataPath, Date, ExpStartTime)
+%     fprintf('\n*** Identify who is calling for new sequences ***\n')
+%     who_calls_playless(AudioDataPath,Logger_dir,Date, ExpStartTime,200,1,1,0,'CheckAfterMergePatch',1);
+    fprintf(1,'Correct for the wrongfully unerased detection values after re-arrangement of the voc sequence by mergePatch and the previous version of Who_calls_playless (before 01/12/2021)\n')
+    who_calls_playless(AudioDataPath,Logger_dir,Date, ExpStartTime,200,1,1,0,'CheckAfterMergePatch',0, 'FixingDeletionError',1);
 end
     
 %% Correct for wrong selection of wav files under voc_localize_using_piezo

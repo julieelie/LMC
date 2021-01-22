@@ -109,10 +109,22 @@ for ff=1:length(DataDir)
             NExpe = NExpe + 1; % Increment the counter of experiments
             AudioDir_all = dir(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractData*.mat', Date(3:end), ExpStartTime))); % These are all the results of vocalization localization corresponding to that experiment time
             BeforeCuration = nan(length(AudioDir_all),1);
+            AudioFile_ind = nan(length(AudioDir_all),1);
             for audiof=1:length(AudioDir_all)
                 BeforeCuration(audiof)=(length(strfind(AudioDir_all(audiof).name, '_'))==2);
+                if BeforeCuration(audiof)
+                    Ind_ = strfind(AudioDir_all(audiof).name, '.');
+                else
+                    Ind_ = strfind(AudioDir_all(audiof).name, '_');
+                    Ind_ = Ind_(end);
+                end
+                IndData = strfind(AudioDir_all(audiof).name, 'Data');
+                AudioFile_ind(audiof) = str2double(AudioDir_all(audiof).name((IndData+4):(Ind_-1)));
             end
+            AudioFileWho_ind = AudioFile_ind(logical(~BeforeCuration));
+            [~,OrdWho] = sort(AudioFileWho_ind);
             DataFileWho = AudioDir_all(logical(~BeforeCuration)); % These are the files obtained after manual curation
+            DataFileWho = DataFileWho(OrdWho);
             Idx_ = strfind(DataFileWho(1).name,'_');
             Idxmat = strfind(DataFileWho(1).name,'.mat');
             Delay = str2double(DataFileWho(1).name((Idx_(end)+1):(Idxmat-1)));
@@ -124,7 +136,10 @@ for ff=1:length(DataDir)
             SubjectAL = LoggerName{find(ALNum .* SubjectLogs)}(3:end); %#ok<FNDSB>
             
             % find the vocalizations emitted by the vocalizer of interest
+            AudioFileBefore_ind = AudioFile_ind(logical(BeforeCuration));
+            [~,OrdBefore] = sort(AudioFileBefore_ind);
             DataFileBeforeCuration = AudioDir_all(logical(BeforeCuration)); % These are the files obtained before manual curation
+            DataFileBeforeCuration = DataFileBeforeCuration(OrdBefore);
             load(fullfile(DataFileBeforeCuration(1).folder, DataFileBeforeCuration(1).name),'Piezo_wave');
             Fns_AL = fieldnames(Piezo_wave);
             FocIndAudio = find(contains(Fns_AL, SubjectAL));
@@ -139,7 +154,7 @@ for ff=1:length(DataDir)
             end
             
             VocCall = zeros(1, NFiles);
-            Nseq = [0 nan(1, NFiles)];
+            Nseq = nan(1, NFiles);
             for nf = 1:NFiles
                 if ~strcmp(DataFileWho(nf).name(27), '_') && ~strcmp(DataFileBeforeCuration(nf).name(27), '.') && (str2double(DataFileWho(nf).name(27))~=str2double(DataFileBeforeCuration(nf).name(27)))
                     warning('Issue with files ordering before and after manual curation of the vocalizations (before/after who_calls')
@@ -148,7 +163,7 @@ for ff=1:length(DataDir)
                 load(fullfile(DataFileWho(nf).folder, DataFileWho(nf).name), 'IndVocStartRaw_merged');
                 load(fullfile(DataFileBeforeCuration(nf).folder, DataFileBeforeCuration(nf).name), 'VocFilename','Old_vv_out_list');
                 
-                Nseq(nf+1) = length(VocFilename);
+                Nseq(nf) = length(VocFilename);
                 if length(IndVocStartRaw_merged)>length(VocFilename) && exist('Old_vv_out_list', 'var') % This is a correction of the correction of merge patch in Who_Calls_Play_Less :-P
                     
                     load(fullfile(DataFileWho(nf).folder, DataFileWho(nf).name), 'IndVocStopRaw_merged', 'IndVocStartPiezo_merged', 'IndVocStopPiezo_merged','IndVocStartRaw','IndVocStopRaw', 'IndVocStartPiezo', 'IndVocStopPiezo','IndVocStart_all', 'IndVocStop_all', 'RMSRatio_all', 'RMSDiff_all');
@@ -172,12 +187,19 @@ for ff=1:length(DataDir)
                 % Call sequences with identified vocalizations and re-order the
                 % vocalization in chornological order (calculated in
                 % cut_neural_data_voc)
-                VocInd_Bin = logical([zeros(1,sum(Nseq(1:nf))) ~cellfun('isempty',IndVocStartRaw_merged)]);
-                VocInd = Neuro.Voc_NeuroSSU.SortInd(VocInd_Bin) - sum(Nseq(1:nf));
-                IndSort_local = find(~cellfun('isempty',IndVocStartRaw_merged));
-                if any(~(VocInd == IndSort_local'))
-                    warning('Looks like there was some re-ordering in time happening between sequences')
+                % Order sequences in time assuming that there is no
+                % re-ordering happening accross files VocExtractData of 100 vocalizations
+                if nf==1
+                    SeqOrder = Neuro.Voc_NeuroSSU.SortInd(1:Nseq(nf));
+                else
+                    SeqOrder = Neuro.Voc_NeuroSSU.SortInd(sum(Nseq(1:(nf-1)))+ (1:Nseq(nf))) - sum(Nseq(1:(nf-1)));
                 end
+                if ~all(SeqOrder<=Nseq(nf)) || any(SeqOrder<0)
+                    warning('There is an issue of reordering accross files VocExtractData of 100 vocalizations, the current code cannot manage that\n')
+                    keyboard
+                end
+                SeqWithCalls = ~cellfun('isempty',IndVocStartRaw_merged(SeqOrder));
+                VocInd = SeqOrder(SeqWithCalls);
                 NV = length(VocInd);
 
                 % Count the number of vocalization cuts for preallocation of space
@@ -219,17 +241,24 @@ for ff=1:length(DataDir)
                     warning('Issue with files ordering before and after manual curation of the vocalizations (before/after who_calls')
                     keyboard
                 end
-                load(fullfile(DataFileWho(nf).folder, DataFileWho(nf).name), 'IndVocStartRaw_merged','IndVocStopRaw_merged', 'IndVocStartPiezo_merged', 'IndVocStopPiezo_merged','BioSoundCalls');
-                load(fullfile(DataFileBeforeCuration(nf).folder, DataFileBeforeCuration(nf).name), 'FS','Piezo_wave','Raw_wave','Piezo_FS','Voc_transc_time_refined');
+                load(fullfile(DataFileWho(nf).folder, DataFileWho(nf).name), 'IndVocStartRaw_merged','IndVocStopRaw_merged', 'IndVocStartPiezo_merged', 'IndVocStopPiezo_merged','BioSoundCalls','BioSoundFilenames');
+                load(fullfile(DataFileBeforeCuration(nf).folder, DataFileBeforeCuration(nf).name), 'FS','Piezo_wave','Raw_wave','Piezo_FS','Voc_transc_time_refined','VocFilename');
                 % Call sequences with identified vocalizations and re-order the
                 % vocalization in chornological order (calculated in
                 % cut_neural_data_voc)
-                VocInd_Bin = logical([zeros(1,sum(Nseq(1:nf))) ~cellfun('isempty',IndVocStartRaw_merged)]);
-                VocInd = Neuro.Voc_NeuroSSU.SortInd(VocInd_Bin) - sum(Nseq(1:nf));
-                IndSort_local = find(~cellfun('isempty',IndVocStartRaw_merged));
-                if any(~(VocInd == IndSort_local'))
-                    warning('Looks like there was some re-ordering in time happening between sequences')
+                % Order sequences in time assuming that there is no
+                % re-ordering happening accross files VocExtractData of 100 vocalizations
+                if nf==1
+                    SeqOrder = Neuro.Voc_NeuroSSU.SortInd(1:Nseq(nf));
+                else
+                    SeqOrder = Neuro.Voc_NeuroSSU.SortInd(sum(Nseq(1:(nf-1)))+ (1:Nseq(nf))) - sum(Nseq(1:(nf-1)));
                 end
+                if ~all(SeqOrder<=Nseq(nf)) || any(SeqOrder<0)
+                    warning('There is an issue of reordering accross files VocExtractData of 100 vocalizations, the current code cannot manage that\n')
+                    keyboard
+                end
+                SeqWithCalls = ~cellfun('isempty',IndVocStartRaw_merged(SeqOrder));
+                VocInd = SeqOrder(SeqWithCalls);
                 NV = length(VocInd);
                 Ncall = nan(NV,sum(ALNum));
                 for vv=1:NV
@@ -244,7 +273,7 @@ for ff=1:length(DataDir)
                             else
                                 jj=0;
                                 Next=[];
-                                while (isempty(Next)) && (jj<(length(VocInd)-vv))
+                                while (isempty(Next)) && (jj<(NV-vv))
                                     jj=jj+1;
                                     % next onset times if any
                                     Next = cell2mat(IndVocStartRaw_merged{VocInd(vv+jj)}');
@@ -305,7 +334,7 @@ for ff=1:length(DataDir)
                                 Durations2Preceding_events = IndVocStartRaw_merged{VocInd(vv)}{ll}(nn) - AllStops;
                                 if sum(Durations2Preceding_events>0) % some calls happened just before
                                     DelayBefore{NExpe}(sum(VocCall)) = (min(Durations2Preceding_events(Durations2Preceding_events>0)))/FS*1000;
-                                elseif VocInd(vv)==1 % This is the first vocalization of the recording session assume that nothing happened before
+                                elseif (vv==1) && (nf==1) % This is the first vocalization of the recording session assume that nothing happened before
                                     DelayBefore{NExpe}(sum(VocCall)) = NeuralBuffer;
                                 else % At best vocalizations before were for sure at a minimum of 200ms (merging time)
                                     DelayBefore{NExpe}(sum(VocCall)) = Delay;
@@ -313,7 +342,7 @@ for ff=1:length(DataDir)
                                 Durations2Following_events = AllStarts - IndVocStopRaw_merged{VocInd(vv)}{ll}(nn);
                                 if sum(Durations2Following_events>0)
                                     DelayAfter{NExpe}(sum(VocCall)) = (min(Durations2Following_events(Durations2Following_events>0)))/FS*1000;
-                                elseif VocInd(vv) == max(VocInd) && nn == Ncall(vv,ll)
+                                elseif vv == length(VocInd) && nn == Ncall(vv,ll) % Last call event
                                     DelayAfter{NExpe}(sum(VocCall)) = NeuralBuffer;
                                 else
                                     DelayAfter{NExpe}(sum(VocCall)) = Delay;
@@ -351,7 +380,13 @@ for ff=1:length(DataDir)
                                 end
                                 
                                 % Duration of the baseline sequence
-                                VocInd_Neuro = find(Neuro.Voc_NeuroSSU.SortInd == (VocInd(vv) + sum(Nseq(1:nf))));
+                                % Find the correct correcponding data,
+                                % often that should be VocInd_Neuro==vv
+                                if nf>1
+                                    VocInd_Neuro = find(Neuro.Voc_NeuroSSU.SortInd == (VocInd(vv) + sum(Nseq(1:(nf-1)))));
+                                else
+                                    VocInd_Neuro = find(Neuro.Voc_NeuroSSU.SortInd == VocInd(vv));
+                                end
                                 BSLDuration{NExpe}(sum(VocCall)) = Neuro.Voc_NeuroSSU.BSL_transc_time_refined(VocInd_Neuro,2)-Neuro.Voc_NeuroSSU.BSL_transc_time_refined(VocInd_Neuro,1);
 
                                 % Extract the sound of the microphone that

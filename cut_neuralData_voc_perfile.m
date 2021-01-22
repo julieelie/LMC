@@ -186,12 +186,22 @@ elseif contains(DataFile,'SS')
     % Loop through audio data
     AudioDir_all = dir(fullfile(Loggers_dir, sprintf('%s*VocExtractData*.mat', Date(3:end)))); % These are all the results of vocalization localization for both operant conditioning and free session
     TrueFiles = nan(length(AudioDir_all),1);
+    FileOrder = nan(length(AudioDir_all),1);
     SessionTime_all = cell(length(AudioDir_all),1);
     for ff=1:length(AudioDir_all)
         TrueFiles(ff)=(length(strfind(AudioDir_all(ff).name, '_'))==2);
         SessionTime_all{ff} = AudioDir_all(ff).name(8:11);
+        if TrueFiles(ff)
+            Ind_ = strfind(AudioDir_all(ff).name, '.');
+        else
+            Ind_ = strfind(AudioDir_all(ff).name, '_');
+            Ind_ = Ind_(end);
+        end
+        IndData = strfind(AudioDir_all(ff).name, 'Data');
+        FileOrder(ff) = str2double(AudioDir_all(ff).name((IndData+4):(Ind_-1)));
     end
     AudioDir = AudioDir_all(logical(TrueFiles));
+    FileOrder = FileOrder(logical(TrueFiles));
     SessionTime = SessionTime_all(logical(TrueFiles));
     ExpStartTimes = unique(SessionTime);
     Nsession = length(ExpStartTimes);
@@ -199,9 +209,12 @@ elseif contains(DataFile,'SS')
         % Retrieve the transctime of vocalizations in all files
         % corresponding to the session
         FileInd = find(contains(SessionTime, ExpStartTimes{nn}));
+        [~,OrdInd] = sort(FileOrder(FileInd));
+        AudioDir_local = AudioDir(FileInd);
+        AudioDir_local = AudioDir_local(OrdInd);
         Voc_transc_time_refined_All = cell(1,length(FileInd));
         for ff=1:length(FileInd)
-            load(fullfile(AudioDir(FileInd(ff)).folder,AudioDir(FileInd(ff)).name), 'Voc_transc_time_refined');
+            load(fullfile(AudioDir_local(ff).folder,AudioDir_local(ff).name), 'Voc_transc_time_refined');
             Voc_transc_time_refined_All{ff} = Voc_transc_time_refined';
         end
         Voc_transc_time_refined = [Voc_transc_time_refined_All{:}]';
