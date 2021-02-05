@@ -41,7 +41,7 @@ ListOfPaths = gather_operant_datapath(BasePath);
  Path2Run(contains(ListOfPaths(Path2Run), '20190712'))=[]; % No neural data
 %%
 
-for pp=26:length(Path2Run)
+for pp=28:length(Path2Run)
     
     Path2ParamFile = ListOfPaths{Path2Run(pp)};
     fprintf(1,'\n\n\n\nRunning result_operant_bat on %s\n\n', Path2ParamFile)
@@ -177,7 +177,7 @@ id = 'MATLAB:Python:UnsupportedLoad';
 warning('off',id)
 
 
-for ss=71:137 %length(GoodCellIndices)
+for ss=1:137 %length(GoodCellIndices)
     fprintf(1,'Cell %d/%d  %s\n',ss,length(GoodCellIndices), ListSSU{Files2Run(GoodCellIndices(ss))})
     neuralData_compile_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath, NeuralBuffer)
 end
@@ -187,7 +187,7 @@ fprintf(' DONE \n')
 %% Calculating the average spike rate during various types of behaviors including vocalizations
 fprintf(' CALCULATING SPIKE RATE CORRESPONDING TO ALL BEHAVIORS.... ')
 
-for ss=42:56%length(GoodCellIndices)
+for ss=1:137%length(GoodCellIndices)
     fprintf(1,'Cell %d/%d\n',ss,length(GoodCellIndices))
     cal_spikerate_perfile(ListSSU{Files2Run(GoodCellIndices(ss))},OutputPath)
 end
@@ -196,7 +196,7 @@ fprintf(' DONE \n')
 %% calculate the KDE SPIKE RATE of vocalizations
 fprintf(1,' CALCULATING KDE OF THE TIME-VARYING SPIKE RATE CORRESPONDING TO VOCALIZATIONS\n');
 Delay = [5000 5000];
-for ss=42:56%length(GoodCellIndices)
+for ss=1:137%length(GoodCellIndices)
     fprintf(1,'Cell %d/%d\n',ss,length(GoodCellIndices))
     cal_kderatevoc_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath,Delay)
 end
@@ -204,7 +204,7 @@ fprintf(' DONE \n')
 %% Plot the average spike rate during various types of behaviors including vocalizations
 fprintf(' PLOTING NEURAL DATA (Av RATE) CORRESPONDING TO ALL BEHAVIORS.... ')
 
-for ss=1:length(GoodCellIndices)
+for ss=1:137 %length(GoodCellIndices)
     fprintf(1,'Cell %d/%d\n',ss,length(GoodCellIndices))
     plot_av_spikerate_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath)
 end
@@ -212,7 +212,7 @@ fprintf(' DONE \n')
 % The plot is saved under OutputPath as sprintf('%s_%s_%s_SS%s_%s-%s_MeanRateScatter.pdf', SubjectID, SSQ,TetrodeID,SSID))
 %% Plot rasters for vocalizations
 fprintf(1,' RASTER PLOTS (AND KDE) of NEURAL DATA CORRESPONDING TO VOCALIZATIONS\n');
-Delay = [200 200];
+Delay = [5000 5000];
 PlotDyn = 0; %Set to 1 to plot dnamic plots
 DurOrd = 0; % set to 1 to order neural responses by increasing vocalization duration
 for ss=1:length(GoodCellIndices)
@@ -225,7 +225,7 @@ fprintf(' DONE \n')
 %% Plot the time varying rate of vocalizations
 fprintf(1,' PLOTING KDE OF THE TIME-VARYING SPIKE RATE CORRESPONDING TO VOCALIZATIONS\n');
 
-for ss=1:length(GoodCellIndices)
+for ss=1:137 %length(GoodCellIndices)
     fprintf(1,'Cell %d/%d\n',ss,length(GoodCellIndices))
     plot_kderatevoc_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath, Delay)
 end

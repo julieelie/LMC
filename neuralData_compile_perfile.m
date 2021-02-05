@@ -355,19 +355,20 @@ for ff=1:length(DataDir)
                                 Offset = IndVocStopRaw_merged{VocInd(vv)}{ll}(nn);
                                 Stops_in_vv = cell2mat(IndVocStopRaw_merged{VocInd(vv)}');
                                 Starts_in_vv = cell2mat(IndVocStartRaw_merged{VocInd(vv)}');
+                                
                                 Overlap_or_included = find((Onset>Starts_in_vv) .* (Onset<Stops_in_vv) + (Offset>Starts_in_vv) .* (Offset<Stops_in_vv));
                                 Occlude = find((Onset<Starts_in_vv) .* (Offset>Stops_in_vv));
                                 All_overlap_ind = [Overlap_or_included Occlude];
                                 if ~isempty(All_overlap_ind)
                                     OnsetInd = find(Starts_in_vv == Onset);
                                     OffsetInd = find(Stops_in_vv == Offset);
-                                    if OnsetInd~=OffsetInd
-                                        warning('Unexpected error, these two haveto be the same')
+                                    if isempty(intersect(OnsetInd,OffsetInd))
+                                        warning('Unexpected error, these two have to be the same or at least overlap')
                                         keyboard
                                     end
                                     RMS_overlap = nan(length(All_overlap_ind),1);
                                     for ovi=1:length(All_overlap_ind)
-                                        VocCall_overlap = VocCall(nf) + (All_overlap_ind(ovi) - OnsetInd);
+                                        VocCall_overlap = VocCall(nf) + (All_overlap_ind(ovi) - intersect(OnsetInd,OffsetInd));
                                         RMS_overlap(ovi) = BioSoundCalls{VocCall_overlap,2}.rms;
                                     end
                                     if all(BioSoundCalls{VocCall(nf),2}.rms>RMS_overlap)

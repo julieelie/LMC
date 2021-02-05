@@ -31,7 +31,7 @@ Data=load(FullDataSetFile);
 % Indices of vocalization renditions produced by subject ('self') or not
 IndVocP = find(contains(Data.What, 'Voc').*contains(Data.Who, 'self'));
 IndVocH = find(contains(Data.What, 'Voc').*~contains(Data.Who, 'self'));
-IndVocD = find(((Data.DelayBefore>=Delay(1)) + contains(Data.VocRank, 'first')).*((Data.DelayAfter>=Delay(2))+ contains(Data.VocRank, 'end')));
+IndVocD = find(((Data.DelayBefore>=Delay(1)) + contains(Data.VocRank, 'first')).*((Data.DelayAfter>=Delay(2))+ contains(Data.VocRank, 'end'))); % Select vocalization that are (either first or have 5s before) and (either last or have 5s after)
 IndVocO = find(contains(Data.ExpType, 'O'));
 IndVocF = find(contains(Data.ExpType, 'F'));
 IndVocPD = intersect(IndVocP, IndVocD);
@@ -43,8 +43,8 @@ IndVocHDF = intersect(IndVocHD, IndVocF);
 IndTr = find(contains(Data.What, 'VocTr'));
 IndBa = find(contains(Data.What, 'VocBa'));
 
-%% KDE time-varying rate alligned to vocalization production onset/offset
-if ~isempty(IndVocPD) && ~isempty(IndVocPDO) && ~isempty(IndVocPDF)
+%% KDE time-varying rate alligned to vocalization production onset/offset irrespective of session
+if ~isempty(IndVocPD) && ~isempty(IndVocPDO) && ~isempty(IndVocPDF) && length(IndVocPD)>MinNumCall
     [KDE_onset.SelfVocAll] = kderate_onset(Data.SpikesArrivalTimes_Behav(IndVocPD),Data.Duration(IndVocPD),Delay,Bin_ms);
     [KDE_offset.SelfVocAll] = kderate_offset(Data.SpikesArrivalTimes_Behav(IndVocPD),Data.Duration(IndVocPD),Delay,Bin_ms);
     
@@ -62,7 +62,7 @@ if ~isempty(IndVocPD) && ~isempty(IndVocPDO) && ~isempty(IndVocPDF)
 end
 
 %% KDE time-varying rate alligned to vocalization perception onset/offset
-if ~isempty(IndVocHD) && ~isempty(IndVocHDO) && ~isempty(IndVocHDF)
+if ~isempty(IndVocHD) && ~isempty(IndVocHDO) && ~isempty(IndVocHDF) && length(IndVocHD)>MinNumCall
     [KDE_onset.OthersVocAll] = kderate_onset(Data.SpikesArrivalTimes_Behav(IndVocHD),Data.Duration(IndVocHD),Delay,Bin_ms);
     [KDE_offset.OthersVocAll] = kderate_offset(Data.SpikesArrivalTimes_Behav(IndVocHD),Data.Duration(IndVocHD),Delay,Bin_ms);
     IndTrHD = intersect(IndTr, IndVocHD);

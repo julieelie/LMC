@@ -10,7 +10,7 @@ end
 if nargin<5
     DurOrd = 0; % set to 1 to order neural responses by decreasing call duration
 end
-
+MinNumCall =8; % Minimum number of events (vocalizations) to calculate a PSTH
 [~, DataFile]=fileparts(InputDataFile);
 % Input
 % Get the date of the recording
@@ -45,34 +45,40 @@ IndVocHD = intersect(IndVocH, IndVocD);
 IndVocHDO = intersect(IndVocHD, IndVocO);
 IndVocHDF = intersect(IndVocHD, IndVocF);
 %% Time Raster plot alligned to vocalization production onset/offset self vocalizations Operant + Free First voc of sequence only
-if ~isempty(IndVocPD) && ~isempty(IndVocPDO) && ~isempty(IndVocPDF)
+if ~isempty(IndVocPD) && ~isempty(IndVocPDO) && ~isempty(IndVocPDF) && length(IndVocPD)>MinNumCall
     Fig1 = figure();% TrCol = [0.9290, 0.6940, 0.1250];BaCol = [1, 0, 0];
-    Color = [0/255 191/255 255/255].*contains(Data.What, 'Ba') + [1 0.7 0.7].*contains(Data.What, 'Tr');
+    ColorLegend.name = {'Ba' 'Tr'};
+    ColorLegend.color = {[0/255 191/255 255/255]; [1 0.7 0.7]};
+    Color = ColorLegend.color{1}.*contains(Data.What, ColorLegend.name{1}) + ColorLegend.color{2}.*contains(Data.What, ColorLegend.name{2});
     if isfield(Data.KDE_onset,'SelfVocAll')
         ColKDE = [186/255 85/255 211/255];
-        timerasterkde(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPD,Color,Data.KDE_onset.SelfVocAll,Data.KDE_offset.SelfVocAll,ColKDE,Data.RewardTime,DurOrd);
+        timerasterkde(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPD,Color,ColorLegend,Data.KDE_onset.SelfVocAll,Data.KDE_offset.SelfVocAll,ColKDE,Data.RewardTime,DurOrd);
     else
-        timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPD,Color);
+        timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPD,Color, ColorLegend);
     end
     suplabel(sprintf('CALLS FROM SUBJECT O and F   %s on %s Raster T%s SS%s %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{3},NeuralInputID{2}),'t');
     print(Fig1,fullfile(OutputPath,sprintf('%s_RasterVocSelf_%d.pdf', FileNameBase, Delay(1))),'-dpdf','-fillpage');
 end
 
 %% Time Raster plot alligned to vocalization perception onset/offset others vocalizations Operant + Free First voc of sequence only
-if ~isempty(IndVocHD) && ~isempty(IndVocHDO) && ~isempty(IndVocHDF)
+if ~isempty(IndVocHD) && ~isempty(IndVocHDO) && ~isempty(IndVocHDF) && length(IndVocHD)>MinNumCall
     Fig2 = figure();
-    Color = [0 0.3 0].*contains(Data.What, 'Tr') + repmat([0.7 0.7 1], length(Data.What),1);
+    ColorLegend.name = {'Ba' 'Tr'};
+    ColorLegend.color = {[0/255 191/255 255/255]; [1 0.7 0.7]};
+    Color = ColorLegend.color{1}.*contains(Data.What, ColorLegend.name{1}) + ColorLegend.color{2}.*contains(Data.What, ColorLegend.name{2});
+    
     if isfield(Data.KDE_onset, 'OthersVocAll')
-        timerasterkde(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocHD,Color, Data.KDE_onset.OthersVocAll,Data.KDE_offset.OthersVocAll,[0.4 0.45 1],Data.RewardTime,DurOrd)
+        ColKDE =[0.4 0.45 1];
+        timerasterkde(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocHD,Color,ColorLegend, Data.KDE_onset.OthersVocAll,Data.KDE_offset.OthersVocAll,ColKDE,Data.RewardTime,DurOrd)
     else
-        timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocHD,Color)
+        timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocHD,Color, ColorLegend)
     end
     suplabel(sprintf('CALLS FROM OTHERS O and F    %s on %s Raster T%s SS%s %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{3},NeuralInputID{2}),'t');
     print(Fig2,fullfile(OutputPath,sprintf('%s_RasterVocOthers_%d.pdf', FileNameBase, Delay(1))),'-dpdf','-fillpage')
 end
 
 %% Time Raster plot alligned to vocalization production onset/offset during Operant conditioning First voc of sequence only
-if ~isempty(IndVocPDO)
+if ~isempty(IndVocPDO) && length(IndVocPDO)>MinNumCall
     Fig6 = figure();
     ColorLegend.name = {'Ba' 'Tr'};
     ColorLegend.color = {[0/255 191/255 255/255]; [1 0.7 0.7]};
@@ -88,40 +94,48 @@ if ~isempty(IndVocPDO)
 end
 
 %% Time Raster plot alligned to vocalization perception onset/offset during operant conditioning First voc of sequence only
-if ~isempty(IndVocHDO)
+if ~isempty(IndVocHDO) && length(IndVocHDO)>MinNumCall
     Fig7 = figure();
-    Color = [0 0.3 0].*contains(Data.What, 'Tr') + repmat([0.7 0.7 1], length(Data.What),1);
+    ColorLegend.name = {'Ba' 'Tr'};
+    ColorLegend.color = {[0/255 191/255 255/255]; [1 0.7 0.7]};
+    Color = ColorLegend.color{1}.*contains(Data.What, ColorLegend.name{1}) + ColorLegend.color{2}.*contains(Data.What, ColorLegend.name{2});
     if isfield(Data.KDE_onset,'OthersVocOp')
-        timerasterkde(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocHDO,Color,Data.KDE_onset.OthersVocOp,Data.KDE_offset.OthersVocOp,[0.4 0.45 1],Data.RewardTime,DurOrd)
+        ColKDE = [0.4 0.45 1];
+        timerasterkde(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocHDO,Color,ColorLegend,Data.KDE_onset.OthersVocOp,Data.KDE_offset.OthersVocOp,ColKDE,Data.RewardTime,DurOrd)
     else
-        timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocHDO,Color)
+        timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocHDO,Color, ColorLegend)
     end
     suplabel(sprintf('CALLS FROM OTHERS OPERANT    %s on %s Raster T%s SS%s %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{3},NeuralInputID{2}),'t');
     print(Fig7,fullfile(OutputPath,sprintf('%s_RasterVocOthersOp_%d.pdf', FileNameBase, Delay(1))),'-dpdf','-fillpage')
 end
 
 %% Time Raster plot alligned to vocalization production onset/offset during Free session First voc of sequence only
-if ~isempty(IndVocPDF)
+if ~isempty(IndVocPDF) && length(IndVocPDF)>MinNumCall
     Fig8 = figure();
-    Color = [0/255 191/255 255/255].*contains(Data.What, 'Tr') + [1 0.7 0.7].*contains(Data.What, 'Ba');
+    ColorLegend.name = {'Ba' 'Tr'};
+    ColorLegend.color = {[0/255 191/255 255/255]; [1 0.7 0.7]};
+    Color = ColorLegend.color{1}.*contains(Data.What, ColorLegend.name{1}) + ColorLegend.color{2}.*contains(Data.What, ColorLegend.name{2});
     if isfield(Data.KDE_onset,'SelfVocFr')
         ColKDE = [186/255 85/255 211/255];
-        timerasterkde(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPDF,Color,Data.KDE_onset.SelfVocFr,Data.KDE_offset.SelfVocFr,ColKDE)
+        timerasterkde(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPDF,Color,ColorLegend,Data.KDE_onset.SelfVocFr,Data.KDE_offset.SelfVocFr,ColKDE,Data.RewardTime,DurOrd)
     else
-        timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPDF,Color)
+        timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPDF,Color, ColorLegend)
     end
     suplabel(sprintf('CALLS FROM SUBJECT FREE SESSION    %s on %s Raster T%s SS%s %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{3},NeuralInputID{2}),'t');
     print(Fig8,fullfile(OutputPath,sprintf('%s_RasterVocSelfFr_%d.pdf', FileNameBase, Delay(1))),'-dpdf','-fillpage')
 end
 
 %% Time Raster plot alligned to vocalization perception onset/offset during Free session First voc of sequence only
-if ~isempty(IndVocHDF)
+if ~isempty(IndVocHDF) && length(IndVocHDF)>MinNumCall
     Fig9 = figure();
-    Color = [0 0.3 0].*contains(Data.What, 'Tr') + repmat([0.7 0.7 1], length(Data.What),1);
+    ColorLegend.name = {'Ba' 'Tr'};
+    ColorLegend.color = {[0/255 191/255 255/255]; [1 0.7 0.7]};
+    Color = ColorLegend.color{1}.*contains(Data.What, ColorLegend.name{1}) + ColorLegend.color{2}.*contains(Data.What, ColorLegend.name{2});
     if isfield(Data.KDE_onset,'OthersVocFr')
-        timerasterkde(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocHDF,Color, Data.KDE_onset.OthersVocFr,Data.KDE_offset.OthersVocFr,[0.4 0.45 1])
+        ColKDE = [0.4 0.45 1];
+        timerasterkde(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocHDF,Color,ColorLegend, Data.KDE_onset.OthersVocFr,Data.KDE_offset.OthersVocFr,ColKDE,Data.RewardTime,DurOrd)
     else
-        timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocHDF,Color)
+        timeraster(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocHDF,Color, ColorLegend)
     end
     suplabel(sprintf('CALLS FROM OTHERS FREE SESSION    %s on %s Raster T%s SS%s %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{3},NeuralInputID{2}),'t');
     print(Fig9,fullfile(OutputPath,sprintf('%s_RasterVocOthersFr_%d.pdf', FileNameBase, Delay(1))),'-dpdf','-fillpage')
@@ -229,6 +243,7 @@ if PlotDyn
         end
     end
 end
+close all
 
 %% INTERNAL FUNCTION
     function timeraster(SpikesArrivalTimes,Duration,Delay,Indices, Color, ColorLegend)

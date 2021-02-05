@@ -35,8 +35,8 @@ if isfield(KDE_onset, 'OthersVocAll') && isfield(KDE_onset,'SelfVocAll')
 end
 
 %% KDE Trill vs Ba from self from all sessions
-TrCol = [0/255 191/255 255/255];
-BaCol = [1, 0, 0];
+BaCol = [0/255 191/255 255/255];
+TrCol = [1, 0, 0];
 if isfield(KDE_onset, 'SelfTrAll') && isfield(KDE_onset,'SelfBaAll')
     Fig1 = kdeplot1v1(KDE_onset.SelfTrAll,KDE_onset.SelfBaAll,KDE_offset.SelfTrAll,KDE_offset.SelfBaAll,TrCol,BaCol,'Trill','Ba');
     suplabel('Self vocalizations all sessions','t');
@@ -45,8 +45,8 @@ if isfield(KDE_onset, 'SelfTrAll') && isfield(KDE_onset,'SelfBaAll')
 end
 
 %% KDE Trill vs Ba from self from operant sessions
-TrCol = [0/255 191/255 255/255];
-BaCol = [1, 0, 0];
+BaCol = [0/255 191/255 255/255];
+TrCol = [1, 0, 0];
 if isfield(KDE_onset, 'SelfTrOp') && isfield(KDE_onset,'SelfBaOp')
     Fig1 = kdeplot1v1(KDE_onset.SelfTrOp,KDE_onset.SelfBaOp,KDE_offset.SelfTrOp,KDE_offset.SelfBaOp,TrCol,BaCol,'Trill','Ba');
     suplabel('Self vocalizations operant session','t');
