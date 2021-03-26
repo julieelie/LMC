@@ -9,6 +9,7 @@ warning('off', WarningID)
 Ncalls = 0;
 NTrills = 0;
 BatIDs = cell(1,Nsets);
+Dates = cell(1,Nsets);
 Mean_SpecMean_piezo = cell(1,Nsets);
 Mean_Fund_piezo = cell(1,Nsets);
 Mean_Amp_piezo = cell(1,Nsets);
@@ -17,22 +18,29 @@ Duration_ms = cell(1,Nsets);
 SessionID = cell(1,Nsets);
 Trills01 = cell(1,Nsets);
 Filenames = cell(1,Nsets);
+CuratedSetNumSeq = nan(Nsets,1);
+CuratedSetFullSeq = nan(Nsets,1);
+CuratedSetDate = nan(Nsets,1);
+CallOnSetOffset = cell(1,Nsets);
+CallOnSetOffsetBat = cell(1,Nsets);
 for Seti=1:Nsets
     clear BioSoundFilenames
     fprintf(1,'Set %d/%d %s\n', Seti, Nsets, List2AudioPath{Seti})
-    load(List2AudioPath{Seti}, 'BioSoundCalls', 'BioSoundFilenames');
+    load(List2AudioPath{Seti}, 'BioSoundCalls', 'BioSoundFilenames', 'IndVocStart_all', 'IndVocStop_all', 'BatID');
+    load([List2AudioPath{Seti}(1:end-8) '.mat'], 'Voc_transc_time_refined')
     if exist('BioSoundFilenames', 'var')
         VocInd = find(~cellfun('isempty',(BioSoundFilenames(:,1))));
         NVoc = length(VocInd);
         Filenames{Seti} = cell(1,NVoc);
         BatIDs{Seti} = cell(1,NVoc);
+        Dates{Seti} = cell(1,NVoc);
         Mean_SpecMean_piezo{Seti} = nan(1,NVoc);
         Mean_Fund_piezo{Seti} = nan(1,NVoc);
         Mean_Amp_piezo{Seti} = nan(1,NVoc);
         Mean_Saliency_piezo{Seti} = nan(1,NVoc);
         Duration_ms{Seti} = nan(1,NVoc);
         Trills01{Seti} = nan(1,NVoc);
-        if strcmp(SessionType{Seti}, 'O')
+        if strcmp(SessionType{Seti}, 'O')% operant session
             SessionID{Seti} = ones(1,NVoc);
         else
             SessionID{Seti} = zeros(1,NVoc);
@@ -42,6 +50,7 @@ for Seti=1:Nsets
             Ind_AL = strfind(BioSoundFilenames{vv,1},'_AL');
             Ind_Bat = strfind(BioSoundFilenames{vv,1}, '_Bat');
             BatIDs{Seti}{ii} = BioSoundFilenames{vv,1}((Ind_Bat + 4):(Ind_AL-1));
+            Dates{Seti}{ii} = BioSoundFilenames{vv,1}(6:11);
             Mean_SpecMean_piezo{Seti}(ii) = nanmean(BioSoundCalls{vv,2}.SpectralMean(~isnan(BioSoundCalls{vv,2}.sal)));
             if isnan(Mean_SpecMean_piezo{Seti}(ii))
                 keyboard
@@ -57,9 +66,40 @@ for Seti=1:Nsets
         NTrills = sum(Trills01{Seti}) + NTrills;
         clear BioSoundFilenames
     end
+    
+    CuratedSetNumSeq(Seti) = length(IndVocStart_all)+CuratedSetNumSeq(Seti);
+    [~,Filename,~] = fileparts(List2AudioPath{Seti});
+    CuratedSetDate(Seti) = str2double(Filename(1:6));
+    
+            NumCall = nan(length(IndVocStart_all),1);
+            for cc=1:length(IndVocStart_all)
+                if ~isempty(IndVocStart_all{cc})
+                    NumCall(cc)=length([IndVocStart_all{cc}{:}]);
+                else
+                    NumCall(cc) = 0;
+                end
+            end
+            CuratedSetFullSeq(Seti) = sum(NumCall>0);
+            CallOnSetOffset{Seti} = nan(2,NumCall);
+            CallOnSetOffsetBat{Seti} = nan(1,NumCall);
+            CallCount = 0;
+            for cc=1:length(IndVocStart_all)
+                if ~isempty(IndVocStart_all{cc})
+                    for bb=1:length(IndVocStart_all{cc})
+                        for calli=1:length(IndVocStart_all{cc}{bb})
+                            CallCount = CallCount + 1;
+                            CallOnSetOffset{Seti}(CallCount,1) = IndVocStart_all{cc}{bb}(calli) + Voc_transc_time_refined(calli,1);
+                            CallOnSetOffset{Seti}(CallCount,2) = IndVocStop_all{cc}{bb}(calli) + Voc_transc_time_refined(calli,1);
+                            CallOnSetOffsetBat{Seti}(CallCount) = str2double(BatID{bb});
+                        end
+                    end
+                end
+            end
+            
 end 
 warning('on', WarningID)
 BatIDs = [BatIDs{:}]';
+Dates = [Dates{:}]';
 Mean_SpecMean_piezo = [Mean_SpecMean_piezo{:}]';
 Mean_Fund_piezo = [Mean_Fund_piezo{:}]';
 Mean_Amp_piezo = [Mean_Amp_piezo{:}]';
@@ -71,26 +111,71 @@ Duration_ms = [Duration_ms{:}]';
 
 %% Investigate some statistics (nb of calls...)
 
-% Number of calls per bat
+% Number of calls per bat and Nb calls per bat and per day
+FreeSessionNb = 0;
+OpSessionNb = 0;
 BatIDx = unique(str2double(BatIDs));
+Datex = unique(str2double(Dates));
 CountByID = nan(length(BatIDx),2);
+CountByIDAndDateOperant = nan(length(BatIDx),length(Datex));
+CountByIDAndDateFree = nan(length(BatIDx),length(Datex));
 for bb=1:length(BatIDx)
     CountByID(bb,1) = sum(str2double(BatIDs(logical(SessionID)))==BatIDx(bb));
     CountByID(bb,2) = sum(str2double(BatIDs(~SessionID))==BatIDx(bb));
+    for dd = 1:length(Datex)
+        LogicalBatIDOp = logical((str2double(BatIDs)==BatIDx(bb)) .* SessionID);
+        TotCallsOp = sum(Datex(LogicalBatIDOp) == Datex(dd));
+        if TotCallsOp~=0 % Let's keep the value to Nan on days where there is no call (mots likely this bat was not recorded on that day)
+            CountByIDAndDateOperant(bb,dd) = TotCallsOp;
+        end
+        LogicalBatIDFr = logical((str2double(BatIDs)==BatIDx(bb)) .* ~SessionID);
+        TotCallsFree = sum(Datex(LogicalBatIDFr) == Datex(dd));
+        if TotCallsFree ~= 0
+            CountByIDAndDateFree(bb,dd) = TotCallsFree;
+        end
+        if bb==1
+            if any(Datex(SessionID) == Datex(dd))
+                OpSessionNb  = OpSessionNb +1;
+            end
+            if any(Datex(~SessionID) == Datex(dd))
+                FreeSessionNb  = FreeSessionNb +1;
+            end
+        end
+            
+    end
+    
 end
 figure();
-FIG1 = subplot(1,2,1)
+FIG1 = subplot(1,2,1);
 BAR = bar(CountByID);
 FIG1.XTickLabel = unique(BatIDs);
-title('Total number of calls over 12 free sessions and 33 operant sessions')
+title(sprintf('Total number of calls over %d free sessions and %d operant sessions', FreeSessionNb, OpSessionNb))
 xlabel('BatID')
 ylabel('# calls')
 FIG2 = subplot(1,2,2);
-BAR2 = bar(CountByID./([33.*ones(6,1) 12.*ones(6,1)]));
+BAR2 = bar(nanmean(CountByIDAndDateFree,2));
 FIG2.XTickLabel = unique(BatIDs);
-title('Average number of calls per session (33 OP 12Free)')
+title('Average number of calls per Free session')
 xlabel('BatID')
 ylabel('# calls')
+
+figure()
+FIG3 = subplot(2,1,1);
+BAR3=bar(CountByIDAndDateFree');
+FIG3.XTickLabel = unique(Dates);
+title('# calls Free sessions')
+xlabel('Dates')
+ylabel('# calls')
+legend(unique(BatIDs));
+
+FIG4 = subplot(2,1,2);
+BAR4=bar(CountByIDAndDateOperant');
+FIG4.XTickLabel = unique(Dates);
+title('# calls Free sessions')
+xlabel('Dates')
+ylabel('# calls')
+legend(unique(BatIDs));
+
 
 %% Acoustic landscape of calls in both sessions
 figure(2)
