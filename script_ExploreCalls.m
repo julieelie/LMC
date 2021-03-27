@@ -231,6 +231,10 @@ xlabel('Dates')
 ylabel('# sequences')
 legend({'only noise' 'calls'})
 
+%% Calculate inter call intervals per bat and per day
+
+
+
 %% Acoustic landscape of calls in both sessions
 figure(2)
 scatter(Mean_Amp_piezo, Duration_ms,20,[0 0 0])
