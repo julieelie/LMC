@@ -232,7 +232,110 @@ ylabel('# sequences')
 legend({'only noise' 'calls'})
 
 %% Calculate inter call intervals per bat and per day
-
+BatU = unique(CallOnSetOffsetBat);
+DateU = unique(CallOnSetOffsetDate);
+CallOnSetOffset = [CallOnSetOffset{:}]';
+CallOnSetOffsetBat = [CallOnSetOffsetBat{:}]';
+CallOnSetOffsetDate = [CallOnSetOffsetDate{:}]';
+CallOnSetOffsetSessionID = [CallOnSetOffsetSessionID{:}]';
+figure(50)
+for BatI = 1:length(BatU)
+    BatI_logical = CallOnSetOffsetBat == BatU(BatI);
+    DateBatI = unique(CallOnSetOffsetDate(BatI_logical));
+    if sum(CallOnSetOffsetSessionID(CallOnSetOffsetBat == BatU(BatI))) % This bat was also calling during operant tests
+        ICI_Free = cell(1,length(DateBatI));
+        ICI_Operant = cell(1,length(DateBatI));
+        CallDuration_Free = cell(1,length(DateBatI));
+        CallDuration_Operant = cell(1,length(DateBatI));
+    else
+        ICI_Free = cell(1,length(DateBatI));
+        ICI_Operant = [];
+        CallDuration_Free = cell(1,length(DateBatI));
+        CallDuration_Operant = [];
+    end
+    for dd=1:length(DateBatI)
+        BatIDateI = find(BatI_logical .* (CallOnSetOffsetDate==DateBatI(dd)));
+        if isempty(ICI_Operant) % Only free session data
+            Onset_free_local = CallOnSetOffset(BatIDateI,1);
+            Offset_free_local = CallOnSetOffset(BatIDateI,2);
+            CallDuration_Free{dd} = Offset_free_local - Onset_free_local;
+            [~,SortI] = sort(Onset_free_local);
+            if any(diffSortI~=1)
+                warning('Issues with calls not ordered properly in time!!\n')
+                keyboard
+            end
+            ICI_Free{dd} = Onset_free_local(2:end) - Offset_free_local(1:end-1);
+        else
+            BatIDateIFree = intersect(BatIDateI, find(~CallOnSetOffsetSessionID));
+            Onset_free_local = CallOnSetOffset(BatIDateIFree,1);
+            Offset_free_local = CallOnSetOffset(BatIDateIFree,2);
+            CallDuration_Free{dd} = Offset_free_local - Onset_free_local;
+            [~,SortI] = sort(Onset_free_local);
+            if any(diffSortI~=1)
+                warning('Issues with calls not ordered properly in time!!\n')
+                keyboard
+            end
+            ICI_Free{dd} = Onset_free_local(2:end) - Offset_free_local(1:end-1);
+            
+            BatIDateIOp = intersect(BatIDateI, find(CallOnSetOffsetSessionID));
+            Onset_Op_local = CallOnSetOffset(BatIDateIOp,1);
+            Offset_Op_local = CallOnSetOffset(BatIDateIOp,2);
+            CallDuration_Operant{dd} = Offset_Op_local - Onset_Op_local;
+            [~,SortI] = sort(Onset_Op_local);
+            if any(diffSortI~=1)
+                warning('Issues with calls not ordered properly in time!!\n')
+                keyboard
+            end
+            ICI_Operant{dd} = Onset_Op_local(2:end) - Offset_Op_local(1:end-1);
+        end
+    end
+    CallDuration_Free = [CallDuration_Free{:}]';
+    ICI_Free = [ICI_Free{:}]';
+    if ~isempty(ICI_Operant)
+        CallDuration_Operant = [CallDuration_Operant{:}]';
+        ICI_Operant = [ICI_Operant{:}]';
+    end
+    figure()
+    if isempty(ICI_Operant) % Only free session data
+        subplot(1,2,1)
+        histogram(CallDuration_Free)
+        ylabel('# calls Free Session')
+        xlabel('duration (ms)')
+        title('Free Session')
+        
+        subplot(1,2,2)
+        histogram(ICI_Free)
+        ylabel('# calls Free Session')
+        xlabel('InterCall Interval (ms)')
+        title('Free Session')
+    else
+        subplot(2,2,1)
+        histogram(CallDuration_Free)
+        ylabel('# calls Free Session')
+        xlabel('duration (ms)')
+        title('Free Session')
+        
+        subplot(2,2,2)
+        histogram(ICI_Free)
+        ylabel('# calls Free Session')
+        xlabel('InterCall Interval (ms)')
+        title('Free Session')
+        
+        subplot(2,2,3)
+        histogram(CallDuration_Operant)
+        ylabel('# calls Operant Session')
+        xlabel('duration (ms)')
+        title('Operant Session')
+        
+        subplot(2,2,4)
+        histogram(ICI_Operant)
+        ylabel('# calls Operant Session')
+        xlabel('InterCall Interval (ms)')
+        title('Operant Session')
+    end
+    suplabel(sprintf('Bat ID: %d', BatU(BatI)) ,'t');
+end
+        
 
 
 %% Acoustic landscape of calls in both sessions
