@@ -23,11 +23,14 @@ CuratedSetFullSeq = nan(Nsets,1);
 CuratedSetDate = nan(Nsets,1);
 CallOnSetOffset = cell(1,Nsets);
 CallOnSetOffsetBat = cell(1,Nsets);
+CallOnSetOffsetSessionID = cell(1,Nsets);
+CallOnSetOffsetDate = cell(1,Nsets);
 for Seti=1:Nsets
     clear BioSoundFilenames
     fprintf(1,'Set %d/%d %s\n', Seti, Nsets, List2AudioPath{Seti})
-    load(List2AudioPath{Seti}, 'BioSoundCalls', 'BioSoundFilenames', 'IndVocStart_all', 'IndVocStop_all', 'BatID');
-    load([List2AudioPath{Seti}(1:end-8) '.mat'], 'Voc_transc_time_refined')
+    load(List2AudioPath{Seti}, 'BioSoundCalls', 'BioSoundFilenames', 'IndVocStartRaw_merged', 'IndVocStart_all', 'IndVocStop_all', 'BatID', 'LoggerName');
+    load([List2AudioPath{Seti}(1:end-8) '.mat'], 'Voc_transc_time_refined', 'Piezo_FS')
+    ALnames = fieldnames(Piezo_FS);
     if exist('BioSoundFilenames', 'var')
         VocInd = find(~cellfun('isempty',(BioSoundFilenames(:,1))));
         NVoc = length(VocInd);
@@ -49,8 +52,9 @@ for Seti=1:Nsets
             vv=VocInd(ii);
             Ind_AL = strfind(BioSoundFilenames{vv,1},'_AL');
             Ind_Bat = strfind(BioSoundFilenames{vv,1}, '_Bat');
+            Ind_voc = strfind(BioSoundFilenames{vv,1}, '_voc_');
             BatIDs{Seti}{ii} = BioSoundFilenames{vv,1}((Ind_Bat + 4):(Ind_AL-1));
-            Dates{Seti}{ii} = BioSoundFilenames{vv,1}(6:11);
+            Dates{Seti}{ii} = BioSoundFilenames{vv,1}((Ind_voc-11) : (Ind_voc-6));
             Mean_SpecMean_piezo{Seti}(ii) = nanmean(BioSoundCalls{vv,2}.SpectralMean(~isnan(BioSoundCalls{vv,2}.sal)));
             if isnan(Mean_SpecMean_piezo{Seti}(ii))
                 keyboard
@@ -67,35 +71,44 @@ for Seti=1:Nsets
         clear BioSoundFilenames
     end
     
-    CuratedSetNumSeq(Seti) = length(IndVocStart_all)+CuratedSetNumSeq(Seti);
+    CuratedSetNumSeq(Seti) = length(IndVocStart_all);
     [~,Filename,~] = fileparts(List2AudioPath{Seti});
     CuratedSetDate(Seti) = str2double(Filename(1:6));
     
-            NumCall = nan(length(IndVocStart_all),1);
-            for cc=1:length(IndVocStart_all)
-                if ~isempty(IndVocStart_all{cc})
-                    NumCall(cc)=length([IndVocStart_all{cc}{:}]);
-                else
-                    NumCall(cc) = 0;
-                end
-            end
-            CuratedSetFullSeq(Seti) = sum(NumCall>0);
-            CallOnSetOffset{Seti} = nan(2,NumCall);
-            CallOnSetOffsetBat{Seti} = nan(1,NumCall);
-            CallCount = 0;
-            for cc=1:length(IndVocStart_all)
-                if ~isempty(IndVocStart_all{cc})
-                    for bb=1:length(IndVocStart_all{cc})
-                        for calli=1:length(IndVocStart_all{cc}{bb})
-                            CallCount = CallCount + 1;
-                            CallOnSetOffset{Seti}(CallCount,1) = IndVocStart_all{cc}{bb}(calli) + Voc_transc_time_refined(calli,1);
-                            CallOnSetOffset{Seti}(CallCount,2) = IndVocStop_all{cc}{bb}(calli) + Voc_transc_time_refined(calli,1);
-                            CallOnSetOffsetBat{Seti}(CallCount) = str2double(BatID{bb});
-                        end
+    NumCall = nan(length(IndVocStart_all),1);
+    for cc=1:length(IndVocStart_all)
+        if ~isempty(IndVocStartRaw_merged{cc})
+            NumCall(cc)=length([IndVocStart_all{cc}{:}]);
+        else
+            NumCall(cc) = 0;
+        end
+    end
+    CuratedSetFullSeq(Seti) = sum(NumCall>0);
+    CallOnSetOffset{Seti} = nan(2,sum(NumCall));
+    CallOnSetOffsetBat{Seti} = nan(1,sum(NumCall));
+    if strcmp(SessionType{Seti}, 'O')% operant session
+            CallOnSetOffsetSessionID{Seti} = ones(1,sum(NumCall));
+        else
+            CallOnSetOffsetSessionID{Seti} = zeros(1,sum(NumCall));
+    end
+    CallOnSetOffsetDate{Seti} = str2double(Filename(1:6)).* ones(1,sum(NumCall));
+        
+    CallCount = 0;
+    for cc=1:length(IndVocStart_all)
+        if ~isempty(IndVocStartRaw_merged{cc})
+            for bb=1:length(IndVocStart_all{cc})
+                if ~isempty(IndVocStartRaw_merged{cc}{bb})
+                    for calli=1:length(IndVocStart_all{cc}{bb})
+                        CallCount = CallCount + 1;
+                        CallOnSetOffset{Seti}(1,CallCount) = IndVocStart_all{cc}{bb}(calli) + Voc_transc_time_refined(cc,1);
+                        CallOnSetOffset{Seti}(2, CallCount) = IndVocStop_all{cc}{bb}(calli) + Voc_transc_time_refined(cc,1);
+                        CallOnSetOffsetBat{Seti}(CallCount) = BatID{contains(LoggerName,ALnames{bb}(7:end))};
                     end
                 end
             end
-            
+        end
+    end
+    
 end 
 warning('on', WarningID)
 BatIDs = [BatIDs{:}]';
@@ -108,8 +121,26 @@ SessionID = [SessionID{:}]';
 Trills01 = [Trills01{:}]';
 Filenames = [Filenames{:}]';
 Duration_ms = [Duration_ms{:}]';
+CallOnSetOffset = [CallOnSetOffset{:}]';
+CallOnSetOffsetBat = [CallOnSetOffsetBat{:}]';
+CallOnSetOffsetDate = [CallOnSetOffsetDate{:}]';
+CallOnSetOffsetSessionID = [CallOnSetOffsetSessionID{:}]';
+
+
 
 %% Investigate some statistics (nb of calls...)
+% Number of sequences per day
+Datex = unique(str2double(Dates));
+CuratedDateSeqFree = nan(2,length(Datex));
+CuratedDateSeqOperant = nan(2,length(Datex));
+for dd = 1:length(Datex)
+    FreeInd = logical((CuratedSetDate==Datex(dd)) .* (~contains(SessionType, 'O')));
+    CuratedDateSeqFree(1,dd) = sum(CuratedSetNumSeq(FreeInd)) - sum(CuratedSetFullSeq(FreeInd)); % empty seq
+    CuratedDateSeqFree(2,dd) = sum(CuratedSetFullSeq(FreeInd)); % seq with calls
+    OpInd = logical((CuratedSetDate==Datex(dd)) .* (contains(SessionType, 'O')));
+    CuratedDateSeqOperant(1,dd) = sum(CuratedSetNumSeq(OpInd)) - sum(CuratedSetFullSeq(OpInd)); % empty seq
+    CuratedDateSeqOperant(2,dd) = sum(CuratedSetFullSeq(OpInd)); % seq with calls
+end
 
 % Number of calls per bat and Nb calls per bat and per day
 FreeSessionNb = 0;
@@ -124,20 +155,23 @@ for bb=1:length(BatIDx)
     CountByID(bb,2) = sum(str2double(BatIDs(~SessionID))==BatIDx(bb));
     for dd = 1:length(Datex)
         LogicalBatIDOp = logical((str2double(BatIDs)==BatIDx(bb)) .* SessionID);
-        TotCallsOp = sum(Datex(LogicalBatIDOp) == Datex(dd));
-        if TotCallsOp~=0 % Let's keep the value to Nan on days where there is no call (mots likely this bat was not recorded on that day)
-            CountByIDAndDateOperant(bb,dd) = TotCallsOp;
+        if sum(LogicalBatIDOp) % This Bat vocalized during Operant sessions
+            TotCallsOp = sum(str2double(Dates(LogicalBatIDOp)) == Datex(dd));
+            if TotCallsOp~=0 % Let's keep the value to Nan on days where there is no call (mots likely this bat was not recorded on that day)
+                CountByIDAndDateOperant(bb,dd) = TotCallsOp;
+            end
         end
         LogicalBatIDFr = logical((str2double(BatIDs)==BatIDx(bb)) .* ~SessionID);
-        TotCallsFree = sum(Datex(LogicalBatIDFr) == Datex(dd));
+        TotCallsFree = sum(str2double(Dates(LogicalBatIDFr)) == Datex(dd));
         if TotCallsFree ~= 0
             CountByIDAndDateFree(bb,dd) = TotCallsFree;
         end
+        % Count the number of sessions
         if bb==1
-            if any(Datex(SessionID) == Datex(dd))
+            if any(str2double(Dates(logical(SessionID))) == Datex(dd))
                 OpSessionNb  = OpSessionNb +1;
             end
-            if any(Datex(~SessionID) == Datex(dd))
+            if any(str2double(Dates(~SessionID)) == Datex(dd))
                 FreeSessionNb  = FreeSessionNb +1;
             end
         end
@@ -162,6 +196,7 @@ ylabel('# calls')
 figure()
 FIG3 = subplot(2,1,1);
 BAR3=bar(CountByIDAndDateFree');
+FIG3.XTick = 1:length(unique(Dates));
 FIG3.XTickLabel = unique(Dates);
 title('# calls Free sessions')
 xlabel('Dates')
@@ -170,12 +205,31 @@ legend(unique(BatIDs));
 
 FIG4 = subplot(2,1,2);
 BAR4=bar(CountByIDAndDateOperant');
+FIG4.XTick = 1:length(unique(Dates));
 FIG4.XTickLabel = unique(Dates);
-title('# calls Free sessions')
+title('# calls Operant sessions')
 xlabel('Dates')
 ylabel('# calls')
 legend(unique(BatIDs));
 
+figure()
+FIG5 = subplot(2,1,1)
+bar(CuratedDateSeqFree', 'stacked')
+FIG5.XTick = 1:length(unique(Dates));
+FIG5.XTickLabel = unique(Dates);
+title('# curated sequences Free session')
+xlabel('Dates')
+ylabel('# sequences')
+legend({'only noise' 'calls'})
+
+FIG6 = subplot(2,1,2)
+bar(CuratedDateSeqOperant', 'stacked')
+FIG6.XTick = 1:length(unique(Dates));
+FIG6.XTickLabel = unique(Dates);
+title('# curated sequences Operant session')
+xlabel('Dates')
+ylabel('# sequences')
+legend({'only noise' 'calls'})
 
 %% Acoustic landscape of calls in both sessions
 figure(2)
@@ -757,6 +811,11 @@ for ee=1:length(ExpFolders)
     DateFolders = dir(fullfile(ExpFolders(ee).folder,ExpFolders(ee).name, 'logger','20*'));
     for dd=1:length(DateFolders)
         fprintf(1, '   %s\n', DateFolders(dd).name);
+        if str2double(DateFolders(dd).name)<20190604
+            fprintf(1, 'skipping, we only focus on recordings with implants\n')
+            continue
+        end
+            
         AudioDataFiles = dir(fullfile(DateFolders(dd).folder, DateFolders(dd).name,'*_VocExtractDat*_*'));
         for ll = 1:length(AudioDataFiles)
             NF = NF +1;
