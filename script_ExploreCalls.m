@@ -242,10 +242,14 @@ legend({'only noise' 'calls'})
 %% Calculate inter call intervals per bat and per day
 BatU = unique(CallOnSetOffsetBat);
 DateU = unique(CallOnSetOffsetDate);
+ICOI_Free_intra=cell(1,length(BatU)); % Inter call onset intervals intra individuals, all bats
+ICOI_Free_inter=cell(1,length(DateU)); % Inter call onset intervals inter individuals, all bats
+
 
 for BatI = 1:length(BatU)
     BatI_logical = CallOnSetOffsetBat == BatU(BatI);
     DateBatI = unique(CallOnSetOffsetDate(BatI_logical));
+    ICOI_Free_intra{BatI} = cell(1,length(DateBatI));
     if sum(CallOnSetOffsetSessionID(CallOnSetOffsetBat == BatU(BatI))) % This bat was also calling during operant tests
         ICI_Free = cell(1,length(DateBatI));
         ICI_Operant = cell(1,length(DateBatI));
@@ -303,7 +307,7 @@ for BatI = 1:length(BatU)
                 if any(SortOn~=SortOff)
                     warning('Issues with calls not ordered properly in time!!\n')
                     Onset_Op_local = Onset_Op_local(SortOn);
-                   Offset_Op_local = Offset_Op_local(SortOn);
+                    Offset_Op_local = Offset_Op_local(SortOn);
 %                     keyboard
                 else
                    Onset_Op_local = Onset_Op_local(SortOn);
@@ -312,10 +316,13 @@ for BatI = 1:length(BatU)
             end
             ICI_Operant{dd} = Onset_Op_local(2:end) - Offset_Op_local(1:end-1);
         end
+        ICOI_Free_intra{BatI}{dd} = diff(Onset_free_local);
     end
+    
     CallDuration_Free = [CallDuration_Free{:}]';
     ICI_Free = [ICI_Free{:}]';
     ICI_Free = ICI_Free(ICI_Free>=0);
+    ICOI_Free_intra{BatI} = [ICOI_Free_intra{BatI}{:}];
     if ~isempty(ICI_Operant)
         CallDuration_Operant = [CallDuration_Operant{:}]';
         ICI_Operant = [ICI_Operant{:}]';
@@ -379,6 +386,51 @@ for BatI = 1:length(BatU)
     end
     suplabel(sprintf('Bat ID: %d', BatU(BatI)) ,'t');
 end
+
+ICOI_Free_intra = [ICOI_Free_intra{:}]';
+
+% Now get the intercall onsets intervals accross bats
+for dd=1:length(DateU)
+    DateI_logical = CallOnSetOffsetDate == DateU(dd);
+    DateIFree = intersect(find(DateI_logical), find(~CallOnSetOffsetSessionID));
+    Onset_free_local = CallOnSetOffset(DateIFree,1)';
+    [Onset_free_local_sorted,SortOn] = sort(Onset_free_local);
+    BatID_local = CallOnSetOffsetBat(DateIFree);
+    if any(diff(SortOn)~=1)
+        fprintf(1,'Reordering calls for %d', DateU(dd))
+        BatID_local = BatID_local(SortOn);
+    end
+    % identify intercalls intervals accross bats
+    ICOI = diff(Onset_free_local_sorted);
+    InterBats = find(diff(BatID_local));
+    ICOI_Free_inter{dd} = ICOI(InterBats); 
+end
+
+ICOI_Free_inter = [ICOI_Free_inter{:}]';
+
+% Plot the distribution of intercall onset intervals intra and interbats
+figure()
+subplot(2,1,1)
+H=histogram(log10(ICOI_Free_intra))
+H.BinEdges = 0:0.1:9;
+H.Parent.XTick = 0:9;
+H.Parent.XTickLabel = power(10, H.Parent.XTick);
+ylabel('# calls Free Session')
+xlabel('InterCall ONSETS Interval (ms)')
+hold on
+vline(log10(200), ':r')
+title('Free Session within bat')
+
+subplot(2,1,2)
+H=histogram(log10(ICOI_Free_inter))
+H.BinEdges = 0:0.1:9;
+H.Parent.XTick = 0:9;
+H.Parent.XTickLabel = power(10, H.Parent.XTick);
+ylabel('# calls Free Session')
+xlabel('InterCall ONSETS Interval (ms)')
+hold on
+vline(log10(200), ':r')
+title('Free Session across bats')
         
 
 
