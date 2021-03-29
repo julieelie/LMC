@@ -75,12 +75,14 @@ for Seti=1:Nsets
     [~,Filename,~] = fileparts(List2AudioPath{Seti});
     CuratedSetDate(Seti) = str2double(Filename(1:6));
     
-    NumCall = nan(length(IndVocStart_all),1);
+    NumCall = zeros(length(IndVocStart_all),1);
     for cc=1:length(IndVocStart_all)
         if ~isempty(IndVocStartRaw_merged{cc})
-            NumCall(cc)=length([IndVocStart_all{cc}{:}]);
-        else
-            NumCall(cc) = 0;
+            for bb=1:length(IndVocStart_all{cc})
+                if ~isempty(IndVocStartRaw_merged{cc}{bb})
+                    NumCall(cc)=length(IndVocStart_all{cc}{bb})+NumCall(cc);
+                end
+            end
         end
     end
     CuratedSetFullSeq(Seti) = sum(NumCall>0);
@@ -103,10 +105,16 @@ for Seti=1:Nsets
                         CallOnSetOffset{Seti}(1,CallCount) = IndVocStart_all{cc}{bb}(calli) + Voc_transc_time_refined(cc,1);
                         CallOnSetOffset{Seti}(2, CallCount) = IndVocStop_all{cc}{bb}(calli) + Voc_transc_time_refined(cc,1);
                         CallOnSetOffsetBat{Seti}(CallCount) = BatID{contains(LoggerName,ALnames{bb}(7:end))};
+                        if isnan(CallOnSetOffsetBat{Seti}(CallCount))
+                            keyboard
+                        end
                     end
                 end
             end
         end
+    end
+    if CallCount~=sum(NumCall)
+        keyboard
     end
     
 end 
@@ -234,11 +242,7 @@ legend({'only noise' 'calls'})
 %% Calculate inter call intervals per bat and per day
 BatU = unique(CallOnSetOffsetBat);
 DateU = unique(CallOnSetOffsetDate);
-CallOnSetOffset = [CallOnSetOffset{:}]';
-CallOnSetOffsetBat = [CallOnSetOffsetBat{:}]';
-CallOnSetOffsetDate = [CallOnSetOffsetDate{:}]';
-CallOnSetOffsetSessionID = [CallOnSetOffsetSessionID{:}]';
-figure(50)
+
 for BatI = 1:length(BatU)
     BatI_logical = CallOnSetOffsetBat == BatU(BatI);
     DateBatI = unique(CallOnSetOffsetDate(BatI_logical));
@@ -256,44 +260,66 @@ for BatI = 1:length(BatU)
     for dd=1:length(DateBatI)
         BatIDateI = find(BatI_logical .* (CallOnSetOffsetDate==DateBatI(dd)));
         if isempty(ICI_Operant) % Only free session data
-            Onset_free_local = CallOnSetOffset(BatIDateI,1);
-            Offset_free_local = CallOnSetOffset(BatIDateI,2);
+            Onset_free_local = CallOnSetOffset(BatIDateI,1)';
+            Offset_free_local = CallOnSetOffset(BatIDateI,2)';
             CallDuration_Free{dd} = Offset_free_local - Onset_free_local;
-            [~,SortI] = sort(Onset_free_local);
-            if any(diffSortI~=1)
-                warning('Issues with calls not ordered properly in time!!\n')
-                keyboard
+            [~,SortOn] = sort(Onset_free_local);
+            if any(diff(SortOn)~=1)
+                [~,SortOff] = sort(Offset_free_local);
+                if any(SortOn~=SortOff)
+                    warning('Issues with calls not ordered properly in time!!\n')
+%                     keyboard
+                else
+                   Onset_free_local = Onset_free_local(SortOn);
+                   Offset_free_local = Offset_free_local(SortOff);
+                end
             end
             ICI_Free{dd} = Onset_free_local(2:end) - Offset_free_local(1:end-1);
         else
             BatIDateIFree = intersect(BatIDateI, find(~CallOnSetOffsetSessionID));
-            Onset_free_local = CallOnSetOffset(BatIDateIFree,1);
-            Offset_free_local = CallOnSetOffset(BatIDateIFree,2);
+            Onset_free_local = CallOnSetOffset(BatIDateIFree,1)';
+            Offset_free_local = CallOnSetOffset(BatIDateIFree,2)';
             CallDuration_Free{dd} = Offset_free_local - Onset_free_local;
-            [~,SortI] = sort(Onset_free_local);
-            if any(diffSortI~=1)
-                warning('Issues with calls not ordered properly in time!!\n')
-                keyboard
+            [~,SortOn] = sort(Onset_free_local);
+            if any(diff(SortOn)~=1)
+                [~,SortOff] = sort(Offset_free_local);
+                if any(SortOn~=SortOff)
+                    warning('Issues with calls not ordered properly in time!!\n')
+%                     keyboard
+                else
+                   Onset_free_local = Onset_free_local(SortOn);
+                   Offset_free_local = Offset_free_local(SortOff);
+                end
             end
             ICI_Free{dd} = Onset_free_local(2:end) - Offset_free_local(1:end-1);
             
             BatIDateIOp = intersect(BatIDateI, find(CallOnSetOffsetSessionID));
-            Onset_Op_local = CallOnSetOffset(BatIDateIOp,1);
-            Offset_Op_local = CallOnSetOffset(BatIDateIOp,2);
+            Onset_Op_local = CallOnSetOffset(BatIDateIOp,1)';
+            Offset_Op_local = CallOnSetOffset(BatIDateIOp,2)';
             CallDuration_Operant{dd} = Offset_Op_local - Onset_Op_local;
-            [~,SortI] = sort(Onset_Op_local);
-            if any(diffSortI~=1)
-                warning('Issues with calls not ordered properly in time!!\n')
-                keyboard
+            [~,SortOn] = sort(Onset_Op_local);
+            if any(diff(SortOn)~=1)
+                [~,SortOff] = sort(Offset_Op_local);
+                if any(SortOn~=SortOff)
+                    warning('Issues with calls not ordered properly in time!!\n')
+                    Onset_Op_local = Onset_Op_local(SortOn);
+                   Offset_Op_local = Offset_Op_local(SortOn);
+%                     keyboard
+                else
+                   Onset_Op_local = Onset_Op_local(SortOn);
+                   Offset_Op_local = Offset_Op_local(SortOff);
+                end
             end
             ICI_Operant{dd} = Onset_Op_local(2:end) - Offset_Op_local(1:end-1);
         end
     end
     CallDuration_Free = [CallDuration_Free{:}]';
     ICI_Free = [ICI_Free{:}]';
+    ICI_Free = ICI_Free(ICI_Free>=0);
     if ~isempty(ICI_Operant)
         CallDuration_Operant = [CallDuration_Operant{:}]';
         ICI_Operant = [ICI_Operant{:}]';
+        ICI_Operant = ICI_Operant(ICI_Operant>=0);
     end
     figure()
     if isempty(ICI_Operant) % Only free session data
@@ -305,8 +331,14 @@ for BatI = 1:length(BatU)
         
         subplot(1,2,2)
         histogram(ICI_Free)
+        H=histogram(log10(ICI_Free))
+        H.BinEdges = 0:0.1:9;
+        H.Parent.XTick = 0:9;
+        H.Parent.XTickLabel = power(10, H.Parent.XTick);
         ylabel('# calls Free Session')
         xlabel('InterCall Interval (ms)')
+        hold on
+        vline(log10(200), ':r')
         title('Free Session')
     else
         subplot(2,2,1)
@@ -316,9 +348,15 @@ for BatI = 1:length(BatU)
         title('Free Session')
         
         subplot(2,2,2)
-        histogram(ICI_Free)
+%         histogram(ICI_Free)
+        H=histogram(log10(ICI_Free))
+        H.BinEdges = 0:0.1:9;
+        H.Parent.XTick = 0:9;
+        H.Parent.XTickLabel = power(10, H.Parent.XTick);
         ylabel('# calls Free Session')
         xlabel('InterCall Interval (ms)')
+        hold on
+        vline(log10(200), ':r')
         title('Free Session')
         
         subplot(2,2,3)
@@ -328,9 +366,15 @@ for BatI = 1:length(BatU)
         title('Operant Session')
         
         subplot(2,2,4)
-        histogram(ICI_Operant)
+%         histogram(ICI_Operant)
+        H=histogram(log10(ICI_Operant))
+        H.BinEdges = 0:0.1:9;
+        H.Parent.XTick = 0:9;
+        H.Parent.XTickLabel = power(10, H.Parent.XTick);
         ylabel('# calls Operant Session')
         xlabel('InterCall Interval (ms)')
+        hold on
+        vline(log10(200), ':r')
         title('Operant Session')
     end
     suplabel(sprintf('Bat ID: %d', BatU(BatI)) ,'t');
