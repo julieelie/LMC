@@ -272,6 +272,8 @@ for BatI = 1:length(BatU)
                 [~,SortOff] = sort(Offset_free_local);
                 if any(SortOn~=SortOff)
                     warning('Issues with calls not ordered properly in time!!\n')
+                    Onset_free_local = Onset_free_local(SortOn);
+                    Offset_free_local = Offset_free_local(SortOn);
 %                     keyboard
                 else
                    Onset_free_local = Onset_free_local(SortOn);
@@ -289,6 +291,8 @@ for BatI = 1:length(BatU)
                 [~,SortOff] = sort(Offset_free_local);
                 if any(SortOn~=SortOff)
                     warning('Issues with calls not ordered properly in time!!\n')
+                    Onset_free_local = Onset_free_local(SortOn);
+                    Offset_free_local = Offset_free_local(SortOn);
 %                     keyboard
                 else
                    Onset_free_local = Onset_free_local(SortOn);
@@ -317,6 +321,9 @@ for BatI = 1:length(BatU)
             ICI_Operant{dd} = Onset_Op_local(2:end) - Offset_Op_local(1:end-1);
         end
         ICOI_Free_intra{BatI}{dd} = diff(Onset_free_local);
+        if any(ICOI_Free_intra{BatI}{dd}<0)
+            keyboard
+        end
     end
     
     CallDuration_Free = [CallDuration_Free{:}]';
@@ -402,6 +409,9 @@ for dd=1:length(DateU)
     end
     % identify intercalls intervals accross bats
     ICOI = diff(Onset_free_local_sorted);
+    if any(ICOI<0)
+        keyboard
+    end
     InterBats = find(diff(BatID_local));
     ICOI_Free_inter{dd} = ICOI(InterBats); 
 end
@@ -409,8 +419,10 @@ end
 ICOI_Free_inter = [ICOI_Free_inter{:}]';
 
 % Plot the distribution of intercall onset intervals intra and interbats
+% LOG10 TIME SCALE
 figure()
 subplot(2,1,1)
+% H=histogram(ICOI_Free_intra)
 H=histogram(log10(ICOI_Free_intra))
 H.BinEdges = 0:0.1:9;
 H.Parent.XTick = 0:9;
@@ -431,6 +443,26 @@ xlabel('InterCall ONSETS Interval (ms)')
 hold on
 vline(log10(200), ':r')
 title('Free Session across bats')
+
+% Plot the distribution of intercall onset intervals intra and interbats
+% LINEAR TIME SCALE on 1 second
+figure()
+subplot(2,1,1)
+H=histogram(ICOI_Free_intra(ICOI_Free_intra<=1000), 50)
+ylabel('# calls Free Session')
+xlabel('InterCall ONSETS Interval (ms)')
+hold on
+vline(200, ':r')
+title('Free Session within bat')
+
+subplot(2,1,2)
+H=histogram(ICOI_Free_inter(ICOI_Free_inter<=1000), 50)
+ylabel('# calls Free Session')
+xlabel('InterCall ONSETS Interval (ms)')
+hold on
+vline(200, ':r')
+title('Free Session across bats')
+        
         
 
 
