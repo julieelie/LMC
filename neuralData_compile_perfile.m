@@ -532,16 +532,16 @@ ExpType = reshape([ExpType{:}],1,sum(NEvents))';
 if exist(OutputDataFile, 'file')
     lastwarn('')
     save(OutputDataFile, 'Duration','DelayBefore','DelayAfter', 'VocOverlap', 'VocWave', 'VocPiezoWave', 'VocRank', 'BioSound','BSLDuration', 'SpikesArrivalTimes_Baseline','SpikesArrivalTimes_Behav','Who','What','ExpType','RewardTime','-append');
-    if contains(lastwarn, 'Variable ''VocWave'' was not saved. For variables larger than 2GB use MAT-file version 7.3 or later.') || contains(lastwarn, 'Variable ''VocPiezoWave'' was not saved. For variables larger than 2GB use MAT-file version 7.3 or later.')
-        save(OutputDataFile, 'Duration','DelayBefore','DelayAfter', 'VocOverlap', 'VocWave', 'VocPiezoWave', 'VocRank', 'BioSound','BSLDuration', 'SpikesArrivalTimes_Baseline','SpikesArrivalTimes_Behav','Who','What','ExpType','RewardTime','-append', '-v7.3');
-    end
+%     if contains(lastwarn, 'Variable ''VocWave'' was not saved. For variables larger than 2GB use MAT-file version 7.3 or later.') || contains(lastwarn, 'Variable ''VocPiezoWave'' was not saved. For variables larger than 2GB use MAT-file version 7.3 or later.')
+%         save(OutputDataFile, 'Duration','DelayBefore','DelayAfter', 'VocOverlap', 'VocWave', 'VocPiezoWave', 'VocRank', 'BioSound','BSLDuration', 'SpikesArrivalTimes_Baseline','SpikesArrivalTimes_Behav','Who','What','ExpType','RewardTime','-append', '-v7.3');
+%     end
             
 else
     lastwarn('')
     save(OutputDataFile, 'Duration','DelayBefore','DelayAfter','VocOverlap', 'VocWave', 'VocPiezoWave', 'VocRank', 'BioSound','BSLDuration', 'SpikesArrivalTimes_Baseline','SpikesArrivalTimes_Behav','Who','What','ExpType','RewardTime');
-    if contains(lastwarn, 'Variable ''VocWave'' was not saved. For variables larger than 2GB use MAT-file version 7.3 or later.') || contains(lastwarn, 'Variable ''VocPiezoWave'' was not saved. For variables larger than 2GB use MAT-file version 7.3 or later.')
-        save(OutputDataFile, 'Duration','DelayBefore','DelayAfter', 'VocOverlap', 'VocWave', 'VocPiezoWave', 'VocRank', 'BioSound','BSLDuration', 'SpikesArrivalTimes_Baseline','SpikesArrivalTimes_Behav','Who','What','ExpType','RewardTime', '-v7.3');
-    end
+%     if contains(lastwarn, 'Variable ''VocWave'' was not saved. For variables larger than 2GB use MAT-file version 7.3 or later.') || contains(lastwarn, 'Variable ''VocPiezoWave'' was not saved. For variables larger than 2GB use MAT-file version 7.3 or later.')
+%         save(OutputDataFile, 'Duration','DelayBefore','DelayAfter', 'VocOverlap', 'VocWave', 'VocPiezoWave', 'VocRank', 'BioSound','BSLDuration', 'SpikesArrivalTimes_Baseline','SpikesArrivalTimes_Behav','Who','What','ExpType','RewardTime', '-v7.3');
+%     end
 end
 
 %% Local function

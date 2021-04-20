@@ -521,6 +521,13 @@ ylabel('Fundamental')
 title(sprintf('n=%d',sum(~isnan(Mean_Fund_piezo(Short)))))
 suplabel('The soundscape of all calls')
 
+%% Relationship between pitch saliency and fundamental
+figure(4)
+scatter(Mean_Fund_piezo, Mean_Saliency_piezo,10,[0 0 0])
+xlabel('Fundamental')
+ylabel('Picth saliency')
+title(sprintf('n=%d',min(sum(~isnan(Mean_Saliency_piezo)),sum(~isnan(Mean_Fund_piezo)))))
+
 %% How are trills dfferent from the rest?
 figure(1)
 
@@ -561,6 +568,14 @@ ylabel('Fundamental')
 title(sprintf('n=%d',sum(~isnan(Mean_Fund_piezo(Short)))))
 suplabel('Trills in this soundscape')
 
+% Relationship between pitch saliency and fundamental
+figure(4)
+scatter(Mean_Fund_piezo, Mean_Saliency_piezo,10,Trills01*[0.4660, 0.6740, 0.1880])
+xlabel('Fundamental')
+ylabel('Picth saliency')
+title(sprintf('n=%d',min(sum(~isnan(Mean_Saliency_piezo)),sum(~isnan(Mean_Fund_piezo)))))
+suplabel('Trills in this soundscape')
+
 %% Are sessions covering a different sound landscape?
 figure(1)
 subplot(2,3,1)
@@ -598,6 +613,15 @@ scatter(Duration_ms(Short), Mean_Fund_piezo(Short),10,SessionID(Short)*[0, 0.447
 xlabel('Duration (ms)')
 ylabel('Fundamental')
 title(sprintf('n=%d',sum(~isnan(Mean_Fund_piezo(Short)))))
+suplabel('Session Type in this soundscape')
+
+% Relationship between pitch saliency and fundamental
+figure(4)
+clf
+scatter(Mean_Fund_piezo, Mean_Saliency_piezo,10,SessionID*[0, 0.4470, 0.7410] + (~SessionID)*[0.8500, 0.3250, 0.0980])
+xlabel('Fundamental')
+ylabel('Picth saliency')
+title(sprintf('n=%d',min(sum(~isnan(Mean_Saliency_piezo)),sum(~isnan(Mean_Fund_piezo)))))
 suplabel('Session Type in this soundscape')
 
 %% How is Cooper covering that sound landscape?
@@ -640,6 +664,15 @@ ylabel('Fundamental')
 title(sprintf('n=%d',sum(~isnan(Mean_Fund_piezo(Short)))))
 
 suplabel('Calls of Cooper in this soundscape')
+
+% Relationship between pitch saliency and fundamental
+figure(4)
+clf
+scatter(Mean_Fund_piezo, Mean_Saliency_piezo,10,(str2double(BatIDs)==59834)*[0.3010, 0.7450, 0.9330])
+xlabel('Fundamental')
+ylabel('Picth saliency')
+title(sprintf('n=%d',min(sum(~isnan(Mean_Saliency_piezo)),sum(~isnan(Mean_Fund_piezo)))))
+suplabel('Calls of Cooper in this soundscape')
 %% How is Edwardo covering that sound landscape?
 figure(1)
 
@@ -679,6 +712,15 @@ xlabel('Duration (ms)')
 ylabel('Fundamental')
 title(sprintf('n=%d',sum(~isnan(Mean_Fund_piezo(Short)))))
 
+suplabel('Calls of Edwardo in this soundscape')
+
+% Relationship between pitch saliency and fundamental
+figure(4)
+clf
+scatter(Mean_Fund_piezo, Mean_Saliency_piezo,10,(str2double(BatIDs)==65701)*[0.3010, 0.7450, 0.9330])
+xlabel('Fundamental')
+ylabel('Picth saliency')
+title(sprintf('n=%d',min(sum(~isnan(Mean_Saliency_piezo)),sum(~isnan(Mean_Fund_piezo)))))
 suplabel('Calls of Edwardo in this soundscape')
 
 %% Are coopers calls different between operant and free session?

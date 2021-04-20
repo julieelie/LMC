@@ -89,7 +89,7 @@ Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190703'))=[];% No
 Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190709'))=[];% No TTL Pulses
 Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190619'))=[];% Issue of clock drift for logger 49 and 12
 
-for pp= 33:length(Path2RunRecOnly) %13 redo Behavioraldata extraction, error Error using get_logger_data_behav (line 228)
+for pp= 34:length(Path2RunRecOnly) %13 redo Behavioraldata extraction, error Error using get_logger_data_behav (line 228)
 %Error in parsing the action, the stop happens before the start\n
 
     Path2ParamFile = List2RecOnlyPath{Path2RunRecOnly(pp)};
@@ -100,7 +100,8 @@ end
 %% Generate the list of paths to gather the data
 % BasePath = '/Volumes/server_home/users/JulieE/LMC';
 % BasePath = '/Volumes/Julie8T';
-OutputPath = '/Users/elie/Documents/LMCResults';
+%OutputPath = '/Users/elie/Documents/LMCResults';
+OutputPath = '/Volumes/JulieE8T/LMCResults';
 [ListSSU] = gather_neural_datapath(BasePath);
 % Define the path were the data will be saved
 % OutputPath = fullfile(BasePath, 'ResultsFiles');
@@ -179,7 +180,7 @@ id = 'MATLAB:Python:UnsupportedLoad';
 warning('off',id)
 
 
-for ss=385:474 %length(GoodCellIndices)
+for ss=355:384 %length(GoodCellIndices)
     fprintf(1,'Cell %d/%d  %s\n',ss,length(GoodCellIndices), ListSSU{Files2Run(GoodCellIndices(ss))})
     neuralData_compile_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath, NeuralBuffer)
 end
@@ -189,7 +190,7 @@ fprintf(' DONE \n')
 %% Calculating the average spike rate during various types of behaviors including vocalizations
 fprintf(' CALCULATING SPIKE RATE CORRESPONDING TO ALL BEHAVIORS.... ')
 
-for ss=385:474%length(GoodCellIndices)
+for ss=138:384%length(GoodCellIndices)
     fprintf(1,'Cell %d/%d\n',ss,length(GoodCellIndices))
     cal_spikerate_perfile(ListSSU{Files2Run(GoodCellIndices(ss))},OutputPath)
 end
@@ -198,7 +199,7 @@ fprintf(' DONE \n')
 %% calculate the KDE SPIKE RATE of vocalizations
 fprintf(1,' CALCULATING KDE OF THE TIME-VARYING SPIKE RATE CORRESPONDING TO VOCALIZATIONS\n');
 Delay = [5000 5000];
-for ss=385:474%length(GoodCellIndices)
+for ss=138:384%length(GoodCellIndices)
     fprintf(1,'Cell %d/%d\n',ss,length(GoodCellIndices))
     cal_kderatevoc_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath,Delay)
 end
@@ -206,7 +207,7 @@ fprintf(' DONE \n')
 %% Plot the average spike rate during various types of behaviors including vocalizations
 fprintf(' PLOTING NEURAL DATA (Av RATE) CORRESPONDING TO ALL BEHAVIORS.... ')
 
-for ss=385:474 %length(GoodCellIndices)
+for ss=138:384 %length(GoodCellIndices)
     fprintf(1,'Cell %d/%d\n',ss,length(GoodCellIndices))
     plot_av_spikerate_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath)
 end
@@ -227,7 +228,7 @@ fprintf(' DONE \n')
 %% Plot the time varying rate of vocalizations
 fprintf(1,' PLOTING KDE OF THE TIME-VARYING SPIKE RATE CORRESPONDING TO VOCALIZATIONS\n');
 
-for ss=1:137 %length(GoodCellIndices)
+for ss=138:384%1:137 %length(GoodCellIndices)
     fprintf(1,'Cell %d/%d\n',ss,length(GoodCellIndices))
     plot_kderatevoc_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath, Delay)
 end
