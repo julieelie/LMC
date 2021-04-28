@@ -41,7 +41,7 @@ ListOfPaths = gather_operant_datapath(BasePath);
  Path2Run(contains(ListOfPaths(Path2Run), '20190712'))=[]; % No neural data
 %%
 fprintf(1, 'Running result operant bat on %d sessions', length(Path2Run))
-for pp=16:length(Path2Run)
+for pp=1:length(Path2Run)
     
     Path2ParamFile = ListOfPaths{Path2Run(pp)};
     fprintf(1,'\n\n\n\nRunning result_operant_bat on %s\n\n', Path2ParamFile)
@@ -89,8 +89,7 @@ Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190703'))=[];% No
 Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190709'))=[];% No TTL Pulses
 Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190619'))=[];% Issue of clock drift for logger 49 and 12
 
-for pp= 34:length(Path2RunRecOnly) %13 redo Behavioraldata extraction, error Error using get_logger_data_behav (line 228)
-%Error in parsing the action, the stop happens before the start\n
+for pp= 18:length(Path2RunRecOnly) 
 
     Path2ParamFile = List2RecOnlyPath{Path2RunRecOnly(pp)};
     fprintf(1,'\n\n\n\nRunning result_reconly_bat on %s\n\n', Path2ParamFile)

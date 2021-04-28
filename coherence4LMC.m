@@ -1,4 +1,4 @@
-function Coherence = coherence4LMC(Cell, Self, Session, FeatureName, Trill)
+function Coherence = coherence4LMC(Cell, Self, Session, FeatureName, Trill, Nvoc,BootstrapType)
 % Self is a boolean 0: vocalizations from other bats (auditory coherency) 1: vocalizations from self: motor coherency
 % Session = 'Operant' or 'Free'
 % FeatureName = 'amp' or 'SpectralMean' or 'sal' The feature on which the
@@ -11,6 +11,13 @@ if nargin<4
 end
 if nargin<5
     Trill=0;
+end
+if nargin<7
+    BootstrapType=0;
+end
+
+if nargin<6
+    Nvoc=0;
 end
 
 
@@ -28,28 +35,39 @@ NBoot = 500; % number of voc ID permutation bootstraps for the significance of I
 % Lags = -Delay:Delay;
 % Freqs = (0:ceil(length(Lags)/2)).* (2*Nyquist/length(Lags)); % Lags is a uneven number so F(i) = i*2*Nyquist/length(Lags)
 
-fprintf(1, 'Running coherence4LMC on Cell %s %s %s Self=%d\n', CellPath, FeatureName, Session, Self)
+fprintf(1, 'Running coherence4LMC on %s %s Self=%d\n', FeatureName, Session, Self)
 CellTimer = tic();
 
 
 %% Various checks (Number of vocalizations in the dataset.. etc)
 if ~isfield(Cell, 'What')
-    fprintf(1,'*** Problem with Cell %s: no what field!! ****\n', CellPath)
+    fprintf(1,'*** Problem with Cell: no what field!! ****\n')
     Coherence.Error = '*** No what field!! ****';
+    fprintf(1, '------------------Done with Calculations %s %s Self=%d in %ds-------------------\n',  FeatureName, Session, Self,toc(CellTimer));
     return
 else
     if Self
         IndVoc = intersect(intersect(find(contains(Cell.What, 'Voc')),find(contains(Cell.ExpType, Session(1)))), find(contains(Cell.Who, 'self')));
     else
         IndVoc = intersect(intersect(find(contains(Cell.What, 'Voc')),find(contains(Cell.ExpType, Session(1)))), find(~contains(Cell.Who, 'self')));
+        % make sure these vocalizations did not overlap with other voc
+        IndVoc = intersect(IndVoc, find(Cell.VocOverlap==0));
+        % ensure as well that there is no noise on the microphone track
+        % (e.i. correlation of tracks above ?)
+        IndVoc = intersect(IndVoc, Cell.AudioCorrelation>0.98);
     end
     if Trill
         IndVoc = intersect(IndVoc, find(contains(Cell.What, 'Tr')));
     end
+    if Nvoc % We want to caclulate coherence on a fix number of vocalizations, randomly select these
+        RandIndVoc = IndVoc(randperm(length(IndVoc)));
+        IndVoc = RandIndVoc(1:Nvoc);
+    end
     NStims = length(IndVoc);
     if NStims<10
-        fprintf(1, '*** Problem with Cell %s: Not enough vocalizations only %d\n', CellPath, NStims)
+        fprintf(1, '*** Problem with Cell: Not enough vocalizations only %d\n', NStims)
         Coherence.Error = sprintf('Not enough vocalizations only %d\n', NStims);
+        fprintf(1, '------------------Done with Calculations %s %s Self=%d in %ds-------------------\n',  FeatureName, Session, Self,toc(CellTimer));
         return
     end
     StimDura = nan(NStims,1);
@@ -57,8 +75,9 @@ else
         StimDura(sss) = round(length(Cell.BioSound{IndVoc(sss),2}.sound) ./(Cell.BioSound{IndVoc(sss),2}.samprate)*10^3);
     end
     if any(abs(StimDura - Cell.Duration(IndVoc))>1)
-        fprintf(1,'*** Problem with Cell %s: duration inconcistency!! ****\n', CellPath)
+        fprintf(1,'*** Problem with Cell: duration inconcistency!! ****\n')
         Coherence.Error = 'Duration inconsistency';
+        fprintf(1, '------------------Done with Calculations %s %s Self=%d in %ds-------------------\n',  FeatureName, Session, Self,toc(CellTimer));
         return
     end
 end
@@ -73,8 +92,9 @@ end
 [YPerStim, YPerStimt] = get_y_4Coherence(Cell.SpikesArrivalTimes_Behav(IndVoc), Cell.Duration(IndVoc),Delay,TR);
 Y = [YPerStim{:}]';
 if nansum(Y)<=2
-    fprintf(1,'Cell%s: Non Spiking cell, No calculation!!\n', CellPath)
+    fprintf(1,'Cell: Non Spiking cell, No calculation!!\n')
     Coherence.Error = 'Non Spiking cell, No calculation!!';
+    fprintf(1, '------------------Done with Calculations %s %s Self=%d in %ds-------------------\n',  FeatureName, Session, Self,toc(CellTimer));
     return
 end
 
@@ -121,12 +141,29 @@ Info_boot = cell(1,NBoot);
 CohT_DelayAtzero_boot = cell(1,NBoot);
 CohT_WidthAtMaxPeak_boot = cell(1,NBoot);
 warning('off', 'signal:findpeaks:largeMinPeakHeight')
-parfor bb=1:NBoot
+parfor bb=1:NBoot %parfor
     if ~mod(bb,NBoot/10)
         fprintf(1, 'Bootstrap %d  ', bb)
     end
     warning('off', 'signal:findpeaks:largeMinPeakHeight')
-    X = [XPerStim{randperm(length(XPerStim))}]';
+    if length(BootstrapType)==1 && BootstrapType==0
+        X = [XPerStim{randperm(length(XPerStim))}]';
+    else
+        X = XPerStim;
+        if length(BootstrapType)==1
+            TimeShuffle = randi([-round(BootstrapType/TR) round(BootstrapType/TR)],1,length(XPerStim));
+        elseif length(BootstrapType)==2
+            TimeShuffle = [randi([-round(BootstrapType(2)/TR) -round(BootstrapType(1)/TR)],1,round(length(XPerStim)/2)) randi([round(BootstrapType(1)/TR) round(BootstrapType(2)/TR)],1,length(XPerStim)-round(length(XPerStim)/2))];
+        end
+        for Stim=1:length(XPerStim)
+            if TimeShuffle(Stim)<0
+                X{Stim} = [XPerStim{Stim}((-TimeShuffle(Stim)+1):end) XPerStim{Stim}(1:-TimeShuffle(Stim))];
+            elseif TimeShuffle(Stim)>0
+                X{Stim} = [XPerStim{Stim}((end-TimeShuffle(Stim)+1):end) XPerStim{Stim}(1:(end-TimeShuffle(Stim)))];
+            end    
+        end
+        X = [X{:}]';
+    end
     [CoherencyT_unshifted, Freqs_b, CSR, ~, CSR_low,~] = multitapercoherence_JN_fast([Y X],nFFT,Fs);
     [Bootstrap]=coherenceinfo_cal_bootstrap(CoherencyT_unshifted,Freqs_b, CSR, CSR_low, Nyquist,Fs,nFFT, TR);
     Info_boot{bb} = Bootstrap.Info;
@@ -157,7 +194,7 @@ end
 %     if Info(cc)>2
 %         keyboard
 %     end
-fprintf(1, 'Done with Cell %s in %ds\n', CellPath, toc(CellTimer));
+fprintf(1, '------------------Done with Calculations %s %s Self=%d in %ds-------------------\n',  FeatureName, Session, Self,toc(CellTimer));
 
 
 % Order cells by

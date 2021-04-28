@@ -75,6 +75,7 @@ DelayAfter = cell(1,NExpe);% Duration of no behavioral event after the offset in
 VocOverlap = cell(1,NExpe); % Indicate if the vocalization overlaps with another one. 0: no overlap; 1: overlap and at least one overlaping vocalization is louder; 2: overlap and it is the loudest vocalization
 VocWave = cell(1,NExpe);% Wave of the vocalization exactly extracted on Mic
 VocPiezoWave = cell(1,NExpe);% Wave of the vocalization exactly extracted on Piezo
+VocCorr = cell(1,NExpe);% degree of correlation between the piezo and the microphone recordings -> estimate if the vocalization is suitable for audition analysis
 VocRank = cell(1,NExpe); % Rank of the call in the vocalization sequence
 RewardTime = cell(1,NExpe); % Time of the reward alligned to voc onset
 BioSound = cell(1,NExpe);%
@@ -221,6 +222,7 @@ for ff=1:length(DataDir)
             DelayBefore{NExpe} = nan(1,sum(VocCall)); % Duration of no behavioral event before the onset in ms
             DelayAfter{NExpe} = nan(1,sum(VocCall));% Duration of no behavioral event after the offset in ms
             VocOverlap{NExpe} = nan(1,sum(VocCall));% Signal the occurence of anoverlap with another vocalization from another bat
+            VocCorr{NExpe} = nan(1,sum(VocCall)); % correlation between Piezo and microphone recording
             VocWave{NExpe} = cell(1,sum(VocCall));% Wave of the vocalization exactly extracted on Mic
             VocPiezoWave{NExpe} = cell(1,sum(VocCall));% Wave of the vocalization exactly extracted on Piezo
             VocRank{NExpe} = cell(1,sum(VocCall));% Rank of the vocal element in the sequence of vocalization as first last or middle
@@ -422,6 +424,10 @@ for ff=1:length(DataDir)
                                 end
                                 VocPiezoWave{NExpe}{sum(VocCall)} = WL; % contains the vocalization with the same delay NeuralBuffer before/after as the neural response
 
+                                % Correlation between microphone and pizeo
+                                % recordings
+                                VocCorr
+                                
                                 % Get the biosound parameters
                                 BioSound{NExpe}{1,sum(VocCall)} = BioSoundCalls{VocCall(nf),1};
                                 BioSound{NExpe}{2,sum(VocCall)} = BioSoundCalls{VocCall(nf),2};

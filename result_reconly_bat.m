@@ -7,10 +7,10 @@ ForceAllign = 0; % In case the TTL pulses allignment was already done but you wa
 ForceVocExt1 = 0; % In case the localization on raw files of vocalizations that were manually extracted was already done but you want to do it again set to 1
 ForceVocExt2 = 0; % In case the localization on Loggers of vocalizations that were manually extracted was already done but you want to do it again set to 1
 ReAllignment = 0; % Incase we don't have a logger on all animals, it's better not to reallign the vocal data by cross correlation between the Microphone and the loggers
-ForceWhoID = 1; % In case the identification of bats was already done but you want to re-do it again
-ForceWhat = 1; % In case running biosound was already done but you want to re-do it
+ForceWhoID = 0; % In case the identification of bats was already done but you want to re-do it again
+ForceWhat = 0; % In case running biosound was already done but you want to re-do it
 CorrectMic = 0;
-ForceBehav = 1;% Force extracting onset/offset time of other behaviors
+ForceBehav = 0;% Force extracting onset/offset time of other behaviors
 MergePatch = 0;
 close all
 
@@ -20,7 +20,7 @@ Date = DataFile(6:11);
 
 % Set the path to the manual extracts
 if nargin<2
-%     ManData = input('Working on manual extraction (1) or automatic (0)? '); 
+    %     ManData = input('Working on manual extraction (1) or automatic (0)? ');
     ManData=0;
     if ManData
         VocManExtDir = fullfile( '/Users/elie/Google Drive/BatmanData/BatmanCuts', ['20' Date]);
@@ -195,7 +195,7 @@ TTL_dir = dir(fullfile(AudioDataPath,sprintf( '%s_%s_TTLPulseTimes.mat', Date, E
 if isempty(TTL_dir) || ForceAllign
     fprintf(1,'\n*** Alligning TTL pulses for the RecOnly session ***\n');
     if contains(Path2RecordingTable, 'BatmanData')
-%         align_soundmexAudio_2_logger(AudioDataPath, Logger_dir, ExpStartTime,'TTL_pulse_generator','Avisoft','Method','risefall', 'Session_strings', {'all voc reward stop', 'rec only stop'}, 'Logger_list', [SerialNumberAL; SerialNumberNL]);
+        %         align_soundmexAudio_2_logger(AudioDataPath, Logger_dir, ExpStartTime,'TTL_pulse_generator','Avisoft','Method','risefall', 'Session_strings', {'all voc reward stop', 'rec only stop'}, 'Logger_list', [SerialNumberAL; SerialNumberNL]);
         align_soundmexAudio_2_logger(AudioDataPath, Logger_dir, ExpStartTime,'TTL_pulse_generator','Avisoft','Method','risefall', 'Session_strings', {'rec only start', 'rec only stop'}, 'Logger_list', [SerialNumberAL; SerialNumberNL]);
     elseif contains(Path2RecordingTable, 'JuvenileRecordings')
         TTLFolder = '/Users/elie/Documents/zero_playback_12h';
@@ -232,7 +232,7 @@ end
 fprintf('\n*** Identify who is calling ***\n')
 WhoCall_dir = dir(fullfile(Logger_dir, sprintf('*%s_%s*whocalls*', Date, ExpStartTime)));
 if isempty(WhoCall_dir) || ForceVocExt1 || ForceWhoID || ForceVocExt2
-%     who_calls(AudioDataPath,Logger_dir,Date, ExpStartTime,200,1,1,0);
+    %     who_calls(AudioDataPath,Logger_dir,Date, ExpStartTime,200,1,1,0);
     who_calls_playless(AudioDataPath,Logger_dir,Date, ExpStartTime,200,1,1,0);
 else
     fprintf('\n*** ALREADY DONE: Identify who is calling ***\n')
@@ -251,10 +251,10 @@ if MergePatch
     mergePatch(Logger_dir,AudioDataPath, Date, ExpStartTime)
     fprintf('\n*** Identify who is calling for new sequences ***\n')
     who_calls_playless(AudioDataPath,Logger_dir,Date, ExpStartTime,200,1,1,0,'CheckAfterMergePatch',1);
-%     fprintf(1,'Correct for the wrongfully unerased detection values after re-arrangement of the voc sequence by mergePatch and the previous version of Who_calls_playless (before 01/12/2021)\n')
-%     who_calls_playless(AudioDataPath,Logger_dir,Date, ExpStartTime,200,1,1,0,'CheckAfterMergePatch',0, 'FixingDeletionError',1);
+    %     fprintf(1,'Correct for the wrongfully unerased detection values after re-arrangement of the voc sequence by mergePatch and the previous version of Who_calls_playless (before 01/12/2021)\n')
+    %     who_calls_playless(AudioDataPath,Logger_dir,Date, ExpStartTime,200,1,1,0,'CheckAfterMergePatch',0, 'FixingDeletionError',1);
 end
-    
+
 %% Correct for wrong selection of wav files under voc_localize_using_piezo
 if CorrectMic
     fprintf('\n*** Correct microphone ***\n')
@@ -264,7 +264,7 @@ else
 end
 
 
-    
+
 
 %% Explore what is said
 fprintf('\n*** Identify what is said ***\n')
@@ -288,7 +288,10 @@ else
 end
 
 
-
+%% Check the audio quality of what was saved under what calls by simply calculating a correlation between microphone and logger
+fprintf('\n*** Identify Audio quality ***\n')
+audioQuality_calls(Logger_dir,Date, ExpStartTime);
+fprintf('\n*** DONE Identify Audio quality ***\n')
 
 
 end
