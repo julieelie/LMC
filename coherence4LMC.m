@@ -1,4 +1,4 @@
-function Coherence = coherence4LMC(Cell, Self, Session, FeatureName, Trill, Nvoc,BootstrapType)
+function Coherence = coherence4LMC(Cell, Self, Session, FeatureName, Trill, Nvoc,BootstrapType, Delay)
 % Self is a boolean 0: vocalizations from other bats (auditory coherency) 1: vocalizations from self: motor coherency
 % Session = 'Operant' or 'Free'
 % FeatureName = 'amp' or 'SpectralMean' or 'sal' The feature on which the
@@ -20,6 +20,9 @@ if nargin<6
     Nvoc=0;
 end
 
+if nargin<8
+    Delay=200; % The segment of data taken into account is -Delay ms before the vocalization onset and +200ms after the vocalization offset
+end
 
 PlotCoherenceFig = 0; % To plot the result of coherence calculation for each cell
 StimXYDataPlot=0;
@@ -30,7 +33,6 @@ Fs = 1/(TR*10^-3); % the data is then sampled at the optimal frequency given the
 Nyquist = Fs * 0.5;
 nFFT = 2^ceil(log2(Nyquist));
 %Delay = nFFT/(2*Fs)*10^3;
-Delay=200; % The segment of data taken into account is -Delay ms before the vocalization onset and +200ms after the vocalization offset
 NBoot = 500; % number of voc ID permutation bootstraps for the significance of Info on coherence for each cell
 % Lags = -Delay:Delay;
 % Freqs = (0:ceil(length(Lags)/2)).* (2*Nyquist/length(Lags)); % Lags is a uneven number so F(i) = i*2*Nyquist/length(Lags)
@@ -46,17 +48,19 @@ if ~isfield(Cell, 'What')
     fprintf(1, '------------------Done with Calculations %s %s Self=%d in %ds-------------------\n',  FeatureName, Session, Self,toc(CellTimer));
     return
 else
-    if Self
-        IndVoc = intersect(intersect(find(contains(Cell.What, 'Voc')),find(contains(Cell.ExpType, Session(1)))), find(contains(Cell.Who, 'self')));
-    else
-        IndVoc = intersect(intersect(find(contains(Cell.What, 'Voc')),find(contains(Cell.ExpType, Session(1)))), find(~contains(Cell.Who, 'self')));
-        % make sure these vocalizations did not overlap with other voc
-        IndVoc = intersect(IndVoc, find(Cell.VocOverlap==0));
-        % ensure as well that there is no noise on the microphone track
-        % (e.i. correlation of tracks above ?)
-        IndVoc = intersect(IndVoc, Cell.AudioCorrelation>0.98);
+    if Self % Select vocalizations from the requested session, emitted by self and that have the right delay before and after
+        IndVoc = find(contains(Cell.What, 'Voc') .* contains(Cell.ExpType, Session(1)) .* contains(Cell.Who, 'self') .* (Cell.DelayBefore>=Delay) .* (Cell.DelayAfter>=Delay));
+    else % Select vocalizations from the requested session, emitted by...
+        % Others with no overlap with other vocalizations and that have
+        % the right delay before and after, % ensure as well that there is
+        % no noise on the microphone track (manual annotation) if we are
+        % in free session, no check for operant
+        IndVoc = find(contains(Cell.What, 'Voc') .* contains(Cell.ExpType, Session(1)) .*(~contains(Cell.Who, 'self')) .* (Cell.VocOverlap==0));
+        if strcmp(Session(1), 'F')
+            IndVoc = intersect(IndVoc, find(Cell.AudioQuality==1));
+        end
     end
-    if Trill
+    if Trill % Only select Trill vocalizations
         IndVoc = intersect(IndVoc, find(contains(Cell.What, 'Tr')));
     end
     if Nvoc % We want to caclulate coherence on a fix number of vocalizations, randomly select these
@@ -135,7 +139,10 @@ if PlotCoherenceFig
     suplabel(sprintf('Coherence Cell %d/%d', cc, NCells), 't');
     drawnow
 end
-%% Bootsrap the calculation of coherence and information with permutation of vocalizations identity (X)
+%% Bootsrap the calculation of coherence and information with permutation...
+% of vocalizations identity (X) BootstrapType==0
+% or same vocalization ID but random onset time between 0 and BootstrapType
+% ms or Bootstraptype(1) ms and BootstrapType(2)ms
 
 Info_boot = cell(1,NBoot);
 CohT_DelayAtzero_boot = cell(1,NBoot);

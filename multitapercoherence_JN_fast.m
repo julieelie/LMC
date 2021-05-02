@@ -30,7 +30,7 @@ function [CoherencyT, fo, Coherence, Coherence_up, Coherence_low, stP] = multita
 % Also containing elements from specgram.m
 % 
 % Modified by Anne, 2002.
-% Modified by Julie E Elie, 2020
+% Modified by Julie E Elie, 2021
 
 %% Sorting inputs and setting default values
 if nargin<2

@@ -89,7 +89,7 @@ Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190703'))=[];% No
 Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190709'))=[];% No TTL Pulses
 Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190619'))=[];% Issue of clock drift for logger 49 and 12
 
-for pp= 18:length(Path2RunRecOnly) 
+for pp= 34:length(Path2RunRecOnly) 
 
     Path2ParamFile = List2RecOnlyPath{Path2RunRecOnly(pp)};
     fprintf(1,'\n\n\n\nRunning result_reconly_bat on %s\n\n', Path2ParamFile)
@@ -179,7 +179,7 @@ id = 'MATLAB:Python:UnsupportedLoad';
 warning('off',id)
 
 
-for ss=355:384 %length(GoodCellIndices)
+for ss=1:length(GoodCellIndices)
     fprintf(1,'Cell %d/%d  %s\n',ss,length(GoodCellIndices), ListSSU{Files2Run(GoodCellIndices(ss))})
     neuralData_compile_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath, NeuralBuffer)
 end

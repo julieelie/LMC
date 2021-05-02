@@ -73,6 +73,7 @@ Duration = cell(1,NExpe); % Duration of the behavioral event in ms
 DelayBefore = cell(1,NExpe); % Duration of no behavioral event before the onset in ms if no event before, Delay ms is considered as the safest estimate of the silence time before but here we are doing the assumption that nothing happened between call detected by voc_localize and voc_localize_operant
 DelayAfter = cell(1,NExpe);% Duration of no behavioral event after the offset in ms if no event after, Delay ms is considered as the safest estimate of the silence time after but here we are doing the assumption that nothing happened between call detected by voc_localize and voc_localize_operant
 VocOverlap = cell(1,NExpe); % Indicate if the vocalization overlaps with another one. 0: no overlap; 1: overlap and at least one overlaping vocalization is louder; 2: overlap and it is the loudest vocalization
+AudioQuality = cell(1,NExpe); % Manual annotation of the suitability of the microphpne recording for analysis: was the vocalization clean enough to be heard properly by other bats
 VocWave = cell(1,NExpe);% Wave of the vocalization exactly extracted on Mic
 VocPiezoWave = cell(1,NExpe);% Wave of the vocalization exactly extracted on Piezo
 VocCorr = cell(1,NExpe);% degree of correlation between the piezo and the microphone recordings -> estimate if the vocalization is suitable for audition analysis
@@ -222,6 +223,7 @@ for ff=1:length(DataDir)
             DelayBefore{NExpe} = nan(1,sum(VocCall)); % Duration of no behavioral event before the onset in ms
             DelayAfter{NExpe} = nan(1,sum(VocCall));% Duration of no behavioral event after the offset in ms
             VocOverlap{NExpe} = nan(1,sum(VocCall));% Signal the occurence of anoverlap with another vocalization from another bat
+            AudioQuality{NExpe} = nan(1,sum(VocCall)); % Manual annotation of the suitability of the microphpne recording for analysis: was the vocalization clean enough to be heard properly by other bats
             VocCorr{NExpe} = nan(1,sum(VocCall)); % correlation between Piezo and microphone recording
             VocWave{NExpe} = cell(1,sum(VocCall));% Wave of the vocalization exactly extracted on Mic
             VocPiezoWave{NExpe} = cell(1,sum(VocCall));% Wave of the vocalization exactly extracted on Piezo
@@ -243,7 +245,7 @@ for ff=1:length(DataDir)
                     warning('Issue with files ordering before and after manual curation of the vocalizations (before/after who_calls')
                     keyboard
                 end
-                load(fullfile(DataFileWho(nf).folder, DataFileWho(nf).name), 'IndVocStartRaw_merged','IndVocStopRaw_merged', 'IndVocStartPiezo_merged', 'IndVocStopPiezo_merged','BioSoundCalls','BioSoundFilenames');
+                load(fullfile(DataFileWho(nf).folder, DataFileWho(nf).name), 'IndVocStartRaw_merged','IndVocStopRaw_merged', 'IndVocStartPiezo_merged', 'IndVocStopPiezo_merged','BioSoundCalls','AudioGood','BioSoundFilenames');
                 load(fullfile(DataFileBeforeCuration(nf).folder, DataFileBeforeCuration(nf).name), 'FS','Piezo_wave','Raw_wave','Piezo_FS','Voc_transc_time_refined','VocFilename');
                 % Call sequences with identified vocalizations and re-order the
                 % vocalization in chornological order (calculated in
@@ -330,24 +332,28 @@ for ff=1:length(DataDir)
                                 % Get the duration of the vocalization in ms, the
                                 % time preceding it since the last event and
                                 % the time following until the next event
-                                % %% INEED TO TAKE INTO ACCOUNT WHAT'S
-                                % HAPPENING ON OTHER LOGGERS!
                                 Duration{NExpe}(sum(VocCall)) = (IndVocStopRaw_merged{VocInd(vv)}{ll}(nn) -IndVocStartRaw_merged{VocInd(vv)}{ll}(nn))/FS*1000;
                                 Durations2Preceding_events = IndVocStartRaw_merged{VocInd(vv)}{ll}(nn) - AllStops;
-                                if sum(Durations2Preceding_events>0) % some calls happened just before
+                                if strcmp(SessionType_local, 'O')
+                                    ExpDelay = (0.7*Delay*FS/1000); % in voc_localize_operant the vocalizations are extracted with a little less than 200ms buffer on each side
+                                elseif strcmp(SessionType_local, 'O')
+                                    ExpDelay = 2.2*Delay*FS/1000; % in voc_localize_using_piezo the vocalizations are extracted and merged within 500ms buffer
+                                end
+                                if sum(Durations2Preceding_events>0) && (IndVocStartRaw_merged{VocInd(vv)}{ll}(nn)>ExpDelay) % some calls happened just before and thie vocalization was correctly placed at least 2 * Delay ms after begining of the sequence
                                     DelayBefore{NExpe}(sum(VocCall)) = (min(Durations2Preceding_events(Durations2Preceding_events>0)))/FS*1000;
                                 elseif (vv==1) && (nf==1) % This is the first vocalization of the recording session assume that nothing happened before
                                     DelayBefore{NExpe}(sum(VocCall)) = NeuralBuffer;
-                                else % At best vocalizations before were for sure at a minimum of 200ms (merging time)
-                                    DelayBefore{NExpe}(sum(VocCall)) = Delay;
+                                else % At best vocalizations before were for sure at a minimum of 200ms (merging time) or the delay since the begining of the who_calls sequence
+                                    DelayBefore{NExpe}(sum(VocCall)) = min(Delay, IndVocStartRaw_merged{VocInd(vv)}{ll}(nn)/FS*1000);
                                 end
+                                DurWave_local = length(Raw_wave{VocInd(vv)});
                                 Durations2Following_events = AllStarts - IndVocStopRaw_merged{VocInd(vv)}{ll}(nn);
-                                if sum(Durations2Following_events>0)
+                                if sum(Durations2Following_events>0) && ((DurWave_local-IndVocStopRaw_merged{VocInd(vv)}{ll}(nn))>ExpDelay)
                                     DelayAfter{NExpe}(sum(VocCall)) = (min(Durations2Following_events(Durations2Following_events>0)))/FS*1000;
                                 elseif vv == length(VocInd) && nn == Ncall(vv,ll) % Last call event
                                     DelayAfter{NExpe}(sum(VocCall)) = NeuralBuffer;
                                 else
-                                    DelayAfter{NExpe}(sum(VocCall)) = Delay;
+                                    DelayAfter{NExpe}(sum(VocCall)) = min(Delay, (DurWave_local-IndVocStopRaw_merged{VocInd(vv)}{ll}(nn))/FS*1000);
                                 end
                                 % Any overlap with another event? 0: no
                                 % overlap, 1: Overlap and this event is the
@@ -423,14 +429,16 @@ for ff=1:length(DataDir)
                                     WL = [WL ; zeros(IndOff-DurWave_local,1)]; %#ok<AGROW>
                                 end
                                 VocPiezoWave{NExpe}{sum(VocCall)} = WL; % contains the vocalization with the same delay NeuralBuffer before/after as the neural response
-
-                                % Correlation between microphone and pizeo
-                                % recordings
-                                VocCorr
                                 
                                 % Get the biosound parameters
                                 BioSound{NExpe}{1,sum(VocCall)} = BioSoundCalls{VocCall(nf),1};
                                 BioSound{NExpe}{2,sum(VocCall)} = BioSoundCalls{VocCall(nf),2};
+                                
+                                % Get the Quality of the microphone
+                                % recording
+                                if strcmp(ExpType{NExpe}{sum(VocCall)}, 'F')
+                                    AudioQuality{NExpe}(sum(VocCall)) = AudioGood(VocCall(nf));
+                                end
 
                                 % Identify the type of call VocTr for a Trill,
                                 % VocBa for a bark and VocUn for undefined Voc
@@ -491,6 +499,7 @@ for ff=1:length(DataDir)
             DelayBefore{NExpe} = nan(1,NBehav); % Duration of no behavioral event before the onset in ms
             DelayAfter{NExpe} = nan(1,NBehav);% Duration of no behavioral event after the offset in ms
             VocOverlap{NExpe} = nan(1,NBehav);% This stays empty
+            AudioQuality{NExpe} = nan(1,NBehav);% This stays empty
             SpikesArrivalTimes_Behav{NExpe} = Neuro.Behav_NeuroSSU.SpikeSUBehav';% Spike arrival time of the behavioral event
             Who{NExpe} = cell(1,NBehav);% Identity of the performing bat (self or ID of the bat)
             What{NExpe} = Neuro.Behav_What(Neuro.Behav_NeuroSSU.BehavIdxSSUAlive)';% Type of Behavior
@@ -523,6 +532,7 @@ Duration = reshape([Duration{:}],1,sum(NEvents))'; % Duration of the behavioral 
 DelayBefore = reshape([DelayBefore{:}],1,sum(NEvents))'; % Duration of no behavioral event before the onset in ms
 DelayAfter = reshape([DelayAfter{:}],1,sum(NEvents))'; % Duration of no behavioral event after the offset in ms
 VocOverlap = reshape([VocOverlap{:}],1,sum(NEvents))';% Indicate if the vocalization overlaps with another one. 0: no overlap; 1: overlap and at least one overlaping vocalization is louder; 2: overlap and it is the loudest vocalization
+AudioQuality = reshape([AudioQuality{:}],1,sum(NEvents))';% Manual annotation of the suitability of the microphpne recording for analysis: was the vocalization clean enough to be heard properly by other bats
 VocWave = reshape([VocWave{:}],1,sum(NEvents))'; % Wave of the vocalization exactly extracted on Mic
 VocPiezoWave = reshape([VocPiezoWave{:}],1,sum(NEvents))'; % Wave of the vocalization exactly extracted on Piezo
 VocRank = reshape([VocRank{:}], 1,sum(NEvents))';% Rank of the vocal element in the sequence of vocalization
@@ -537,14 +547,14 @@ ExpType = reshape([ExpType{:}],1,sum(NEvents))';
 
 if exist(OutputDataFile, 'file')
     lastwarn('')
-    save(OutputDataFile, 'Duration','DelayBefore','DelayAfter', 'VocOverlap', 'VocWave', 'VocPiezoWave', 'VocRank', 'BioSound','BSLDuration', 'SpikesArrivalTimes_Baseline','SpikesArrivalTimes_Behav','Who','What','ExpType','RewardTime','-append');
+    save(OutputDataFile, 'Duration','DelayBefore','DelayAfter', 'VocOverlap', 'AudioQuality','VocWave', 'VocPiezoWave', 'VocRank', 'BioSound','BSLDuration', 'SpikesArrivalTimes_Baseline','SpikesArrivalTimes_Behav','Who','What','ExpType','RewardTime','-append');
 %     if contains(lastwarn, 'Variable ''VocWave'' was not saved. For variables larger than 2GB use MAT-file version 7.3 or later.') || contains(lastwarn, 'Variable ''VocPiezoWave'' was not saved. For variables larger than 2GB use MAT-file version 7.3 or later.')
 %         save(OutputDataFile, 'Duration','DelayBefore','DelayAfter', 'VocOverlap', 'VocWave', 'VocPiezoWave', 'VocRank', 'BioSound','BSLDuration', 'SpikesArrivalTimes_Baseline','SpikesArrivalTimes_Behav','Who','What','ExpType','RewardTime','-append', '-v7.3');
 %     end
             
 else
     lastwarn('')
-    save(OutputDataFile, 'Duration','DelayBefore','DelayAfter','VocOverlap', 'VocWave', 'VocPiezoWave', 'VocRank', 'BioSound','BSLDuration', 'SpikesArrivalTimes_Baseline','SpikesArrivalTimes_Behav','Who','What','ExpType','RewardTime');
+    save(OutputDataFile, 'Duration','DelayBefore','DelayAfter','VocOverlap','AudioQuality', 'VocWave', 'VocPiezoWave', 'VocRank', 'BioSound','BSLDuration', 'SpikesArrivalTimes_Baseline','SpikesArrivalTimes_Behav','Who','What','ExpType','RewardTime');
 %     if contains(lastwarn, 'Variable ''VocWave'' was not saved. For variables larger than 2GB use MAT-file version 7.3 or later.') || contains(lastwarn, 'Variable ''VocPiezoWave'' was not saved. For variables larger than 2GB use MAT-file version 7.3 or later.')
 %         save(OutputDataFile, 'Duration','DelayBefore','DelayAfter', 'VocOverlap', 'VocWave', 'VocPiezoWave', 'VocRank', 'BioSound','BSLDuration', 'SpikesArrivalTimes_Baseline','SpikesArrivalTimes_Behav','Who','What','ExpType','RewardTime', '-v7.3');
 %     end

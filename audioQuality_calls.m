@@ -111,6 +111,9 @@ for df=1:length(DataFiles) %1
         if isempty(IndVocStart)
             keyboard
         end
+        if isempty(IndVocStart)
+            continue
+        end
         IndVocStart_diffind = find(diff(IndVocStart)>1);
         IndVocStart = [IndVocStart(1) IndVocStart(IndVocStart_diffind +1)];
         NV = length(IndVocStart);
