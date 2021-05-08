@@ -1,4 +1,4 @@
-function Coherence = coherence4LMC(Cell, Self, Session, FeatureName, Trill, Nvoc,BootstrapType, Delay)
+function Coherence = coherence4LMC(Cell, Self, Session, FeatureName, Trill, Nvoc,BootstrapType, Average, Delay)
 % Self is a boolean 0: vocalizations from other bats (auditory coherency) 1: vocalizations from self: motor coherency
 % Session = 'Operant' or 'Free'
 % FeatureName = 'amp' or 'SpectralMean' or 'sal' The feature on which the
@@ -21,6 +21,10 @@ if nargin<6
 end
 
 if nargin<8
+    Average = 0; %1 calculate X as the weighted average over all input X
+end
+
+if nargin<9
     Delay=200; % The segment of data taken into account is -Delay ms before the vocalization onset and +200ms after the vocalization offset
 end
 
@@ -104,12 +108,22 @@ end
 
 %% Calculate acoustic features input to the models
 % acoustic data is a vector of the value of the acoustic feature sampled
-% at 1000Hz starting -200ms (Delay) before stim onset and stop at 200ms (Delay) after
+% at 1/TRHz starting -200ms (Delay) before stim onset and stop at 200ms (Delay) after
 % stim offset
 DefaultVal = 0;%zero should be the default value for the amplitude, we know here that there is no sound
 [XPerStim, XPerStimt] = get_x_4coherence(Cell.BioSound(IndVoc,2), Cell.Duration(IndVoc), Delay,TR,DefaultVal,FeatureName);
+if Average
+    Length = cellfun(@length, XPerStim);
+    XPerStim_mat = nan(NStims, max(Length));
+    for Stim = 1:NStims
+        XPerStim_mat(Stim,1:Length(Stim)) = XPerStim{Stim};
+    end
+    AvStim = nanmean(XPerStim_mat,1);
+    for Stim = 1:NStims
+        XPerStim{Stim} = AvStim(1:Length(Stim));
+    end
+end
 X = [XPerStim{:}]';
-
 
 if StimXYDataPlot
     if strcmp(FeatureName, 'amp') %#ok<UNRCH>
@@ -145,73 +159,73 @@ end
 % of vocalizations identity (X) BootstrapType==0
 % or same vocalization ID but random onset time between 0 and BootstrapType
 % ms or Bootstraptype(1) ms and BootstrapType(2)ms
-
-Info_boot = cell(1,NBoot);
-CohT_DelayAtzero_boot = cell(1,NBoot);
-CohT_WidthAtMaxPeak_boot = cell(1,NBoot);
-warning('off', 'signal:findpeaks:largeMinPeakHeight')
-parfor bb=1:NBoot %parfor
-    if ~mod(bb,NBoot/10)
-        fprintf(1, 'Bootstrap %d  ', bb)
-    end
+if BootstrapType
+    Info_boot = cell(1,NBoot);
+    CohT_DelayAtzero_boot = cell(1,NBoot);
+    CohT_WidthAtMaxPeak_boot = cell(1,NBoot);
     warning('off', 'signal:findpeaks:largeMinPeakHeight')
-    if BootstrapType==0
-        Xboot = [XPerStim{randperm(length(XPerStim))}]';
-        Yboot = Y;
-    elseif BootstrapType==1
-        Yboot = YPerStim;
-        for Stim=1:length(YPerStim)
-            TimeShuffle = randi([1 length(YPerStim{Stim})]);
-            Yboot{Stim} = [YPerStim{Stim}(TimeShuffle:end) YPerStim{Stim}(1:TimeShuffle-1)];  
+    parfor bb=1:NBoot %parfor
+        if ~mod(bb,NBoot/10)
+            fprintf(1, 'Bootstrap %d  ', bb)
         end
-        Yboot = [Yboot{:}]';
-        Xboot = X;
-    elseif BootstrapType==2
-        TimeShuffle = randi([1 length(Y)]);
-        Yboot = [Y(TimeShuffle:end); Y(1:TimeShuffle-1)];  
-        Xboot = X;
-    else
-        error('Wrong input for BootstrapType')
+        warning('off', 'signal:findpeaks:largeMinPeakHeight')
+        if BootstrapType==1
+            Xboot = [XPerStim{randperm(length(XPerStim))}]';
+            Yboot = Y;
+        elseif BootstrapType==2
+            Yboot = YPerStim;
+            for Stim=1:length(YPerStim)
+                TimeShuffle = randi([1 length(YPerStim{Stim})]);
+                Yboot{Stim} = [YPerStim{Stim}(TimeShuffle:end) YPerStim{Stim}(1:TimeShuffle-1)];  
+            end
+            Yboot = [Yboot{:}]';
+            Xboot = X;
+        elseif BootstrapType==3
+            TimeShuffle = randi([1 length(Y)]);
+            Yboot = [Y(TimeShuffle:end); Y(1:TimeShuffle-1)];  
+            Xboot = X;
+        else
+            error('Wrong input for BootstrapType')
+        end
+        [CoherencyT_unshifted, Freqs_b, CSR, ~, CSR_low,~] = multitapercoherence_JN_fast([Yboot Xboot],nFFT,Fs);
+        [Bootstrap]=coherenceinfo_cal_bootstrap(CoherencyT_unshifted,Freqs_b, CSR, CSR_low, Nyquist,Fs,nFFT, TR);
+        Info_boot{bb} = Bootstrap.Info;
+        CohT_DelayAtzero_boot{bb} = Bootstrap.CoherencyT_DelayAtzero;
+        CohT_WidthAtMaxPeak_boot{bb} = Bootstrap.CoherencyT_WidthAtMaxPeak;
     end
-    [CoherencyT_unshifted, Freqs_b, CSR, ~, CSR_low,~] = multitapercoherence_JN_fast([Yboot Xboot],nFFT,Fs);
-    [Bootstrap]=coherenceinfo_cal_bootstrap(CoherencyT_unshifted,Freqs_b, CSR, CSR_low, Nyquist,Fs,nFFT, TR);
-    Info_boot{bb} = Bootstrap.Info;
-    CohT_DelayAtzero_boot{bb} = Bootstrap.CoherencyT_DelayAtzero;
-    CohT_WidthAtMaxPeak_boot{bb} = Bootstrap.CoherencyT_WidthAtMaxPeak;
-end
-warning('on', 'signal:findpeaks:largeMinPeakHeight')
-fprintf(1, 'DONE\n')
-if BootstrapType==0
-    Coherence.Bootstrap.Info = [Info_boot{:}];
-    Coherence.Bootstrap.CoherencyT_DelayAtzero = [CohT_DelayAtzero_boot{:}];
-    Coherence.Bootstrap.CoherencyT_WidthAtMaxPeak = [CohT_WidthAtMaxPeak_boot{:}];
-    Coherence.Info_p = sum((Coherence.Bootstrap.Info - Coherence.Info)>= 0)/NBoot;
-elseif BootstrapType==1
-    Coherence.BootstrapTime.Info = [Info_boot{:}];
-    Coherence.BootstrapTime.CoherencyT_DelayAtzero = [CohT_DelayAtzero_boot{:}];
-    Coherence.BootstrapTime.CoherencyT_WidthAtMaxPeak = [CohT_WidthAtMaxPeak_boot{:}];
-    Coherence.Info_pTime = sum((Coherence.BootstrapTime.Info - Coherence.Info)>= 0)/NBoot;
-    
-elseif BootstrapType==2
-    Coherence.BootstrapFullTime.Info = [Info_boot{:}];
-    Coherence.BootstrapFullTime.CoherencyT_DelayAtzero = [CohT_DelayAtzero_boot{:}];
-    Coherence.BootstrapFullTime.CoherencyT_WidthAtMaxPeak = [CohT_WidthAtMaxPeak_boot{:}];
-    Coherence.Info_pFullTime = sum((Coherence.BootstrapFullTime.Info - Coherence.Info)>= 0)/NBoot;
-end
+    warning('on', 'signal:findpeaks:largeMinPeakHeight')
+    fprintf(1, 'DONE\n')
+    if BootstrapType==1
+        Coherence.Bootstrap.Info = [Info_boot{:}];
+        Coherence.Bootstrap.CoherencyT_DelayAtzero = [CohT_DelayAtzero_boot{:}];
+        Coherence.Bootstrap.CoherencyT_WidthAtMaxPeak = [CohT_WidthAtMaxPeak_boot{:}];
+        Coherence.Info_p = sum((Coherence.Bootstrap.Info - Coherence.Info)>= 0)/NBoot;
+    elseif BootstrapType==2
+        Coherence.BootstrapTime.Info = [Info_boot{:}];
+        Coherence.BootstrapTime.CoherencyT_DelayAtzero = [CohT_DelayAtzero_boot{:}];
+        Coherence.BootstrapTime.CoherencyT_WidthAtMaxPeak = [CohT_WidthAtMaxPeak_boot{:}];
+        Coherence.Info_pTime = sum((Coherence.BootstrapTime.Info - Coherence.Info)>= 0)/NBoot;
 
-if PlotCoherenceFig
-    figure(4) %#ok<UNRCH>
-    clf
-    histogram(Coherence.Bootstrap.Info)
-    hold on
-    VL = vline(Coherence.Info, '-r');
-    VL.LineWidth = 2;
-    ylabel(sprintf('# bootstrap (total = %d)', NBoot))
-    xlabel(sprintf('Information on coherence with sound %s', FeatureName))
-    title(sprintf('Cell Significance of information with bootstraped permutation test p=%.2f', Coherence.Info_p))
-    drawnow
-end
+    elseif BootstrapType==3
+        Coherence.BootstrapFullTime.Info = [Info_boot{:}];
+        Coherence.BootstrapFullTime.CoherencyT_DelayAtzero = [CohT_DelayAtzero_boot{:}];
+        Coherence.BootstrapFullTime.CoherencyT_WidthAtMaxPeak = [CohT_WidthAtMaxPeak_boot{:}];
+        Coherence.Info_pFullTime = sum((Coherence.BootstrapFullTime.Info - Coherence.Info)>= 0)/NBoot;
+    end
 
+    if PlotCoherenceFig
+        figure(4) %#ok<UNRCH>
+        clf
+        histogram(Coherence.Bootstrap.Info)
+        hold on
+        VL = vline(Coherence.Info, '-r');
+        VL.LineWidth = 2;
+        ylabel(sprintf('# bootstrap (total = %d)', NBoot))
+        xlabel(sprintf('Information on coherence with sound %s', FeatureName))
+        title(sprintf('Cell Significance of information with bootstraped permutation test p=%.2f', Coherence.Info_p))
+        drawnow
+    end
+end
 %     keyboard
 %     if Info(cc)>2
 %         keyboard
