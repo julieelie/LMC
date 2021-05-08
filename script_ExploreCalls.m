@@ -32,7 +32,10 @@ for Seti=1:Nsets
     load([List2AudioPath{Seti}(1:end-8) '.mat'], 'Voc_transc_time_refined', 'Piezo_FS')
     ALnames = fieldnames(Piezo_FS);
     if exist('BioSoundFilenames', 'var')
-        VocInd = find(~cellfun('isempty',(BioSoundFilenames(:,1))));
+        VocInd1 = find(~cellfun('isempty',(BioSoundFilenames(:,1))));
+        VocInd2 = find(~cellfun('isempty',(BioSoundCalls(:,1))));
+        VocInd3 = find(~cellfun('isempty',(BioSoundCalls(:,2))));
+        VocInd = intersect(intersect(VocInd1, VocInd2), VocInd3);
         NVoc = length(VocInd);
         Filenames{Seti} = cell(1,NVoc);
         BatIDs{Seti} = cell(1,NVoc);
@@ -246,18 +249,22 @@ ICOI_Free_intra=cell(1,length(BatU)); % Inter call onset intervals intra individ
 ICOI_Free_inter=cell(1,length(DateU)); % Inter call onset intervals inter individuals, all bats
 
 
-for BatI = 1:length(BatU)
+for BatI = 3:length(BatU)
     BatI_logical = CallOnSetOffsetBat == BatU(BatI);
     DateBatI = unique(CallOnSetOffsetDate(BatI_logical));
     ICOI_Free_intra{BatI} = cell(1,length(DateBatI));
     if sum(CallOnSetOffsetSessionID(CallOnSetOffsetBat == BatU(BatI))) % This bat was also calling during operant tests
         ICI_Free = cell(1,length(DateBatI));
         ICI_Operant = cell(1,length(DateBatI));
+        ICOI_Free = cell(1,length(DateBatI));
+        ICOI_Operant = cell(1,length(DateBatI));
         CallDuration_Free = cell(1,length(DateBatI));
         CallDuration_Operant = cell(1,length(DateBatI));
     else
         ICI_Free = cell(1,length(DateBatI));
         ICI_Operant = [];
+        ICOI_Free = cell(1,length(DateBatI));
+        ICOI_Operant = [];
         CallDuration_Free = cell(1,length(DateBatI));
         CallDuration_Operant = [];
     end
@@ -281,6 +288,7 @@ for BatI = 1:length(BatU)
                 end
             end
             ICI_Free{dd} = Onset_free_local(2:end) - Offset_free_local(1:end-1);
+            ICOI_Free{dd} = diff(Onset_free_local);
         else
             BatIDateIFree = intersect(BatIDateI, find(~CallOnSetOffsetSessionID));
             Onset_free_local = CallOnSetOffset(BatIDateIFree,1)';
@@ -300,6 +308,7 @@ for BatI = 1:length(BatU)
                 end
             end
             ICI_Free{dd} = Onset_free_local(2:end) - Offset_free_local(1:end-1);
+            ICOI_Free{dd} = diff(Onset_free_local);
             
             BatIDateIOp = intersect(BatIDateI, find(CallOnSetOffsetSessionID));
             Onset_Op_local = CallOnSetOffset(BatIDateIOp,1)';
@@ -319,6 +328,7 @@ for BatI = 1:length(BatU)
                 end
             end
             ICI_Operant{dd} = Onset_Op_local(2:end) - Offset_Op_local(1:end-1);
+            ICOI_Operant{dd} = diff(Onset_Op_local);
         end
         ICOI_Free_intra{BatI}{dd} = diff(Onset_free_local);
         if any(ICOI_Free_intra{BatI}{dd}<0)
@@ -329,11 +339,15 @@ for BatI = 1:length(BatU)
     CallDuration_Free = [CallDuration_Free{:}]';
     ICI_Free = [ICI_Free{:}]';
     ICI_Free = ICI_Free(ICI_Free>=0);
+    ICOI_Free = [ICOI_Free{:}]';
+    ICOI_Free = ICOI_Free(ICOI_Free>=0);
     ICOI_Free_intra{BatI} = [ICOI_Free_intra{BatI}{:}];
     if ~isempty(ICI_Operant)
         CallDuration_Operant = [CallDuration_Operant{:}]';
         ICI_Operant = [ICI_Operant{:}]';
         ICI_Operant = ICI_Operant(ICI_Operant>=0);
+        ICOI_Operant = [ICOI_Operant{:}]';
+        ICOI_Operant = ICOI_Operant(ICOI_Operant>=0);
     end
     figure()
     if isempty(ICI_Operant) % Only free session data
@@ -355,13 +369,13 @@ for BatI = 1:length(BatU)
         vline(log10(200), ':r')
         title('Free Session')
     else
-        subplot(2,2,1)
+        subplot(2,4,1)
         histogram(CallDuration_Free)
         ylabel('# calls Free Session')
         xlabel('duration (ms)')
         title('Free Session')
         
-        subplot(2,2,2)
+        subplot(2,4,2)
 %         histogram(ICI_Free)
         H=histogram(log10(ICI_Free))
         H.BinEdges = 0:0.1:9;
@@ -373,13 +387,13 @@ for BatI = 1:length(BatU)
         vline(log10(200), ':r')
         title('Free Session')
         
-        subplot(2,2,3)
+        subplot(2,4,3)
         histogram(CallDuration_Operant)
         ylabel('# calls Operant Session')
         xlabel('duration (ms)')
         title('Operant Session')
         
-        subplot(2,2,4)
+        subplot(2,4,4)
 %         histogram(ICI_Operant)
         H=histogram(log10(ICI_Operant))
         H.BinEdges = 0:0.1:9;
@@ -390,8 +404,55 @@ for BatI = 1:length(BatU)
         hold on
         vline(log10(200), ':r')
         title('Operant Session')
+        
+        subplot(2,4,5)
+        H=histogram(log10(ICOI_Free), 'FaceColor','k', 'Normalization', 'cdf')
+        H.BinEdges = 0:0.1:9;
+        H.Parent.XTick = 0:9;
+        H.Parent.XTickLabel = power(10, H.Parent.XTick);
+        ylabel('# calls Free Session')
+        xlabel('InterCall Interval (ms)')
+        title('Free Session')
+        
+        subplot(2,4,6)
+        H=histogram(log10(ICOI_Operant), 'FaceColor', 'k', 'Normalization', 'probability')
+        H.BinEdges = 0:0.1:9;
+        H.Parent.XTick = 0:9;
+        H.Parent.XTickLabel = power(10, H.Parent.XTick);
+        ylabel('# calls Operant Session')
+        xlabel('InterCall Interval (ms)')
+        title('Operant Session')
+        
+        subplot(2,4,7)
+        H=histogram2(log10(ICOI_Free(1:end-1)), log10(ICOI_Free(2:end)), 0:0.1:9, 0:0.1:9, 'DisplayStyle','tile', 'Normalization', 'probability')
+        H.Parent.XTick = 0:9;
+        H.Parent.XTickLabel = power(10, H.Parent.XTick);
+        H.Parent.YTick = 0:9;
+        H.Parent.YTickLabel = power(10, H.Parent.YTick);
+        xlabel('InterCall Interval before a given call (ms)')
+        ylabel('InterCall Interval after a given call (ms)')
+        CBar = colorbar;
+        ylabel(CBar, 'probability')
+        title('Free Session')
+        grid off
+        box off
+        
+        subplot(2,4,8)
+        H=histogram2(log10(ICOI_Operant(1:end-1)), log10(ICOI_Operant(2:end)), 0:0.1:9, 0:0.1:9, 'DisplayStyle','tile', 'Normalization', 'probability')
+        H.Parent.XTick = 0:9;
+        H.Parent.XTickLabel = power(10, H.Parent.XTick);
+        H.Parent.YTick = 0:9;
+        H.Parent.YTickLabel = power(10, H.Parent.YTick);
+        xlabel('InterCall Interval before a given call (ms)')
+        ylabel('InterCall Interval after a given call (ms)')
+        CBar = colorbar;
+        ylabel(CBar, 'probability')
+        title('Operant Session')
+        grid off
+        box off
     end
     suplabel(sprintf('Bat ID: %d', BatU(BatI)) ,'t');
+    keyboard
 end
 
 ICOI_Free_intra = [ICOI_Free_intra{:}]';

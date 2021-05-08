@@ -134,6 +134,8 @@ end
 %% Calculate information on coherence and other parameters on coherence
 Coherence=coherenceinfo_cal(CoherencyT_unshifted,Freqs, CSR, CSR_up, CSR_low, Nyquist,Fs,nFFT,TR,PlotCoherenceFig, FeatureName);
 Coherence.Freqs =Freqs;
+Coherence.LengthX = length(X);
+Coherence.NStims = NStims;
 if PlotCoherenceFig
     figure(3) %#ok<UNRCH>
     suplabel(sprintf('Coherence Cell %d/%d', cc, NCells), 't');
@@ -153,25 +155,25 @@ parfor bb=1:NBoot %parfor
         fprintf(1, 'Bootstrap %d  ', bb)
     end
     warning('off', 'signal:findpeaks:largeMinPeakHeight')
-    if length(BootstrapType)==1 && BootstrapType==0
-        X = [XPerStim{randperm(length(XPerStim))}]';
+    if BootstrapType==0
+        Xboot = [XPerStim{randperm(length(XPerStim))}]';
+        Yboot = Y;
+    elseif BootstrapType==1
+        Yboot = YPerStim;
+        for Stim=1:length(YPerStim)
+            TimeShuffle = randi([1 length(YPerStim{Stim})]);
+            Yboot{Stim} = [YPerStim{Stim}(TimeShuffle:end) YPerStim{Stim}(1:TimeShuffle-1)];  
+        end
+        Yboot = [Yboot{:}]';
+        Xboot = X;
+    elseif BootstrapType==2
+        TimeShuffle = randi([1 length(Y)]);
+        Yboot = [Y(TimeShuffle:end); Y(1:TimeShuffle-1)];  
+        Xboot = X;
     else
-        X = XPerStim;
-        if length(BootstrapType)==1
-            TimeShuffle = randi([-round(BootstrapType/TR) round(BootstrapType/TR)],1,length(XPerStim));
-        elseif length(BootstrapType)==2
-            TimeShuffle = [randi([-round(BootstrapType(2)/TR) -round(BootstrapType(1)/TR)],1,round(length(XPerStim)/2)) randi([round(BootstrapType(1)/TR) round(BootstrapType(2)/TR)],1,length(XPerStim)-round(length(XPerStim)/2))];
-        end
-        for Stim=1:length(XPerStim)
-            if TimeShuffle(Stim)<0
-                X{Stim} = [XPerStim{Stim}((-TimeShuffle(Stim)+1):end) XPerStim{Stim}(1:-TimeShuffle(Stim))];
-            elseif TimeShuffle(Stim)>0
-                X{Stim} = [XPerStim{Stim}((end-TimeShuffle(Stim)+1):end) XPerStim{Stim}(1:(end-TimeShuffle(Stim)))];
-            end    
-        end
-        X = [X{:}]';
+        error('Wrong input for BootstrapType')
     end
-    [CoherencyT_unshifted, Freqs_b, CSR, ~, CSR_low,~] = multitapercoherence_JN_fast([Y X],nFFT,Fs);
+    [CoherencyT_unshifted, Freqs_b, CSR, ~, CSR_low,~] = multitapercoherence_JN_fast([Yboot Xboot],nFFT,Fs);
     [Bootstrap]=coherenceinfo_cal_bootstrap(CoherencyT_unshifted,Freqs_b, CSR, CSR_low, Nyquist,Fs,nFFT, TR);
     Info_boot{bb} = Bootstrap.Info;
     CohT_DelayAtzero_boot{bb} = Bootstrap.CoherencyT_DelayAtzero;
@@ -179,10 +181,23 @@ parfor bb=1:NBoot %parfor
 end
 warning('on', 'signal:findpeaks:largeMinPeakHeight')
 fprintf(1, 'DONE\n')
-Coherence.Bootstrap.Info = [Info_boot{:}];
-Coherence.Bootstrap.CoherencyT_DelayAtzero = [CohT_DelayAtzero_boot{:}];
-Coherence.Bootstrap.CoherencyT_WidthAtMaxPeak = [CohT_WidthAtMaxPeak_boot{:}];
-Coherence.Info_p = sum((Coherence.Bootstrap.Info - Coherence.Info)>= 0)/NBoot;
+if BootstrapType==0
+    Coherence.Bootstrap.Info = [Info_boot{:}];
+    Coherence.Bootstrap.CoherencyT_DelayAtzero = [CohT_DelayAtzero_boot{:}];
+    Coherence.Bootstrap.CoherencyT_WidthAtMaxPeak = [CohT_WidthAtMaxPeak_boot{:}];
+    Coherence.Info_p = sum((Coherence.Bootstrap.Info - Coherence.Info)>= 0)/NBoot;
+elseif BootstrapType==1
+    Coherence.BootstrapTime.Info = [Info_boot{:}];
+    Coherence.BootstrapTime.CoherencyT_DelayAtzero = [CohT_DelayAtzero_boot{:}];
+    Coherence.BootstrapTime.CoherencyT_WidthAtMaxPeak = [CohT_WidthAtMaxPeak_boot{:}];
+    Coherence.Info_pTime = sum((Coherence.BootstrapTime.Info - Coherence.Info)>= 0)/NBoot;
+    
+elseif BootstrapType==2
+    Coherence.BootstrapFullTime.Info = [Info_boot{:}];
+    Coherence.BootstrapFullTime.CoherencyT_DelayAtzero = [CohT_DelayAtzero_boot{:}];
+    Coherence.BootstrapFullTime.CoherencyT_WidthAtMaxPeak = [CohT_WidthAtMaxPeak_boot{:}];
+    Coherence.Info_pFullTime = sum((Coherence.BootstrapFullTime.Info - Coherence.Info)>= 0)/NBoot;
+end
 
 if PlotCoherenceFig
     figure(4) %#ok<UNRCH>
@@ -203,10 +218,6 @@ end
 %     end
 fprintf(1, '------------------Done with Calculations %s %s Self=%d in %ds-------------------\n',  FeatureName, Session, Self,toc(CellTimer));
 
-
-% Order cells by
-% decreasing values of info
-[~,Coherence.GoodInfo] = sort(Coherence.Info,'descend');
 
 
 %% INTERNAL FUNCTIONS
