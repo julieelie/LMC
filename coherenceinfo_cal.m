@@ -125,7 +125,8 @@ end
 
 % Plot the value of coherency as a function of delay
 if PlotCoherenceFig
-    figure(3)
+%     figure(3)
+figure()
     clf
     subplot(1,3,1)
     plot(CoherencyT_xTimeDelay, CoherencyT_filt, 'LineWidth',2);

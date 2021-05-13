@@ -44,6 +44,22 @@ IndVocPDF = intersect(IndVocPD, IndVocF);
 IndVocHD = intersect(IndVocH, IndVocD);
 IndVocHDO = intersect(IndVocHD, IndVocO);
 IndVocHDF = intersect(IndVocHD, IndVocF);
+
+
+%% Figure only onset with spectrograms and amplitude
+
+Fig6bis = figure();
+% ColorLegend.name = {'Ba' 'Tr'};
+ColorLegend.name = {'Vocalization'};
+% ColorLegend.color = {[0/255 191/255 255/255]; [1 0.7 0.7]};
+ColorLegend.color = {[0.6350, 0.0780, 0.1840, 0.5]};
+% Color = ColorLegend.color{1}.*contains(Data.What, ColorLegend.name{1}) + ColorLegend.color{2}.*contains(Data.What, ColorLegend.name{2});
+Color = [0.6350, 0.0780, 0.1840, 0.5];
+if isfield(Data.KDE_onset, 'SelfVocOp')
+    ColKDE = [0.25 0.25 0.25];
+    timerasterkdeOnSpectroAmp(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPDO,Data.BioSound, Color,ColorLegend,Data.KDE_onset.SelfVocOp,ColKDE)
+end
+
 %% Time Raster plot alligned to vocalization production onset/offset self vocalizations Operant + Free First voc of sequence only
 if ~isempty(IndVocPD) && ~isempty(IndVocPDO) && ~isempty(IndVocPDF) && length(IndVocPD)>MinNumCall
     Fig1 = figure();% TrCol = [0.9290, 0.6940, 0.1250];BaCol = [1, 0, 0];
@@ -92,6 +108,7 @@ if ~isempty(IndVocPDO) && length(IndVocPDO)>MinNumCall
     suplabel(sprintf('CALLS FROM SUBJECT OPERANT   %s on %s Raster T%s SS%s %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{3},NeuralInputID{2}),'t');
     print(Fig6,fullfile(OutputPath,sprintf('%s_RasterVocSelfOp_%d.pdf', FileNameBase, Delay(1))),'-dpdf','-fillpage')
 end
+
 
 %% Time Raster plot alligned to vocalization perception onset/offset during operant conditioning First voc of sequence only
 if ~isempty(IndVocHDO) && length(IndVocHDO)>MinNumCall
@@ -345,7 +362,7 @@ function timerasterkde(SpikesArrivalTimes,Duration,Delay,Indices, Color, ColorLe
                 Sat = Sat(SpikeInd);
                 for spike=1:length(Sat)
                     hold on
-                    plot(Sat(spike)*ones(2,1), oo-[0.9 0.1], 'k-', 'LineWidth',2)
+                    plot(Sat(spike)*ones(2,1), oo-[0.9 0.1], 'k-', 'LineWidth',1.5)
                 end
             end
             hold on
@@ -583,4 +600,310 @@ function timerasterkde(SpikesArrivalTimes,Duration,Delay,Indices, Color, ColorLe
             end
         end
     end
+
+
+function timerasterkdeOnSpectroAmp(SpikesArrivalTimes,Duration,Delay,Indices, BioSound, Color, ColorLegend, Dat1, Col1, RewardTime,DurOrd)
+    if nargin<10
+        RewardTime = nan(length(Duration),1);
+    end
+    if nargin<11
+        DurOrd=0;
+    end
+    if DurOrd
+        % We want to plot data with increasing duration of
+        % vocalizations.
+        [~,IDur] = sort(Duration(Indices));
+    else
+        IDur = 1:length(Indices);
+    end
+    
+    % Plot spectrogram of the longest call from Microphone
+    ss1=subplot(7,1,1);
+    DBNOISE =60;
+    f_low = 0;
+    LongestVoc = find(Duration==max(Duration(Indices)));
+    LongestVoc = LongestVoc(1);
+    yyaxis left
+    logB = BioSound{LongestVoc,1}.spectro;
+    maxB = max(max(logB));
+    minB = maxB-DBNOISE;
+    imagesc(double(BioSound{LongestVoc,1}.to)*1000,double(BioSound{LongestVoc,1}.fo),logB);          % to is in seconds
+    axis xy;
+    caxis('manual');
+    caxis([minB maxB]);
+    cmap = spec_cmap();
+    colormap(cmap);
+    %         colorbar()
+    v_axis = axis;
+    v_axis(3)=f_low;
+    v_axis(4)=50000;
+    axis(v_axis);
+    xlabel('time (ms)'), ylabel('Frequency');
+    XLIM = [-Delay(1) max(Duration(Indices))+Delay(2)];
+    xlim(XLIM)
+    
+    % Plot spectrogram of the longest call from Piezo
+    ss2=subplot(7,1,2);
+    DBNOISE =60;
+    f_low = 0;
+    yyaxis left
+    logB = BioSound{LongestVoc,2}.spectro;
+    maxB = max(max(logB));
+    minB = maxB-DBNOISE;
+    imagesc(double(BioSound{LongestVoc,2}.to)*1000,double(BioSound{LongestVoc,2}.fo),logB);          % to is in seconds
+    axis xy;
+    caxis('manual');
+    caxis([minB maxB]);
+    cmap = spec_cmap();
+    colormap(cmap);
+    %         colorbar()
+    v_axis = axis;
+    v_axis(3)=f_low;
+    v_axis(4)=10000;
+    axis(v_axis);
+    xlabel('time (ms)'), ylabel('Frequency');
+    XLIM = [-Delay(1) max(Duration(Indices))+Delay(2)];
+    xlim(XLIM)        
+    
+    % Plot spikes and vocalization spots alligned to vocalization onset
+    % and gather amplitude data
+    XAmp_Mat = zeros(length(Indices), Duration(LongestVoc));
+    YSpike_Mat = zeros(length(Indices), Duration(LongestVoc) + sum(Delay));
+    ss3=subplot(7,1,[3 4 5]);
+    for oo=1:length(Indices)
+        cc=IDur(oo);
+        XAmp_Mat(oo,round(BioSound{Indices(oo),2}.tAmp .*1000)+1) = BioSound{Indices(oo),2}.amp;
+        
+        hold on
+        % plot vocalization timing
+        if size(Color,1)==1
+            plot([0 Duration(Indices(cc))], oo-[0.5 0.5], '-','LineWidth',250/length(Indices),'Color', Color)
+        else
+            plot([0 Duration(Indices(cc))], oo-[0.5 0.5], '-','LineWidth',250/length(Indices),'Color', Color(Indices(cc),:)) % vocalization
+        end
+        
+        % plot reward time
+        if ~isinf(RewardTime(Indices(cc))) && ~isnan(RewardTime(Indices(cc)))
+            plot(RewardTime(Indices(cc)), oo-0.5,'o','MarkerSize',6, 'MarkerFaceColor',[1 0.85 0.275],'MarkerEdgeColor',[1 0.85 0.275])
+            hold on
+        end
+        % plot spikes
+        Sat = SpikesArrivalTimes{Indices(cc)};
+        if Delay(2)<5000
+            SpikeInd = find((Sat>-Delay(1)).*(Sat<(max(Duration(Indices))+Delay(2))));
+        else
+            SpikeInd = find((Sat>-Delay(1)).*(Sat<(Duration(Indices(cc))+Delay(2))));
+        end
+        if ~isempty(SpikeInd)
+            Sat = Sat(SpikeInd);
+            for spike=1:length(Sat)
+                hold on
+                plot(Sat(spike)*ones(2,1), oo-[0.9 0.1], 'k-', 'LineWidth',1.5)
+                YSpike_Mat(oo, ceil(Sat(spike)+Delay(1)))=1;
+            end
+        end
+        hold on
+        
+    end
+    XLIM = [-Delay(1) max(Duration(Indices))+Delay(2)];
+    xlabel('Time centered at vocalization onset (ms)')
+    ylim([0 length(Indices)+1])
+    xlim(XLIM)
+    ylabel('Vocalization renditions')
+    if length(ColorLegend.color)>1
+        title(ss1, ['\fontsize{16} {\color[rgb]' sprintf('{%.1f %.1f %.1f}%s',ColorLegend.color{1}, ColorLegend.name{1}) ' \color[rgb]' sprintf('{%.1f %.1f %.1f}%s}', ColorLegend.color{2}, ColorLegend.name{2})]);
+    else
+%         title(ss1, ['\fontsize{16} {\color[rgb]' sprintf('{%.1f %.1f %.1f}%s',ColorLegend.color{1}(1:3), ColorLegend.name{1})]);
+    end
+    hold off
+    
+    % Plot the KDE and on top the average amplitude of vocalizations
+    TR=10;
+    Overlap = 0;
+    [YPerStim, YPerStimt,FS] = get_y_4Coherence(SpikesArrivalTimes(Indices), Duration(Indices),Delay,TR,Overlap);
+    
+    subplot(7,1,[6 7])
+    yyaxis left
+    cla
+    AvAmp = [zeros(1, Delay(1)) mean(XAmp_Mat,1) zeros(1, Delay(2))];
+    Ampx = -(Delay(1)):1:max(Duration(Indices))+Delay(2)-1;
+    StdAmp = [zeros(1, Delay(1)) std(XAmp_Mat,0,1)./(size(XAmp_Mat,1))^0.5 zeros(1, Delay(2))];
+    shadedErrorBar(Ampx,AvAmp,StdAmp,{'-','Color',[0.6350, 0.0780, 0.1840, 0.7], 'LineWidth',2})
+    ylabel('Vocalization Amplitude')
+    
+    yyaxis right
+    cla
+    shadedErrorBar(YPerStimt{1}, mean(cell2mat(YPerStim'),1).*1000, 1000*std(cell2mat(YPerStim'),0,1)./(length(YPerStim)).^0.5, {'-','Color',Col1, 'LineWidth',2})
+%     plot(Dat1(2,:),Dat1(1,:),'-','Color',Col1,'LineWidth',2)
+%     hold on
+%     shadedErrorBar(Dat1(2,:),Dat1(1,:),Dat1(3:4,:),{'-','Color',Col1, 'LineWidth',2})
+    hold on
+    VL = vline(0,':k');
+    VL.LineWidth = 2;
+    hold off
+    xlim(XLIM)
+    xlabel('Time (ms)')
+    ylabel('Rate (Hz)')
+    
+    
+    
+    figure()
+    [z,p,k] = butter(6,7/(FS/2),'low');
+    sos_lowY = zp2sos(z,p,k);
+    [z,p,k] = butter(6,7/(1000/2),'low');
+    sos_lowX = zp2sos(z,p,k);
+    YPerStimLow = YPerStim;
+    XAmp_MatLow = XAmp_Mat;
+    for Stim=1:length(YPerStim)
+        YPerStimLow{Stim} = filtfilt(sos_lowY,1,YPerStim{Stim});
+        XAmp_MatLow(Stim,:) = filtfilt(sos_lowX,1,XAmp_Mat(Stim,:));
+    end
+    yyaxis left
+    cla
+    AvAmp = [zeros(1, Delay(1)) mean(XAmp_MatLow,1) zeros(1, Delay(2))];
+    Ampx = -(Delay(1)):1:max(Duration(Indices))+Delay(2)-1;
+    StdAmp = [zeros(1, Delay(1)) std(XAmp_MatLow,0,1)./(size(XAmp_MatLow,1))^0.5 zeros(1, Delay(2))];
+    shadedErrorBar(Ampx,AvAmp,StdAmp,{'-','Color',[0.6350, 0.0780, 0.1840, 0.7], 'LineWidth',2})
+    ylabel('Vocalization Amplitude')
+    
+    yyaxis right
+    cla
+    shadedErrorBar(YPerStimt{1}, mean(cell2mat(YPerStimLow'),1).*1000, 1000*std(cell2mat(YPerStimLow'),0,1)./(length(YPerStimLow)).^0.5, {'-','Color',Col1, 'LineWidth',2})
+%     plot(Dat1(2,:),Dat1(1,:),'-','Color',Col1,'LineWidth',2)
+%     hold on
+%     shadedErrorBar(Dat1(2,:),Dat1(1,:),Dat1(3:4,:),{'-','Color',Col1, 'LineWidth',2})
+    hold on
+    VL = vline(0,':k');
+    VL.LineWidth = 2;
+    hold off
+    xlim(XLIM)
+    xlabel('Time (ms)')
+    ylabel('Rate (Hz)')
+    
+end
+
+
+    function [YPerStim, YPerStimt,FS] = get_y_4Coherence(SAT, Duration,Delay,TR,Overlap)
+        DebugFig = 0;
+        if nargin<5
+            Overlap = 0;
+        end
+        if length(Delay)==1
+            Delay = [Delay Delay];
+        end
+        % Calculate the time varying rate applying a gaussian window TR on the
+        % spike pattern. The spike pattern considered starts -Delay ms
+        % before the onset of the vocalization and stops Delay ms after the
+        % offset of the vocalization
+        YPerStim = cell(1,length(Duration));
+        YPerStimt = cell(1,length(Duration));
+        % Gaussian window of 2*std equal to TR (68% of Gaussian centered in TR)
+        nStd =(max(Duration) + Delay(1) + Delay(2))/10; % before set as 4
+        Tau = (TR/2);
+        T_pts = (0:2*nStd*Tau) - nStd*Tau; % centered tpoints around the mean = 0 and take data into account up to nstd away on each side
+        Expwav = exp(-0.5*(T_pts).^2./Tau^2)/(Tau*(2*pi)^0.5);
+        Expwav = Expwav./sum(Expwav);
+        % Frequency at which the neural data should be sampled
+        FS = round(1/((TR-Overlap).*10^-3));
+        % Loop through the stimuli and fill in the matrix
+        for stim=1:length(Duration)
+            % Time slots for the neural response
+            TimeBinsY = -Delay(1) : (Delay(2) + max(Duration));
+            SpikePattern = zeros(1,length(TimeBinsY)-1);
+            for isp = 1:length(SAT{stim})
+                SpikeInd = round(SAT{stim}(isp));
+                if (SpikeInd>=-Delay(1)) && (SpikeInd<(Delay(2) + max(Duration)))
+                    SpikePattern(SpikeInd + Delay(1) +1) = SpikePattern(SpikeInd + Delay(1) +1) +1;
+                end
+            end
+            
+            % Convolve with Gaussian to obtain our smooth time varying spike train
+            % and resample if necessary
+            if FS == 1000
+                YPerStim{stim} = conv(SpikePattern, Expwav,'same');
+                YPerStimt{stim} = TimeBinsY;
+            else
+                YPerStim_local = conv(SpikePattern, Expwav,'same');
+                if sum(YPerStim_local)>0
+                    YPerStim_local = YPerStim_local/sum(YPerStim_local)*sum(SpikePattern); % Make sure we keep the right number of sipkes after convolution!
+                end
+                
+                % resampling function is really doing weird things at edges...
+                % doing my own resampling
+                TimeBinsYOnsetInd = 1 :(TR-Overlap): (Delay(2) + Delay(1) + max(Duration)); % These are slightly different than in get_Y_4GLM, because the times slot are used as indices in the vector and not as actuel time values!
+                TimeBinsYOffsetInd = TimeBinsYOnsetInd + TR -1;
+                TimeBinsYOnsetInd = TimeBinsYOnsetInd(TimeBinsYOffsetInd<=(Delay(2) + Delay(1) + max(Duration))); % Only keep windows that are within the call
+                TimeBinsYOffsetInd = TimeBinsYOffsetInd(TimeBinsYOffsetInd<=(Delay(2) + Delay(1) + max(Duration))); % Only keep windows that are within the call
+                
+                
+                
+                TimeBinsYOnset = -Delay(1) :(TR-Overlap): (Delay(2) + max(Duration));
+                TimeBinsYOffset = TimeBinsYOnset + TR;
+                TimeBinsYOnset = TimeBinsYOnset(TimeBinsYOffset<=(Delay(2) + max(Duration))); % Only keep windows that are within the call
+                TimeBinsYOffset = TimeBinsYOffset(TimeBinsYOffset<=(Delay(2) + max(Duration))); % Only keep windows that are within the call
+                YPerStimt{stim} = TimeBinsYOnset + (TimeBinsYOffset - TimeBinsYOnset)/2;
+                
+                YPerStim_resamp = nan(TR, length(TimeBinsYOnsetInd));
+                for tt=1:length(TimeBinsYOnsetInd)
+                    YPerStim_resamp(:,tt) = YPerStim_local(TimeBinsYOnsetInd(tt): TimeBinsYOffsetInd(tt))';
+                end
+                YPerStim{stim} = mean(YPerStim_resamp);
+                
+                
+                if DebugFig
+                    figure(200) %#ok<UNRCH>
+                    clf
+                    plot((-Delay(1)+0.5):(Duration(stim)+Delay(2)),YPerStim_local, 'LineWidth',2)
+                    xlabel('Time ms')
+                    ylabel('Spike Rate mHz (/ms)')
+                    title(sprintf('Stim %d/%d',stim,length(Duration)));
+                    %         RemainTime = length(XPerStim_temp) - (length(XPerStim{stim})-1)*(1/Fs*10^3);
+                    %         XPerStimt{stim} = RemainTime/2+(1/Fs*10^3)*(0:(length(XPerStim{stim})-1));
+                    hold on
+                    plot(YPerStimt{stim},YPerStim{stim}, 'LineWidth',2)
+                    legend({'original' 'resampled'}, 'AutoUpdate','off')
+                    hold on
+                    SpikeTimes = TimeBinsY(logical(SpikePattern));
+                    for ss = 1:length(SpikeTimes)
+                        V=vline(SpikeTimes(ss), 'k-');
+                        V.LineWidth = 2;
+                        hold on
+                    end
+                    pause(1)
+                end
+                
+            end
+            
+            %     % change zero values for the smallest value under matlab.
+            %     if sum(YPerStim{stim}==0)
+            %         MinData = min(YPerStim{stim}(YPerStim{stim} ~=0));
+            %         if ~isempty(MinData)
+            %             YPerStim{stim}(YPerStim{stim}==0)=min(MinData,realmin('double'));
+            %         else
+            %             YPerStim{stim}(YPerStim{stim}==0)=realmin('double');
+            %         end
+            %     end
+            
+            % Make sure that the output mean(Y) = input mean(Y)
+            %     if abs(round(sum(YPerStim{stim})*TR) - sum(SpikePattern))>TR/5
+            %         warning('discrepancy in spike rate calculations larger than TR/5= %d?', TR/5)
+            %         keyboard
+            %     end
+            
+            %     if any(YPerStim{stim}<0)
+            %         keyboard
+            %     end
+            
+            
+            %         % Time slots for the neural response
+            %         TimeBinsY = -(Delay) : TR: (Delay + Duration(stim));
+            %         YPerStim{stim} = nan(1,length(TimeBinsY)-1);
+            %         for tt=1:(length(TimeBinsY)-1)
+            %             % Find the number of spikes
+            %             YPerStim{stim}(tt) = sum( (SAT{stim}>=TimeBinsY(tt)) .* (SAT{stim}<TimeBinsY(tt+1)));
+            %         end
+        end
+        
+    end
+
 end

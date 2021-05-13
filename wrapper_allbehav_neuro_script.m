@@ -214,7 +214,7 @@ fprintf(' DONE \n')
 % The plot is saved under OutputPath as sprintf('%s_%s_%s_SS%s_%s-%s_MeanRateScatter.pdf', SubjectID, SSQ,TetrodeID,SSID))
 %% Plot rasters for vocalizations
 fprintf(1,' RASTER PLOTS (AND KDE) of NEURAL DATA CORRESPONDING TO VOCALIZATIONS\n');
-Delay = [5000 5000];
+Delay = [1000 1000];
 PlotDyn = 0; %Set to 1 to plot dnamic plots
 DurOrd = 0; % set to 1 to order neural responses by increasing vocalization duration
 for ss=1:length(GoodCellIndices)

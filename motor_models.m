@@ -71,8 +71,8 @@ NCells = length(CellsPath);
 Delay=200; % The segment of data taken into account is -Delay ms before the vocalization onset and +200ms after the vocalization offset
 NBoot = 500; % number of voc ID permutation bootstraps for the significance of Info on coherence for each cell
 Trill=0; % 0: all calls; 1: Trills only; 2: non Trills only(still have to write the code for that!!)
-BootstrapType=0;% 0:No Bootstrap; 1: bootstrap calculation based on Voc ID shuffling, keeping onsets; 2, shuffling in time of Y(neural resposne) within each voc keeping voc ID intact; 3, shuffling in time accross all neural vector used for coherence
-Average = 1; % 0: use feature variations for X; 1: use average feature variations accross vocalizations for X
+BootstrapType=4;% 0:No Bootstrap; 1: bootstrap calculation based on Voc ID shuffling, keeping onsets; 2, shuffling in time of Y(neural resposne) within each voc keeping voc ID intact; 3, shuffling in time accross all neural vector used for coherence; 4:permutation of spikes accross all vocalizations
+Average = 0; % 0: use feature variations for X; 1: use average feature variations accross vocalizations for X
 NumVoc = 0;% 0: keep all vocalizations; any value: randomly choose NumVoc vocalizations to calculate Coherence
 % Lags = -Delay:Delay;
 % Freqs = (0:ceil(length(Lags)/2)).* (2*Nyquist/length(Lags)); % Lags is a uneven number so F(i) = i*2*Nyquist/length(Lags)
@@ -99,37 +99,42 @@ NumVoc = 0;% 0: keep all vocalizations; any value: randomly choose NumVoc vocali
 % MotorCoherenceOperantAll = AuditoryCoherenceFreeAll;
 
 
-AuditoryCoherenceFreeAll=load(fullfile(Path,sprintf('AuditoryCoherence_%s_%s.mat', FeatureName, 'Free')));
+% AuditoryCoherenceFreeAll=load(fullfile(Path,sprintf('AuditoryCoherence_%s_%s.mat', FeatureName, 'Free')));
 % AuditoryCoherenceFreeAll.Info_pFullTime = nan(NCells,1);
 % AuditoryCoherenceFreeAll.NStims = nan(NCells,1);
 % AuditoryCoherenceFreeAll.LengthX = nan(NCells,1);
-AuditoryCoherenceFreeAll.AvAmpCoherencyT_DelayAtzero = nan(NCells,1);
-AuditoryCoherenceFreeAll.AvAmpCoherencyT_WidthAtMaxPeak = nan(NCells,1);
-AuditoryCoherenceFreeAll.AvAmpInfo = nan(NCells,1);
-AuditoryCoherenceFreeAll.AvAmpInfo_low = nan(NCells,1);
-AuditoryCoherenceFreeAll.AvAmpInfo_up = nan(NCells,1);
-AuditoryCoherenceFreeAll.AvAmpInfo_pFullTime = nan(NCells,1);
+% AuditoryCoherenceFreeAll.AvAmpCoherencyT_DelayAtzero = nan(NCells,1);
+% AuditoryCoherenceFreeAll.AvAmpCoherencyT_WidthAtMaxPeak = nan(NCells,1);
+% AuditoryCoherenceFreeAll.AvAmpInfo = nan(NCells,1);
+% AuditoryCoherenceFreeAll.AvAmpInfo_low = nan(NCells,1);
+% AuditoryCoherenceFreeAll.AvAmpInfo_up = nan(NCells,1);
+% AuditoryCoherenceFreeAll.AvAmpInfo_pTime = nan(NCells,1);
+% AuditoryCoherenceFreeAll.Info_pRandSpikePerm = nan(NCells,1);
 
     
-MotorCoherenceFreeAll = load(fullfile(Path,sprintf('MotorCoherence_%s_%s.mat', FeatureName, 'Free')));
+% MotorCoherenceFreeAll = load(fullfile(Path,sprintf('MotorCoherence_%s_%s.mat', FeatureName, 'Free')));
 % MotorCoherenceFreeAll.Info_pFullTime = nan(NCells,1);
 % MotorCoherenceFreeAll.NStims = nan(NCells,1);
 % MotorCoherenceFreeAll.LengthX = nan(NCells,1);
-MotorCoherenceFreeAll.AvAmpCoherencyT_DelayAtzero = nan(NCells,1);
-MotorCoherenceFreeAll.AvAmpCoherencyT_WidthAtMaxPeak = nan(NCells,1);
-MotorCoherenceFreeAll.AvAmpInfo = nan(NCells,1);
-MotorCoherenceFreeAll.AvAmpInfo_low = nan(NCells,1);
-MotorCoherenceFreeAll.AvAmpInfo_up = nan(NCells,1);
-MotorCoherenceFreeAll.AvAmpInfo_pFullTime = nan(NCells,1);
+% MotorCoherenceFreeAll.AvAmpCoherencyT_DelayAtzero = nan(NCells,1);
+% MotorCoherenceFreeAll.AvAmpCoherencyT_WidthAtMaxPeak = nan(NCells,1);
+% MotorCoherenceFreeAll.AvAmpInfo = nan(NCells,1);
+% MotorCoherenceFreeAll.AvAmpInfo_low = nan(NCells,1);
+% MotorCoherenceFreeAll.AvAmpInfo_up = nan(NCells,1);
+% MotorCoherenceFreeAll.AvAmpInfo_pTime = nan(NCells,1);
+% MotorCoherenceFreeAll.Info_pRandSpikePerm = nan(NCells,1);
     
-MotorCoherenceOperantAll = load(fullfile(Path,sprintf('MotorCoherence_%s_%s.mat', FeatureName, 'Operant')));
+% MotorCoherenceOperantAll = load(fullfile(Path,sprintf('MotorCoherence_%s_%s.mat', FeatureName, 'Operant')));
 % MotorCoherenceOperantAll.Info_pFullTime = nan(NCells,1);
 % MotorCoherenceOperantAll.NStims = nan(NCells,1);
 % MotorCoherenceOperantAll.LengthX = nan(NCells,1);
-MotorCoherenceOperantAll.AvAmpCoherencyT_DelayAtzero = nan(NCells,1);
-MotorCoherenceOperantAll.AvAmpCoherencyT_WidthAtMaxPeak = nan(NCells,1);
-MotorCoherenceOperantAll.AvAmpInfo = nan(NCells,1);
-MotorCoherenceOperantAll.AvAmpInfo_low = nan(NCells,1);
+% MotorCoherenceOperantAll.AvAmpCoherencyT_DelayAtzero = nan(NCells,1);
+% MotorCoherenceOperantAll.AvAmpCoherencyT_WidthAtMaxPeak = nan(NCells,1);
+% MotorCoherenceOperantAll.AvAmpInfo = nan(NCells,1);
+% MotorCoherenceOperantAll.AvAmpInfo_low = nan(NCells,1);
+% MotorCoherenceOperantAll.AvAmpInfo_up = nan(NCells,1);
+% MotorCoherenceOperantAll.AvAmpInfo_pTime = nan(NCells,1);
+% MotorCoherenceOperantAll.Info_pRandSpikePerm = nan(NCells,1);
 
 for cc=1:NCells
     
@@ -149,34 +154,38 @@ for cc=1:NCells
         
         MotorCoherenceOperant_local = coherence4LMC(Cell, 1,'Operant', 'amp', Trill,NumVoc,BootstrapType, Average);
         
-        AuditoryCoherenceFree = Cell.AuditoryCoherenceFree;
-        MotorCoherenceFree = Cell.MotorCoherenceFree;
-        MotorCoherenceOperant = Cell.MotorCoherenceOperant;
-        if ~isfield(AuditoryCoherenceFree_local, 'Error')
-            AuditoryCoherenceFree.CoherenceavAmp = AuditoryCoherenceFree_local;
+%         AuditoryCoherenceFree = Cell.AuditoryCoherenceFree;
+%         MotorCoherenceFree = Cell.MotorCoherenceFree;
+%         MotorCoherenceOperant = Cell.MotorCoherenceOperant;
+%         if ~isfield(AuditoryCoherenceFree_local, 'Error')
+%             AuditoryCoherenceFree.Info_pRandSpikePerm = AuditoryCoherenceFree_local.Info_pRandSpikePerm;
+%             AuditoryCoherenceFree.CoherenceavAmp = AuditoryCoherenceFree_local;
 %             AuditoryCoherenceFree.BootstrapFullTime = AuditoryCoherenceFree_local.BootstrapFullTime;
 %             AuditoryCoherenceFree.Info_pFullTime = AuditoryCoherenceFree_local.Info_pFullTime;
 %             AuditoryCoherenceFree.NStims = AuditoryCoherenceFree_local.NStims;
 %             AuditoryCoherenceFree.LengthX = AuditoryCoherenceFree_local.LengthX;
-        end
-        if ~isfield(MotorCoherenceFree_local, 'Error')
-            MotorCoherenceFree.CoherenceavAmp = MotorCoherenceFree_local;
+                
+%         end
+%         if ~isfield(MotorCoherenceFree_local, 'Error')
+%             MotorCoherenceFree.Info_pRandSpikePerm = MotorCoherenceFree_local.Info_pRandSpikePerm;
+%             MotorCoherenceFree.CoherenceavAmp = MotorCoherenceFree_local;
 %             MotorCoherenceFree.BootstrapFullTime = MotorCoherenceFree_local.BootstrapFullTime;
 %             MotorCoherenceFree.Info_pFullTime = MotorCoherenceFree_local.Info_pFullTime;
 %             MotorCoherenceFree.NStims = MotorCoherenceFree_local.NStims;
 %             MotorCoherenceFree.LengthX = MotorCoherenceFree_local.LengthX;
-        end
-        if ~isfield(MotorCoherenceOperant_local, 'Error')
-            MotorCoherenceOperant.CoherenceavAmp = MotorCoherenceOperant_local;
+%         end
+%         if ~isfield(MotorCoherenceOperant_local, 'Error')
+%             MotorCoherenceOperant.Info_pRandSpikePerm = MotorCoherenceOperant_local.Info_pRandSpikePerm;
+%             MotorCoherenceOperant.CoherenceavAmp = MotorCoherenceOperant_local;
 %             MotorCoherenceOperant.BootstrapFullTime = MotorCoherenceOperant_local.BootstrapFullTime;
 %             MotorCoherenceOperant.Info_pFullTime = MotorCoherenceOperant_local.Info_pFullTime;
 %             MotorCoherenceOperant.NStims = MotorCoherenceOperant_local.NStims;
 %             MotorCoherenceOperant.LengthX = MotorCoherenceOperant_local.LengthX;
-        end
-        save(CellPath, 'AuditoryCoherenceFree','MotorCoherenceFree','MotorCoherenceOperant', '-append')
+%         end
+%         save(CellPath, 'AuditoryCoherenceFree','MotorCoherenceFree','MotorCoherenceOperant', '-append')
 %             save(CellPath, 'AuditoryCoherenceFree','MotorCoherenceFree','AuditoryCoherenceOperant', 'MotorCoherenceOperant','-append')
         
-        if ~isfield(AuditoryCoherenceFree, 'Error')
+%         if ~isfield(AuditoryCoherenceFree, 'Error')
 %             AuditoryCoherenceFreeAll.CoherencyT_DelayAtzero(cc) = AuditoryCoherenceFree.CoherencyT_DelayAtzero;
 %             AuditoryCoherenceFreeAll.CoherencyT_WidthAtMaxPeak(cc) = AuditoryCoherenceFree.CoherencyT_WidthAtMaxPeak;
 %             AuditoryCoherenceFreeAll.MaxCoherence(cc) = AuditoryCoherenceFree.MaxCoherence1;
@@ -193,15 +202,15 @@ for cc=1:NCells
 %             AuditoryCoherenceFreeAll.Info_pFullTime(cc) = AuditoryCoherenceFree.Info_pFullTime;
 %             AuditoryCoherenceFreeAll.NStims(cc) = AuditoryCoherenceFree.NStims;
 %             AuditoryCoherenceFreeAll.LengthX(cc) = AuditoryCoherenceFree.LengthX;
-            AuditoryCoherenceFreeAll.AvAmpCoherencyT_DelayAtzero(cc) = AuditoryCoherenceFree_local.CoherencyT_DelayAtzero;
-            AuditoryCoherenceFreeAll.AvAmpCoherencyT_WidthAtMaxPeak(cc) = AuditoryCoherenceFree_local.CoherencyT_WidthAtMaxPeak;
-            AuditoryCoherenceFreeAll.AvAmpInfo(cc) = AuditoryCoherenceFree_local.Info;
-            AuditoryCoherenceFreeAll.AvAmpInfo_low(cc) = AuditoryCoherenceFree_local.Info_low;
-            AuditoryCoherenceFreeAll.AvAmpInfo_up(cc) = AuditoryCoherenceFree_local.Info_up;
-            AuditoryCoherenceFreeAll.AvAmpInfo_pFullTime(cc) = sum((AuditoryCoherenceFree.BootstrapFullTime.Info - AuditoryCoherenceFree_local.Info)>= 0)/length(AuditoryCoherenceFree.BootstrapFullTime.Info);
-            
-        end
-        if ~isfield(MotorCoherenceFree, 'Error')
+%             AuditoryCoherenceFreeAll.AvAmpCoherencyT_DelayAtzero(cc) = AuditoryCoherenceFree_local.CoherencyT_DelayAtzero;
+%             AuditoryCoherenceFreeAll.AvAmpCoherencyT_WidthAtMaxPeak(cc) = AuditoryCoherenceFree_local.CoherencyT_WidthAtMaxPeak;
+%             AuditoryCoherenceFreeAll.AvAmpInfo(cc) = AuditoryCoherenceFree_local.Info;
+%             AuditoryCoherenceFreeAll.AvAmpInfo_low(cc) = AuditoryCoherenceFree_local.Info_low;
+%             AuditoryCoherenceFreeAll.AvAmpInfo_up(cc) = AuditoryCoherenceFree_local.Info_up;
+%             AuditoryCoherenceFreeAll.AvAmpInfo_pTime(cc) = sum((AuditoryCoherenceFree.BootstrapTime.Info - AuditoryCoherenceFree_local.Info)>= 0)/length(AuditoryCoherenceFree.BootstrapTime.Info);
+%               AuditoryCoherenceFreeAll.Info_pRandSpikePerm(cc) = AuditoryCoherenceFree.Info_pRandSpikePerm;
+%         end
+%         if ~isfield(MotorCoherenceFree, 'Error')
 %             MotorCoherenceFreeAll.CoherencyT_DelayAtzero(cc) = MotorCoherenceFree.CoherencyT_DelayAtzero;
 %             MotorCoherenceFreeAll.CoherencyT_WidthAtMaxPeak(cc) = MotorCoherenceFree.CoherencyT_WidthAtMaxPeak;
 %             MotorCoherenceFreeAll.MaxCoherence(cc) = MotorCoherenceFree.MaxCoherence1;
@@ -218,13 +227,14 @@ for cc=1:NCells
 %             MotorCoherenceFreeAll.Info_pFullTime(cc) = MotorCoherenceFree.Info_pFullTime;
 %             MotorCoherenceFreeAll.NStims(cc) = MotorCoherenceFree.NStims;
 %             MotorCoherenceFreeAll.LengthX(cc) = MotorCoherenceFree.LengthX;
-            MotorCoherenceFreeAll.AvAmpCoherencyT_DelayAtzero(cc) = MotorCoherenceFree_local.CoherencyT_DelayAtzero;
-            MotorCoherenceFreeAll.AvAmpCoherencyT_WidthAtMaxPeak(cc) = MotorCoherenceFree_local.CoherencyT_WidthAtMaxPeak;
-            MotorCoherenceFreeAll.AvAmpInfo(cc) = MotorCoherenceFree_local.Info;
-            MotorCoherenceFreeAll.AvAmpInfo_low(cc) = MotorCoherenceFree_local.Info_low;
-            MotorCoherenceFreeAll.AvAmpInfo_up(cc) = AuditoryCoherenceFree_local.Info_up;
-            MotorCoherenceFreeAll.AvAmpInfo_pFullTime(cc) = sum((MotorCoherenceFree.BootstrapFullTime.Info - MotorCoherenceFree_local.Info)>= 0)/length(MotorCoherenceFree.BootstrapFullTime.Info);
-        end
+%             MotorCoherenceFreeAll.AvAmpCoherencyT_DelayAtzero(cc) = MotorCoherenceFree_local.CoherencyT_DelayAtzero;
+%             MotorCoherenceFreeAll.AvAmpCoherencyT_WidthAtMaxPeak(cc) = MotorCoherenceFree_local.CoherencyT_WidthAtMaxPeak;
+%             MotorCoherenceFreeAll.AvAmpInfo(cc) = MotorCoherenceFree_local.Info;
+%             MotorCoherenceFreeAll.AvAmpInfo_low(cc) = MotorCoherenceFree_local.Info_low;
+%             MotorCoherenceFreeAll.AvAmpInfo_up(cc) = MotorCoherenceFree_local.Info_up;
+%             MotorCoherenceFreeAll.AvAmpInfo_pTime(cc) = sum((MotorCoherenceFree.BootstrapTime.Info - MotorCoherenceFree_local.Info)>= 0)/length(MotorCoherenceFree.BootstrapTime.Info);
+%              MotorCoherenceFreeAll.Info_pRandSpikePerm(cc) = MotorCoherenceFree.Info_pRandSpikePerm;
+%         end
 
 %         if ~isfield(AuditoryCoherenceOperant, 'Error')
 %             AuditoryCoherenceOperantAll.CoherencyT_DelayAtzero(cc) = AuditoryCoherenceOperant.CoherencyT_DelayAtzero;
@@ -241,7 +251,7 @@ for cc=1:NCells
 %             AuditoryCoherenceOperantAll.Info_p(cc) = AuditoryCoherenceOperant.Info_p;
 %         end
 
-        if ~isfield(MotorCoherenceOperant, 'Error')
+%         if ~isfield(MotorCoherenceOperant, 'Error')
 %             MotorCoherenceOperantAll.CoherencyT_DelayAtzero(cc) = MotorCoherenceOperant.CoherencyT_DelayAtzero;
 %             MotorCoherenceOperantAll.CoherencyT_WidthAtMaxPeak(cc) = MotorCoherenceOperant.CoherencyT_WidthAtMaxPeak;
 %             MotorCoherenceOperantAll.MaxCoherence(cc) = MotorCoherenceOperant.MaxCoherence1;
@@ -255,13 +265,14 @@ for cc=1:NCells
 %             MotorCoherenceOperantAll.Info_up(cc) = MotorCoherenceOperant.Info_up;
 %             MotorCoherenceOperantAll.Info_p(cc) = MotorCoherenceOperant.Info_p;
 %             MotorCoherenceOperantAll.Info_pTime(cc) = MotorCoherenceOperant.Info_pTime;
-            MotorCoherenceOperantAll.AvAmpCoherencyT_DelayAtzero(cc) = MotorCoherenceOperant_local.CoherencyT_DelayAtzero;
-            MotorCoherenceOperantAll.AvAmpCoherencyT_WidthAtMaxPeak(cc) = MotorCoherenceOperant_local.CoherencyT_WidthAtMaxPeak;
-            MotorCoherenceOperantAll.AvAmpInfo(cc) = MotorCoherenceOperant_local.Info;
-            MotorCoherenceOperantAll.AvAmpInfo_low(cc) = MotorCoherenceOperant_local.Info_low;
-            MotorCoherenceOperantAll.AvAmpInfo_up(cc) = AuditoryCoherenceOperant_local.Info_up;
-            MotorCoherenceOperantAll.AvAmpInfo_pFullTime(cc) = sum((MotorCoherenceOperant.BootstrapFullTime.Info - MotorCoherenceOperant_local.Info)>= 0)/length(MotorCoherenceOperant.BootstrapFullTime.Info);
-        end
+%             MotorCoherenceOperantAll.AvAmpCoherencyT_DelayAtzero(cc) = MotorCoherenceOperant_local.CoherencyT_DelayAtzero;
+%             MotorCoherenceOperantAll.AvAmpCoherencyT_WidthAtMaxPeak(cc) = MotorCoherenceOperant_local.CoherencyT_WidthAtMaxPeak;
+%             MotorCoherenceOperantAll.AvAmpInfo(cc) = MotorCoherenceOperant_local.Info;
+%             MotorCoherenceOperantAll.AvAmpInfo_low(cc) = MotorCoherenceOperant_local.Info_low;
+%             MotorCoherenceOperantAll.AvAmpInfo_up(cc) = MotorCoherenceOperant_local.Info_up;
+%             MotorCoherenceOperantAll.AvAmpInfo_pTime(cc) = sum((MotorCoherenceOperant.BootstrapTime.Info - MotorCoherenceOperant_local.Info)>= 0)/length(MotorCoherenceOperant.BootstrapTime.Info);
+%             MotorCoherenceOperantAll.Info_pRandSpikePerm(cc) = MotorCoherenceOperant.Info_pRandSpikePerm;
+%         end
     elseif Trill==1 % Only calculating motor coherence for Trills because only Cooper is producing trills and never listening to them
         MotorCoherenceFreeTrill = coherence4LMC(Cell, 1,'Free', 'amp', Trill,NumVoc, BootstrapType);
 
@@ -312,7 +323,7 @@ end
 
 % Order cells by
 % decreasing values of info
-if ~Trill
+if Trill
     [~,AuditoryCoherenceFreeAll.GoodInfo] = sort(AuditoryCoherenceFreeAll.Info,'descend');
     save(fullfile(Path,sprintf('AuditoryCoherence_%s_%s.mat', FeatureName, 'Free')),'-struct','AuditoryCoherenceFreeAll');
     
@@ -424,28 +435,25 @@ end
     hold off
     
     % Just the histogram of information with cell breaked down
-    GestureOnCell_logical = logical((Info_p<0.01) .* (Info_pFullTime<0.01) .* (AvAmpInfo_pFullTime<0.01));
-    OnCell_logical = logical((Info_p>=0.01) .* (Info_pFullTime<0.01).* (AvAmpInfo_pFullTime<0.01));
-    GestureCell_logical = logical((Info_p<0.01) .* (Info_pFullTime<0.01).* (AvAmpInfo_pFullTime>=0.01));
-    NSCell_logical = logical((Info_p>=0.01) .* (Info_pFullTime>=0.01));
+    GestureCell_logical = logical((Info_low>0.1).*(Info_p<0.01));% Gesture cells
+    SCell_logical = logical((Info_low>0.1).*(Info_p>=0.01));% On cells
+    NSCell_logical = Info_pRandSpikePerm>=0.01;
     FBreak=figure();
     clf
-    histogram(Info(GestureOnCell_logical),'BinWidth',0.1,'FaceColor', [1 0 0]) % Gesture and vocalization On cells
+    histogram(Info(SCell_logical),'BinWidth',0.1,'FaceColor', [0, 0, 1]) % Vocalization On Cells; purple
     hold on
-    histogram(Info(OnCell_logical),'BinWidth',0.1,'FaceColor', [0.9290, 0.6940, 0.1250]) % Vocalization On Cells; yello
-    hold on
-    histogram(Info(GestureCell_logical),'BinWidth',0.1,'FaceColor', [0.8500, 0.3250, 0.0980]) % Gesture Cells only; orange
+    histogram(Info(GestureCell_logical),'BinWidth',0.1,'FaceColor', [0.75, 0, 0.75]) % Gesture Cells only; red
     hold on
     histogram(Info(NSCell_logical),'BinWidth',0.1,'FaceColor', 'k') % Non Significant cells
-    legend({'Gesture and On units', 'On units', 'Gesture units', 'NS units'})
+    legend({'Vocalization On units', 'Gesture units', 'NS units'})
     xlabel(sprintf('Information on Coherence with sound %s (bits)',FeatureName2))
     ylabel('Number of Cells')
     hold on
-    v=vline(nanmean(Info(Info_pFullTime<0.01)),'c--');
+    v=vline(nanmean(Info(~NSCell_logical)),'c--');
     v.LineWidth = 2;
     XLIM = get(gca, 'XLim');
     set(gca, 'XLim', [XLIM(1) 5])
-    title(sprintf('%s Information (mean = %.2f +/- %.2f)', MS, nanmean(Info(Info_pFullTime<0.01)), nanstd(Info(Info_pFullTime<0.01))))
+    title(sprintf('%s Information (mean = %.2f +/- %.2f)', MS, nanmean(Info(~NSCell_logical)), nanstd(Info(~NSCell_logical))))
     box off
     hold off
     
@@ -464,19 +472,17 @@ end
     ax1.YAxisLocation = 'right';
     ax1.Box = 'off';
     ax1.Color = 'none';
-    text(20,-50, sprintf('All mean = %.2f +/- %.2f', nanmean(CoherencyT_DelayAtzero), nanstd(CoherencyT_DelayAtzero)/(sum(~isnan(CoherencyT_DelayAtzero)))^0.5))
+    text(20,-50, sprintf('Sig mean = %.2f +/- %.2f', nanmean(CoherencyT_DelayAtzero(~NSCell_logical)), nanstd(CoherencyT_DelayAtzero(~NSCell_logical))/(sum(~isnan(CoherencyT_DelayAtzero(~NSCell_logical))))^0.5))
 %     hold on
 %     text(29, -57, sprintf('Sig mean = %.2f +/- %.2f', nanmean(CoherencyT_DelayAtzero(Info_p<0.01)), nanstd(CoherencyT_DelayAtzero(Info_p<0.01))/(sum(~isnan(CoherencyT_DelayAtzero(Info_p<0.01))))^0.5))
     hold(ax1,'on')
     ax2 = axes(t);
-    scatter(ax2,Info(GestureOnCell_logical),CoherencyT_DelayAtzero(Info_p<0.01),25, [1 0 0], 'filled')
+    scatter(ax2,Info(SCell_logical),CoherencyT_DelayAtzero(SCell_logical),25, [0, 0, 1], 'filled')
     hold(ax2, 'on')
-    scatter(ax2,Info(GestureCell_logical),CoherencyT_DelayAtzero(Info_p>=0.01),25, [0.8500, 0.3250, 0.0980], 'filled')
+    scatter(ax2,Info(GestureCell_logical),CoherencyT_DelayAtzero(GestureCell_logical),25, [0.75, 0, 0.75], 'filled')
     hold(ax2, 'on')
-    scatter(ax2,Info(OnCell_logical),CoherencyT_DelayAtzero(Info_p>=0.01),25, [0.9290, 0.6940, 0.1250], 'filled')
-    hold(ax2, 'on')
-    scatter(ax2,Info(NSCell_logical),CoherencyT_DelayAtzero(Info_p>=0.01),25, 'k', 'filled')
-    
+    scatter(ax2,Info(NSCell_logical),CoherencyT_DelayAtzero(NSCell_logical),25, 'k', 'filled')
+    legend({'Vocalization On units', 'Gesture units', 'NS units'})
     ylabel('Optimal Delay (ms)')
     ax2.Box = 'off';
     ax2.Color = 'none';
@@ -498,27 +504,24 @@ end
     ax1.YAxisLocation = 'right';
     ax1.Box = 'off';
     ax1.Color = 'none';
-    text(20,  50, sprintf('All mean = %.2f +/- %.2f', nanmean(CoherencyT_WidthAtMaxPeak), nanstd(CoherencyT_WidthAtMaxPeak)/(sum(~isnan(CoherencyT_WidthAtMaxPeak)))^0.5))
+    text(20,  50, sprintf('Sig mean = %.2f +/- %.2f', nanmean(CoherencyT_WidthAtMaxPeak(~NSCell_logical)), nanstd(CoherencyT_WidthAtMaxPeak(~NSCell_logical))/(sum(~isnan(CoherencyT_WidthAtMaxPeak(~NSCell_logical))))^0.5))
 %     hold on
 %     text(-57, 29, sprintf('Sig mean = %.2f +/- %.2f', nanmean(CoherencyT_WidthAtMaxPeak(Info_p<0.01)), nanstd(CoherencyT_WidthAtMaxPeak(Info_p<0.01))/(sum(~isnan(CoherencyT_WidthAtMaxPeak(Info_p<0.01))))^0.5))
     
     hold(ax1,'on')
     ax2 = axes(t);
-    scatter(ax2,Info(GestureOnCell_logical),CoherencyT_DelayAtzero(Info_p<0.01),25, [1 0 0], 'filled')
+    scatter(ax2,Info(SCell_logical),CoherencyT_WidthAtMaxPeak(SCell_logical),25, [0, 0, 1], 'filled')
     hold(ax2, 'on')
-    scatter(ax2,Info(GestureCell_logical),CoherencyT_DelayAtzero(Info_p>=0.01),25, [0.8500, 0.3250, 0.0980], 'filled')
+    scatter(ax2,Info(GestureCell_logical),CoherencyT_WidthAtMaxPeak(GestureCell_logical),25, [0.75, 0, 0.75], 'filled')
     hold(ax2, 'on')
-    scatter(ax2,Info(OnCell_logical),CoherencyT_DelayAtzero(Info_p>=0.01),25, [0.9290, 0.6940, 0.1250], 'filled')
-    hold(ax2, 'on')
-    scatter(ax2,Info(NSCell_logical),CoherencyT_DelayAtzero(Info_p>=0.01),25, 'k', 'filled')
+    scatter(ax2,Info(NSCell_logical),CoherencyT_WidthAtMaxPeak(NSCell_logical),25, 'k', 'filled')
+    legend({'Vocalization On units', 'Gesture units', 'NS units'})
     ax2.Box = 'off';
     ax2.Color = 'none';
     xlabel(sprintf('Information on Coherence with sound %s (bits)',FeatureName2))
     ylabel('Time resolution (ms)')
     xlim([0 5])
-    hold on
-    h=hline(0, 'k:');
-    h.LineWidth = 2;
+    
     
 
     
@@ -931,7 +934,7 @@ clf
  SessionChoice = 'Free';
     Auditory = load(fullfile(Path,sprintf('AuditoryCoherence_%s_%s.mat', FeatureName{fn}, SessionChoice)));
     Motor = load(fullfile(Path,sprintf('MotorCoherence_%s_%s.mat', FeatureName{fn}, SessionChoice)));
-    Colors = [(Motor.Info_pFullTime<0.01) zeros(length(Motor.Info),1) (Auditory.Info_pFullTime<0.01)];
+    Colors = [(Motor.Info_low>0.1) zeros(length(Motor.Info),1) (Auditory.Info_low>0.1)];
     if strcmp(FeatureName{fn}, 'amp')
         FeatureName2 = 'Amplitude';
     elseif strcmp(FeatureName{fn}, 'sal')

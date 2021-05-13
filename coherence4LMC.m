@@ -28,7 +28,7 @@ if nargin<9
     Delay=200; % The segment of data taken into account is -Delay ms before the vocalization onset and +200ms after the vocalization offset
 end
 
-PlotCoherenceFig = 0; % To plot the result of coherence calculation for each cell
+PlotCoherenceFig = 1; % To plot the result of coherence calculation for each cell
 StimXYDataPlot=0;
 TR=2; % 2ms is chosen as the Time resolution for the neural data
 Fs = 1/(TR*10^-3); % the data is then sampled at the optimal frequency given the neural time resolution choosen
@@ -114,7 +114,7 @@ DefaultVal = 0;%zero should be the default value for the amplitude, we know here
 [XPerStim, XPerStimt] = get_x_4coherence(Cell.BioSound(IndVoc,2), Cell.Duration(IndVoc), Delay,TR,DefaultVal,FeatureName);
 if Average
     Length = cellfun(@length, XPerStim);
-    XPerStim_mat = nan(NStims, max(Length));
+    XPerStim_mat = zeros(NStims, max(Length));
     for Stim = 1:NStims
         XPerStim_mat(Stim,1:Length(Stim)) = XPerStim{Stim};
     end
@@ -152,7 +152,7 @@ Coherence.LengthX = length(X);
 Coherence.NStims = NStims;
 if PlotCoherenceFig
     figure(3) %#ok<UNRCH>
-    suplabel(sprintf('Coherence Cell %d/%d', cc, NCells), 't');
+%     suplabel(sprintf('Coherence Cell %d/%d', cc, NCells), 't');
     drawnow
 end
 %% Bootsrap the calculation of coherence and information with permutation...
@@ -164,7 +164,10 @@ if BootstrapType
     CohT_DelayAtzero_boot = cell(1,NBoot);
     CohT_WidthAtMaxPeak_boot = cell(1,NBoot);
     warning('off', 'signal:findpeaks:largeMinPeakHeight')
-    parfor bb=1:NBoot %parfor
+    if BootstrapType==4
+        Yboot_All = get_y_4Coherence_rand(Cell.SpikesArrivalTimes_Behav(IndVoc), Cell.Duration(IndVoc),Delay,TR,length(Y), sum(Y),0, NBoot);
+    end
+    for bb=1:NBoot %parfor
         if ~mod(bb,NBoot/10)
             fprintf(1, 'Bootstrap %d  ', bb)
         end
@@ -184,6 +187,9 @@ if BootstrapType
             TimeShuffle = randi([1 length(Y)]);
             Yboot = [Y(TimeShuffle:end); Y(1:TimeShuffle-1)];  
             Xboot = X;
+        elseif BootstrapType == 4
+            Yboot = Yboot_All{bb}';
+            Xboot = X;
         else
             error('Wrong input for BootstrapType')
         end
@@ -199,30 +205,40 @@ if BootstrapType
         Coherence.Bootstrap.Info = [Info_boot{:}];
         Coherence.Bootstrap.CoherencyT_DelayAtzero = [CohT_DelayAtzero_boot{:}];
         Coherence.Bootstrap.CoherencyT_WidthAtMaxPeak = [CohT_WidthAtMaxPeak_boot{:}];
-        Coherence.Info_p = sum((Coherence.Bootstrap.Info - Coherence.Info)>= 0)/NBoot;
+        Info_p = sum(([Info_boot{:}] - Coherence.Info)>= 0)/NBoot;
+        Coherence.Info_p = Info_p;
     elseif BootstrapType==2
         Coherence.BootstrapTime.Info = [Info_boot{:}];
         Coherence.BootstrapTime.CoherencyT_DelayAtzero = [CohT_DelayAtzero_boot{:}];
         Coherence.BootstrapTime.CoherencyT_WidthAtMaxPeak = [CohT_WidthAtMaxPeak_boot{:}];
-        Coherence.Info_pTime = sum((Coherence.BootstrapTime.Info - Coherence.Info)>= 0)/NBoot;
+        Info_p = sum(([Info_boot{:}] - Coherence.Info)>= 0)/NBoot;
+        Coherence.Info_pTime = Info_p;
 
     elseif BootstrapType==3
         Coherence.BootstrapFullTime.Info = [Info_boot{:}];
         Coherence.BootstrapFullTime.CoherencyT_DelayAtzero = [CohT_DelayAtzero_boot{:}];
         Coherence.BootstrapFullTime.CoherencyT_WidthAtMaxPeak = [CohT_WidthAtMaxPeak_boot{:}];
-        Coherence.Info_pFullTime = sum((Coherence.BootstrapFullTime.Info - Coherence.Info)>= 0)/NBoot;
+        Info_p = sum(([Info_boot{:}] - Coherence.Info)>= 0)/NBoot;
+        Coherence.Info_pFullTime = Info_p;
+        
+    elseif BootstrapType==4
+        Coherence.BootstrapRandSpikePerm.Info = [Info_boot{:}];
+        Coherence.BootstrapRandSpikePerm.CoherencyT_DelayAtzero = [CohT_DelayAtzero_boot{:}];
+        Coherence.BootstrapRandSpikePerm.CoherencyT_WidthAtMaxPeak = [CohT_WidthAtMaxPeak_boot{:}];
+        Info_p = sum(([Info_boot{:}] - Coherence.Info)>= 0)/NBoot;
+        Coherence.Info_pRandSpikePerm = Info_p;
     end
 
     if PlotCoherenceFig
         figure(4) %#ok<UNRCH>
         clf
-        histogram(Coherence.Bootstrap.Info)
+        histogram([Info_boot{:}])
         hold on
         VL = vline(Coherence.Info, '-r');
         VL.LineWidth = 2;
         ylabel(sprintf('# bootstrap (total = %d)', NBoot))
         xlabel(sprintf('Information on coherence with sound %s', FeatureName))
-        title(sprintf('Cell Significance of information with bootstraped permutation test p=%.2f', Coherence.Info_p))
+        title(sprintf('Cell Significance of information with bootstraped permutation test p=%.2f', Info_p))
         drawnow
     end
 end
@@ -436,6 +452,84 @@ fprintf(1, '------------------Done with Calculations %s %s Self=%d in %ds-------
             %             YPerStim{stim}(tt) = sum( (SAT{stim}>=TimeBinsY(tt)) .* (SAT{stim}<TimeBinsY(tt+1)));
             %         end
         end
+        
+    end
+
+
+
+    function [Y_rand] = get_y_4Coherence_rand(SAT, Duration,Delay,TR,LengthY, NSpike,Overlap, NBoot)
+        if nargin<7
+            Overlap = 0;
+        end
+        if nargin<8
+            NBoot = 500;
+        end
+        if length(Delay)==1
+            Delay = [Delay Delay];
+        end
+        % Calculate the time varying rate for all concatenate stims, after
+        % shuffling the spike accross the entire spike train, and applying
+        % a gaussian window TR on the
+        % spike pattern. The spike pattern considered starts -Delay ms
+        % before the onset of the vocalization and stops Delay ms after the
+        % offset of the vocalization
+        % Gaussian window of 2*std equal to TR (68% of Gaussian centered in TR)
+        nStd =(max(Duration) + Delay(1) + Delay(2))/10; % before set as 4
+        Tau = (TR/2);
+        T_pts = (0:2*nStd*Tau) - nStd*Tau; % centered tpoints around the mean = 0 and take data into account up to nstd away on each side
+        Expwav = exp(-0.5*(T_pts).^2./Tau^2)/(Tau*(2*pi)^0.5);
+        Expwav = Expwav./sum(Expwav);
+        % Frequency at which the neural data should be sampled
+        FS = round(1/((TR-Overlap).*10^-3));
+        % Loop through the stimuli and fill in the matrix
+        SpikePattern=cell(1, length(Duration));
+        for stim=1:length(Duration)
+            % Time slots for the neural response
+            TimeBinsY = -Delay(1) : (Delay(2) + Duration(stim));
+            SpikePattern{stim} = zeros(1,length(TimeBinsY)-1);
+            for isp = 1:length(SAT{stim})
+                SpikeInd = round(SAT{stim}(isp));
+                if (SpikeInd>=-Delay(1)) && (SpikeInd<(Delay(2) + Duration(stim)))
+                    SpikePattern{stim}(SpikeInd + Delay(1) +1) = SpikePattern{stim}(SpikeInd + Delay(1) +1) +1;
+                end
+            end
+        end
+        % Concatenate the spike trains in a single vector and suffle the
+        % spike order
+        SpikePattern = [SpikePattern{:}];
+        
+        Y_rand = cell(NBoot,1);
+        parfor SP=1:NBoot
+            SpikePattern_local = SpikePattern(randperm(length(SpikePattern)));
+        
+            % Convolve with Gaussian to obtain our smooth time varying spike train
+            % and resample if necessary
+            if FS == 1000
+                Y_rand{SP} = conv(SpikePattern_local, Expwav,'same');
+            else
+                Y_rand_local = conv(SpikePattern_local, Expwav,'same');
+                if sum(Y_rand_local)>0
+                    Y_rand_local = Y_rand_local/sum(Y_rand_local)*sum(SpikePattern_local); % Make sure we keep the right number of sipkes after convolution!
+                end
+
+                % resampling function is really doing weird things at edges...
+                % doing my own resampling
+                TotalDuration = ((Delay(2) + Delay(1))*length(Duration) + sum(Duration));
+                TimeBinsYOnsetInd = 1 :(TR-Overlap): TotalDuration; % These are slightly different than in get_Y_4GLM, because the times slot are used as indices in the vector and not as actuel time values!
+                TimeBinsYOffsetInd = TimeBinsYOnsetInd + TR -1;
+                TimeBinsYOnsetInd = TimeBinsYOnsetInd(TimeBinsYOffsetInd<=TotalDuration); % Only keep windows that are within the concatenated calls
+                TimeBinsYOffsetInd = TimeBinsYOffsetInd(TimeBinsYOffsetInd<=TotalDuration); % Only keep windows that are within the concatenated calls
+
+
+                Y_resamp = nan(TR, length(TimeBinsYOnsetInd));
+                for tt=1:length(TimeBinsYOnsetInd)
+                    Y_resamp(:,tt) = Y_rand_local(TimeBinsYOnsetInd(tt): TimeBinsYOffsetInd(tt))';
+                end
+                Y_resamp = mean(Y_resamp);
+                Y_rand{SP} = Y_resamp(1:LengthY)./sum(Y_resamp(1:LengthY)).* NSpike;
+            end
+        end
+        
         
     end
 
