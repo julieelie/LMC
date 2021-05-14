@@ -66,6 +66,9 @@ WeightedSigCoherenceFreq = sum(Freqs4weight.*Weight);
 %% Calculate the cumulative sum of the significant information pdf
 CumSumWeight = cumsum(Weight); 
 CumSumSigCoherence50Hz = CumSumWeight(find(Freqs4weight<=50,1,'Last'));
+if isempty(CumSumSigCoherence50Hz) % All significant coherence above 50Hz or none significant
+    CumSumSigCoherence50Hz = 0;
+end
 %% compute information by integrating log of 1 - coherence where the lower bound of the coherence is positive
 df = Freqs4Info(2) - Freqs4Info(1);
 Info = -df*sum(log2(1 - Coherence4Info(CoherenceLow4Info>0)));

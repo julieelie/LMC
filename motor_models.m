@@ -76,6 +76,7 @@ Average = 0; % 0: use feature variations for X; 1: use average feature variation
 NumVoc = 0;% 0: keep all vocalizations; any value: randomly choose NumVoc vocalizations to calculate Coherence
 % Lags = -Delay:Delay;
 % Freqs = (0:ceil(length(Lags)/2)).* (2*Nyquist/length(Lags)); % Lags is a uneven number so F(i) = i*2*Nyquist/length(Lags)
+AuditoryCoherenceFreeAll = struct();
 AuditoryCoherenceFreeAll.CoherencyT_DelayAtzero = nan(NCells,1);
 AuditoryCoherenceFreeAll.CoherenceWeightedFreq = nan(NCells,1);
 AuditoryCoherenceFreeAll.CumSumSigCoherence50Hz = nan(NCells,1);
