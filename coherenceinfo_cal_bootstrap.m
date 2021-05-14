@@ -34,54 +34,73 @@ if freqCutoff ~= -1
     CoherenceLow4Info = CoherenceLow4Info(indx);
 end
 
-minFreq = Fs/nFFT;
-if minFreq > 0
-    findx = find(Freqs4Info >= minFreq); %#ok<MXFND>
-    sindx = min(findx);
-    Freqs4Info = Freqs4Info(sindx:end);
-    Coherence4Info = Coherence4Info(sindx:end);
-%     CoherenceUp4Info = CoherenceUp4Info(sindx:end);
-    CoherenceLow4Info = CoherenceLow4Info(sindx:end);
-end
+% The DC component is now eliminated by zscoring we can discard that
+% section
+% minFreq = Fs/nFFT;
+% if minFreq > 0
+%     findx = find(Freqs4Info >= minFreq); %#ok<MXFND>
+%     sindx = min(findx);
+%     Freqs4Info = Freqs4Info(sindx:end);
+%     Coherence4Info = Coherence4Info(sindx:end);
+% %     CoherenceUp4Info = CoherenceUp4Info(sindx:end);
+%     CoherenceLow4Info = CoherenceLow4Info(sindx:end);
+% end
 
 %% if the clower goes below zero set all values to zero and keep track fo that first value of frequency for which the coherence is non significant
 cutoffIndex = find(CoherenceLow4Info < 0, 1, 'first');
 if (isempty(cutoffIndex))
     cutoffIndex = length(CoherenceLow4Info);
+elseif cutoffIndex==1 % The first frequency is not significant, try to find the next non significant that follows the significant ones
+    cutoffIndex = find(find(CoherenceLow4Info < 0)> find(CoherenceLow4Info > 0,1,'first'),1,'first');
 end
 freqCutoff = Freqs4Info(cutoffIndex);
 FirstNonSigCoherenceFreq = freqCutoff;
 
+%% Calculate the coherence weighted significant frequencies
+Weight = Coherence4Info(CoherenceLow4Info>0);
+Weight = Weight./sum(Weight);
+Freqs4weight = Freqs4Info(CoherenceLow4Info>0);
+WeightedSigCoherenceFreq = sum(Freqs4weight.*Weight);
+
+%% Calculate the cumulative sum of the significant information pdf
+CumSumWeight = cumsum(Weight); 
+CumSumSigCoherence50Hz = CumSumWeight(find(Freqs4weight<=50,1,'Last'));
+
 %% compute information by integrating log of 1 - coherence
 df = Freqs4Info(2) - Freqs4Info(1);
-Info = -df*sum(log2(1 - Coherence4Info(1:cutoffIndex)));
+Info = -df*sum(log2(1 - Coherence4Info(CoherenceLow4Info>0)));
 % Info_up = -df*sum(log2(1 - CoherenceUp4Info(1:cutoffIndex)));
 % Info_low = -df*sum(log2(1 - CoherenceLow4Info(1:cutoffIndex)));
 
 %% Lowpass the coherency according to threshold FirstNonSigCoherenceFreq and find the width of max peak
-[z,p,k] = butter(6,FirstNonSigCoherenceFreq/(Fs/2),'low');
-sos_low = zp2sos(z,p,k);
-CoherencyT_filt=filtfilt(sos_low,1,CoherencyT);
-CoherencyT_xTimeDelay = -(((nFFT/2)/Fs)*10^3):TR:(((nFFT/2-1))/Fs)*10^3; % Corresponding values in ms of the Delay for each value of CoherencyT
-[P,Locs] = findpeaks(CoherencyT_filt);
+if FirstNonSigCoherenceFreq
+    [z,p,k] = butter(6,FirstNonSigCoherenceFreq/(Fs/2),'low');
+    sos_low = zp2sos(z,p,k);
+    CoherencyT_filt=filtfilt(sos_low,1,CoherencyT);
+    CoherencyT_xTimeDelay = -(((nFFT/2)/Fs)*10^3):TR:(((nFFT/2-1))/Fs)*10^3; % Corresponding values in ms of the Delay for each value of CoherencyT
+    [P,Locs] = findpeaks(CoherencyT_filt);
 
-if ~isempty(Locs)
-%     [P,IndM] = max(P);
-    [~,IndM] = max(P);
-    Locs = Locs(IndM);
-    CoherencyT_DelayAtzero = CoherencyT_xTimeDelay(Locs);
-    CrossZero1 = CoherencyT_xTimeDelay(find(CoherencyT_filt(1:Locs)<=mean(CoherencyT_filt), 1, 'last')+1);
-    CrossZero2 = CoherencyT_xTimeDelay(Locs + find(CoherencyT_filt(Locs+1:end)<=mean(CoherencyT_filt), 1, 'first')-1);
-    if isempty(CrossZero2)
-        CrossZero2 = CoherencyT_xTimeDelay(Locs + find(CoherencyT_filt(Locs+1:end)==min(CoherencyT_filt(Locs+1:end)), 1, 'first')-1);
+    if ~isempty(Locs)
+    %     [P,IndM] = max(P);
+        [~,IndM] = max(P);
+        Locs = Locs(IndM);
+        CoherencyT_DelayAtzero = CoherencyT_xTimeDelay(Locs);
+        CrossZero1 = CoherencyT_xTimeDelay(find(CoherencyT_filt(1:Locs)<=mean(CoherencyT_filt), 1, 'last')+1);
+        CrossZero2 = CoherencyT_xTimeDelay(Locs + find(CoherencyT_filt(Locs+1:end)<=mean(CoherencyT_filt), 1, 'first')-1);
+        if isempty(CrossZero2)
+            CrossZero2 = CoherencyT_xTimeDelay(Locs + find(CoherencyT_filt(Locs+1:end)==min(CoherencyT_filt(Locs+1:end)), 1, 'first')-1);
+        end
+        CoherencyT_WidthAtMaxPeak = CrossZero2 - CrossZero1;
+    else
+        CoherencyT_DelayAtzero = nan;
+        CoherencyT_WidthAtMaxPeak = nan;
+        warning('There is no peak in Coherency T \n')
     end
-    CoherencyT_WidthAtMaxPeak = CrossZero2 - CrossZero1;
 else
     CoherencyT_DelayAtzero = nan;
-    CoherencyT_WidthAtMaxPeak = nan;
-    warning('There is no peak in Coherency T \n')
+        CoherencyT_WidthAtMaxPeak = nan;
+        warning('There is no peak in Coherency T \n')
 end
-
 
 %% Plot the value of coherency as a function of delay
 % if PlotCoherenceFig
@@ -140,6 +159,8 @@ end
 Coherence.Info = Info;
 Coherence.CoherencyT_DelayAtzero = CoherencyT_DelayAtzero;
 Coherence.CoherencyT_WidthAtMaxPeak = CoherencyT_WidthAtMaxPeak;
+Coherence.WeightedSigCoherenceFreq = WeightedSigCoherenceFreq;
+Coherence.CumSumSigCoherence50Hz = CumSumSigCoherence50Hz;
 Coherence.FeatureName = FeatureName;
 
 end

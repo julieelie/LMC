@@ -216,7 +216,7 @@ fprintf(' DONE \n')
 fprintf(1,' RASTER PLOTS (AND KDE) of NEURAL DATA CORRESPONDING TO VOCALIZATIONS\n');
 Delay = [1000 1000];
 PlotDyn = 0; %Set to 1 to plot dnamic plots
-DurOrd = 0; % set to 1 to order neural responses by increasing vocalization duration
+DurOrd = 1; % set to 1 to order neural responses by increasing vocalization duration
 for ss=1:length(GoodCellIndices)
     fprintf(1,'Cell %d/%d\n',ss,length(GoodCellIndices))
     plot_rastervoc_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath, Delay, PlotDyn, DurOrd)
