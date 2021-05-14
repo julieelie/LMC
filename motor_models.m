@@ -28,8 +28,10 @@ CellsPath = AllFiles(logical(Files2run));
 
 %% Check cell stability between 2 sessions
 NCells = length(CellsPath);
-KDE_OpvsFr_p = nan(NCells,1);
-KDE_OpvsFr_KStestp = nan(NCells,1);
+OpvsFr_Ks2stat = nan(NCells,1);
+OpvsFr_Ks2statevenodd = nan(NCells,1);
+OpvsFr_Ks2stat_boot = cell(NCells,1);
+OpvsFr_Ks2pval_boot = nan(NCells,1);
 for cc=1:NCells
     
     %% load data
@@ -37,18 +39,36 @@ for cc=1:NCells
     fprintf(1, '*** Cell %s %d/%d ***\n', CellPath, cc, NCells)
     Cell = load(CellPath,'QualitySSU', 'FreeBehavSession', 'OperantSession');
     % decide if cell is stable enough to compare free and operant sessions
-    IndicesOp=((Cell.QualitySSU.TimePoints(2:end)-60/2)>0) .* ((Cell.QualitySSU.TimePoints(2:end)-60/2)<diff(Cell.OperantSession));
-    IndicesFr=((Cell.QualitySSU.TimePoints(2:end)-60/2)>(Cell.FreeBehavSession(1)- Cell.OperantSession(1))) .* ((Cell.QualitySSU.TimePoints(2:end)-60/2)<(Cell.FreeBehavSession(2)- Cell.OperantSession(1)));
-    [H,KDE_OpvsFr_p(cc),CI,STATS] = ttest2(Cell.QualitySSU.KDE(logical(IndicesOp)), Cell.QualitySSU.KDE(logical(IndicesFr)));
-    if sum(IndicesFr)&& sum(IndicesOp)
-        [h,KDE_OpvsFr_KStestp(cc),ks2stat] = kstest2(Cell.QualitySSU.KDE(logical(IndicesOp)), Cell.QualitySSU.KDE(logical(IndicesFr)));
+    LogicalOp=logical(((Cell.QualitySSU.TimePoints(2:end)-60/2)>0) .* ((Cell.QualitySSU.TimePoints(2:end)-60/2)<diff(Cell.OperantSession)));
+    LogicalFr=logical(((Cell.QualitySSU.TimePoints(2:end)-60/2)>(Cell.FreeBehavSession(1)- Cell.OperantSession(1))) .* ((Cell.QualitySSU.TimePoints(2:end)-60/2)<(Cell.FreeBehavSession(2)- Cell.OperantSession(1))));
+    IndicesOp = find(LogicalOp);
+    IndicesFr = find(LogicalFr);
+    AllIndices = [IndicesOp IndicesFr];
+    EvenIndOp = IndicesOp(rem(IndicesOp,2)==0);
+    OddIndOp = IndicesOp(rem(IndicesOp,2)==1);
+    EvenIndFr = IndicesFr(rem(IndicesFr,2)==0);
+    OddIndFr = IndicesFr(rem(IndicesFr,2)==1);
+%     [H,KDE_OpvsFr_p(cc),CI,STATS] = ttest2(Cell.QualitySSU.KDE(logical(IndicesOp)), Cell.QualitySSU.KDE(logical(IndicesFr)));
+    if sum(LogicalFr)&& sum(LogicalOp)
+        [~,~,OpvsFr_Ks2stat(cc)] = kstest2(Cell.QualitySSU.KDE(LogicalOp), Cell.QualitySSU.KDE(LogicalFr));
+        [~,~,OpvsFr_Ks2statevenodd(cc)] = kstest2(Cell.QualitySSU.KDE([EvenIndOp EvenIndFr]), Cell.QualitySSU.KDE([OddIndOp OddIndFr]));
+        OpvsFr_Ks2stat_boot_local = cell(1,Nbootstrap);
+        parfor bb=1:Nbootstrap
+            Shuffled = AllIndices(randperm(length(AllIndices)));
+            [~,~,OpvsFr_Ks2stat_boot_local{bb}] = kstest2(Cell.QualitySSU.KDE(Shuffled(1:length(IndicesOp))), Cell.QualitySSU.KDE(Shuffled(length(IndicesOp)+ (1:length(IndicesFr)))));
+        end
+        OpvsFr_Ks2stat_boot{cc} = [OpvsFr_Ks2stat_boot_local{:}];
     end
-%     figure(15);clf;histogram(Cell.QualitySSU.KDE(logical(IndicesOp)), 'Normalization', 'probability'); hold on; histogram(Cell.QualitySSU.KDE(logical(IndicesFr)), 'Normalization', 'probability')
-%     xlabel('Spike Rate in Hz (bin=1min)')
-%     ylabel('probability')
-%     legend({'operant' 'Free'})
-%     title(sprintf('Spike rate distribution p=%.2f',KDE_OpvsFr_p(cc)))
-%     pause(1)
+    figure(15);clf;subplot(1,2,1); histogram(Cell.QualitySSU.KDE(LogicalOp), 'Normalization', 'probability'); hold on; histogram(Cell.QualitySSU.KDE(LogicalFr), 'Normalization', 'probability')
+    xlabel('Spike Rate in Hz (bin=1min)')
+    ylabel('probability')
+    legend({'operant' 'Free'})
+    title('Spike rate distribution')
+    subplot(1,2,2)
+    histogram(OpvsFr_Ks2stat_boot{cc}, 'FaceColor', 'k'); hold on; VObs = vline(OpvsFr_Ks2stat(cc), 'g-'); VObs.LineWidth=2; hold on; VEO = vline(OpvsFr_Ks2statevenodd(cc), 'r-'); VEO.LineWidth=2;
+    title(sprintf('KS difference distribution p=%.2f', sum(OpvsFr_Ks2stat_boot{cc}>=OpvsFr_Ks2stat(cc))/Nbootstrap))
+    
+    pause(1)
 end  
 save(fullfile(Path, 'KDE_SessionStability.mat'), 'CellsPath', 'KDE_OpvsFr_KStestp','KDE_OpvsFr_p')
 
