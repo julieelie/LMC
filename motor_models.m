@@ -76,29 +76,29 @@ Average = 0; % 0: use feature variations for X; 1: use average feature variation
 NumVoc = 0;% 0: keep all vocalizations; any value: randomly choose NumVoc vocalizations to calculate Coherence
 % Lags = -Delay:Delay;
 % Freqs = (0:ceil(length(Lags)/2)).* (2*Nyquist/length(Lags)); % Lags is a uneven number so F(i) = i*2*Nyquist/length(Lags)
-AuditoryCoherenceFreeAll = struct();
-AuditoryCoherenceFreeAll.CoherencyT_DelayAtzero = nan(NCells,1);
-AuditoryCoherenceFreeAll.CoherenceWeightedFreq = nan(NCells,1);
-AuditoryCoherenceFreeAll.CumSumSigCoherence50Hz = nan(NCells,1);
-AuditoryCoherenceFreeAll.MaxCoherence = nan(NCells,1);
-AuditoryCoherenceFreeAll.MaxCoherenceF = nan(NCells,1);
-AuditoryCoherenceFreeAll.CoherencePeaks = cell(NCells,1);
-AuditoryCoherenceFreeAll.CoherencePeaksF = cell(NCells,1);
-AuditoryCoherenceFreeAll.FirstNonSigCoherenceFreq = nan(NCells,1);
-AuditoryCoherenceFreeAll.SecondCoherenceFreqCutOff = nan(NCells,1);
-AuditoryCoherenceFreeAll.Info = nan(NCells,1);
-AuditoryCoherenceFreeAll.Info_low = nan(NCells,1);
-AuditoryCoherenceFreeAll.Info_up = nan(NCells,1);
-AuditoryCoherenceFreeAll.Info_pRandSpikePerm = nan(NCells,1);
-AuditoryCoherenceFreeAll.Info_pTime = nan(NCells,1);
-AuditoryCoherenceFreeAll.Info_pFullTime = nan(NCells,1);
-AuditoryCoherenceFreeAll.CellsPath = CellsPath;
-AuditoryCoherenceFreeAll.TR = TR;
-AuditoryCoherenceFreeAll.Delay = Delay;
-
-AuditoryCoherenceOperantAll = AuditoryCoherenceFreeAll;
-MotorCoherenceFreeAll = AuditoryCoherenceFreeAll;
-MotorCoherenceOperantAll = AuditoryCoherenceFreeAll;
+% AuditoryCoherenceFreeAll = struct();
+% AuditoryCoherenceFreeAll.CoherencyT_DelayAtzero = nan(NCells,1);
+% AuditoryCoherenceFreeAll.CoherenceWeightedFreq = nan(NCells,1);
+% AuditoryCoherenceFreeAll.CumSumSigCoherence50Hz = nan(NCells,1);
+% AuditoryCoherenceFreeAll.MaxCoherence = nan(NCells,1);
+% AuditoryCoherenceFreeAll.MaxCoherenceF = nan(NCells,1);
+% AuditoryCoherenceFreeAll.CoherencePeaks = cell(NCells,1);
+% AuditoryCoherenceFreeAll.CoherencePeaksF = cell(NCells,1);
+% AuditoryCoherenceFreeAll.FirstNonSigCoherenceFreq = nan(NCells,1);
+% AuditoryCoherenceFreeAll.SecondCoherenceFreqCutOff = nan(NCells,1);
+% AuditoryCoherenceFreeAll.Info = nan(NCells,1);
+% AuditoryCoherenceFreeAll.Info_low = nan(NCells,1);
+% AuditoryCoherenceFreeAll.Info_up = nan(NCells,1);
+% AuditoryCoherenceFreeAll.Info_pRandSpikePerm = nan(NCells,1);
+% AuditoryCoherenceFreeAll.Info_pTime = nan(NCells,1);
+% AuditoryCoherenceFreeAll.Info_pFullTime = nan(NCells,1);
+% AuditoryCoherenceFreeAll.CellsPath = CellsPath;
+% AuditoryCoherenceFreeAll.TR = TR;
+% AuditoryCoherenceFreeAll.Delay = Delay;
+% 
+% AuditoryCoherenceOperantAll = AuditoryCoherenceFreeAll;
+% MotorCoherenceFreeAll = AuditoryCoherenceFreeAll;
+% MotorCoherenceOperantAll = AuditoryCoherenceFreeAll;
 
 
 % AuditoryCoherenceFreeAll=load(fullfile(Path,sprintf('AuditoryCoherence_%s_%s.mat', FeatureName, 'Free')));
@@ -138,7 +138,7 @@ MotorCoherenceOperantAll = AuditoryCoherenceFreeAll;
 % MotorCoherenceOperantAll.AvAmpInfo_pTime = nan(NCells,1);
 % MotorCoherenceOperantAll.Info_pRandSpikePerm = nan(NCells,1);
 
-for cc=1:NCells
+for cc=326:NCells
     
     CellTimer = tic();
     %% load data
