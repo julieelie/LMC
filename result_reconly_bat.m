@@ -30,9 +30,9 @@ end
 if nargin<3
     % Set the path to the recording log
     if contains(Path2ParamFile, 'LMC')
-        Path2RecordingTable = '/Users/elie/Google Drive/BatmanData/RecordingLogs/recording_logs.xlsx';
+        Path2RecordingTable = '/Users/elie/Google Drive/Mon Drive/BatmanData/RecordingLogs/recording_logs.xlsx';
     elseif contains(Path2ParamFile, 'Juvenile')
-        Path2RecordingTable = '/Users/elie/Google Drive/JuvenileRecordings/JuvenileRecordingsNWAF155_Log.xlsx';
+        Path2RecordingTable = '/Users/elie/Google Drive/Mon Drive/JuvenileRecordings/JuvenileRecordingsNWAF155_Log.xlsx';
     end
 end
 if nargin<4

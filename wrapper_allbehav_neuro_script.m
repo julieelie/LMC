@@ -4,7 +4,7 @@ addpath(genpath('/Users/elie/Documents/CODE/GitHub/LMC'))
 addpath(genpath('/Users/elie/Documents/CODE/GitHub/Kilosort2'))
 addpath(genpath('/Users/elie/Documents/CODE/GitHub/LoggerDataProcessing'))
 addpath(genpath('/Users/elie/Documents/CODE/GitHub/SoundAnalysisBats'))
-Path2RecordingTable = '/Users/elie/Google Drive/BatmanData/RecordingLogs/recording_logs.xlsx';
+Path2RecordingTable = '/Users/elie/Google Drive/Mon Drive/BatmanData/RecordingLogs/recording_logs.xlsx';
 BasePath = '/Volumes/JulieE8T';
 %% RUN audio data extraction for the operant tests
 % BasePath = '/Volumes/server_home/users/JulieE/LMC';

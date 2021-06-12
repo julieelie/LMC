@@ -1,7 +1,7 @@
 function result_operant_bat_what(Path2ParamFile, Path2RecordingTable, Logger_dir)
-addpath(genpath('/Users/elie/Documents/CODE/LMC'))
-addpath(genpath('/Users/elie/Documents/CODE/LoggerDataProcessing'))
-addpath(genpath('/Users/elie/Documents/CODE/SoundAnalysisBats'))
+addpath(genpath('/Users/elie/Documents/CODE/GitHub/LMC'))
+addpath(genpath('/Users/elie/Documents/CODE/GitHub/LoggerDataProcessing'))
+addpath(genpath('/Users/elie/Documents/CODE/GitHub/SoundAnalysisBats'))
 TranscExtract = 1; % set to 1 to extract logger data and transceiver time
 ForceExtract = 0; % set to 1 to redo the extraction of loggers otherwise the calculations will use the previous extraction data
 ForceAllign = 0; % In case the TTL pulses allignment was already done but you want to do it again, set to 1
@@ -21,7 +21,7 @@ WavFileStruc = dir(fullfile(AudioDataPath, [DataFile(1:16) '*mic*.wav']));
 DataSnipStruc = dir(fullfile(AudioDataPath, [DataFile(1:16) '*snippets/*.wav']));
 
 if TranscExtract && nargin<2
-    Path2RecordingTable = '/Users/elie/Google Drive/BatmanData/RecordingLogs/recording_logs.xlsx';
+    Path2RecordingTable = '/Users/elie/Google Drive/Mon Drive/BatmanData/RecordingLogs/recording_logs.xlsx';
 end
 if TranscExtract && nargin<3
     % Set the path to logger data
