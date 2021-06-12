@@ -1,9 +1,9 @@
-addpath(genpath('/Users/elie/Documents/CODE/operant_bats'))
-addpath(genpath('/Users/elie/Documents/CODE/GeneralCode'))
-addpath(genpath('/Users/elie/Documents/CODE/LMC'))
-addpath(genpath('/Users/elie/Documents/CODE/Kilosort2'))
-addpath(genpath('/Users/elie/Documents/CODE/LoggerDataProcessing'))
-addpath(genpath('/Users/elie/Documents/CODE/SoundAnalysisBats'))
+addpath(genpath('/Users/elie/Documents/CODE/GitHub/operant_bats'))
+addpath(genpath('/Users/elie/Documents/CODE/GitHub/GeneralCode'))
+addpath(genpath('/Users/elie/Documents/CODE/GitHub/LMC'))
+addpath(genpath('/Users/elie/Documents/CODE/GitHub/Kilosort2'))
+addpath(genpath('/Users/elie/Documents/CODE/GitHub/LoggerDataProcessing'))
+addpath(genpath('/Users/elie/Documents/CODE/GitHub/SoundAnalysisBats'))
 Path2RecordingTable = '/Users/elie/Google Drive/BatmanData/RecordingLogs/recording_logs.xlsx';
 BasePath = '/Volumes/JulieE8T';
 %% RUN audio data extraction for the operant tests
