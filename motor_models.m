@@ -91,7 +91,7 @@ NCells = length(CellsPath);
 Delay=200; % The segment of data taken into account is -Delay ms before the vocalization onset and +200ms after the vocalization offset
 NBoot = 500; % number of voc ID permutation bootstraps for the significance of Info on coherence for each cell
 Trill=0; % 0: all calls; 1: Trills only; 2: non Trills only(still have to write the code for that!!)
-BootstrapType=4;% 0:No Bootstrap; 1: bootstrap calculation based on Voc ID shuffling, keeping onsets; 2, shuffling in time of Y(neural resposne) within each voc keeping voc ID intact; 3, shuffling in time accross all neural vector used for coherence; 4:permutation of spikes accross all vocalizations
+BootstrapType=1;% 0:No Bootstrap; 1: bootstrap calculation based on Voc ID shuffling, keeping onsets; 2, shuffling in time of Y(neural resposne) within each voc keeping voc ID intact; 3, shuffling in time accross all neural vector used for coherence; 4:permutation of spikes accross all vocalizations
 Average = 0; % 0: use feature variations for X; 1: use average feature variations accross vocalizations for X
 NumVoc = 0;% 0: keep all vocalizations; any value: randomly choose NumVoc vocalizations to calculate Coherence
 % Lags = -Delay:Delay;
@@ -121,109 +121,118 @@ NumVoc = 0;% 0: keep all vocalizations; any value: randomly choose NumVoc vocali
 % MotorCoherenceOperantAll = AuditoryCoherenceFreeAll;
 
 
-% AuditoryCoherenceFreeAll=load(fullfile(Path,sprintf('AuditoryCoherence_%s_%s.mat', FeatureName, 'Free')));
+AuditoryCoherenceFreeAll=load(fullfile(Path,sprintf('AuditoryCoherence_%s_%s.mat', FeatureName, 'Free')));
 % AuditoryCoherenceFreeAll.Info_pFullTime = nan(NCells,1);
-% AuditoryCoherenceFreeAll.NStims = nan(NCells,1);
-% AuditoryCoherenceFreeAll.LengthX = nan(NCells,1);
+AuditoryCoherenceFreeAll.NStims = nan(NCells,1);
+AuditoryCoherenceFreeAll.LengthX = nan(NCells,1);
 % AuditoryCoherenceFreeAll.AvAmpCoherencyT_DelayAtzero = nan(NCells,1);
 % AuditoryCoherenceFreeAll.AvAmpCoherencyT_WidthAtMaxPeak = nan(NCells,1);
 % AuditoryCoherenceFreeAll.AvAmpInfo = nan(NCells,1);
 % AuditoryCoherenceFreeAll.AvAmpInfo_low = nan(NCells,1);
 % AuditoryCoherenceFreeAll.AvAmpInfo_up = nan(NCells,1);
 % AuditoryCoherenceFreeAll.AvAmpInfo_pTime = nan(NCells,1);
-% AuditoryCoherenceFreeAll.Info_pRandSpikePerm = nan(NCells,1);
+AuditoryCoherenceFreeAll.Info_pRandVoc = nan(NCells,1);
 
+AuditoryCoherenceOperantAll=load(fullfile(Path,sprintf('AuditoryCoherence_%s_%s.mat', FeatureName, 'Operant')));
+AuditoryCoherenceOperantAll.Info_pRandVoc = nan(NCells,1);
     
-% MotorCoherenceFreeAll = load(fullfile(Path,sprintf('MotorCoherence_%s_%s.mat', FeatureName, 'Free')));
+MotorCoherenceFreeAll = load(fullfile(Path,sprintf('MotorCoherence_%s_%s.mat', FeatureName, 'Free')));
 % MotorCoherenceFreeAll.Info_pFullTime = nan(NCells,1);
-% MotorCoherenceFreeAll.NStims = nan(NCells,1);
-% MotorCoherenceFreeAll.LengthX = nan(NCells,1);
+MotorCoherenceFreeAll.NStims = nan(NCells,1);
+MotorCoherenceFreeAll.LengthX = nan(NCells,1);
 % MotorCoherenceFreeAll.AvAmpCoherencyT_DelayAtzero = nan(NCells,1);
 % MotorCoherenceFreeAll.AvAmpCoherencyT_WidthAtMaxPeak = nan(NCells,1);
 % MotorCoherenceFreeAll.AvAmpInfo = nan(NCells,1);
 % MotorCoherenceFreeAll.AvAmpInfo_low = nan(NCells,1);
 % MotorCoherenceFreeAll.AvAmpInfo_up = nan(NCells,1);
 % MotorCoherenceFreeAll.AvAmpInfo_pTime = nan(NCells,1);
-% MotorCoherenceFreeAll.Info_pRandSpikePerm = nan(NCells,1);
+MotorCoherenceFreeAll.Info_pRandVoc = nan(NCells,1);
     
-% MotorCoherenceOperantAll = load(fullfile(Path,sprintf('MotorCoherence_%s_%s.mat', FeatureName, 'Operant')));
+MotorCoherenceOperantAll = load(fullfile(Path,sprintf('MotorCoherence_%s_%s.mat', FeatureName, 'Operant')));
 % MotorCoherenceOperantAll.Info_pFullTime = nan(NCells,1);
-% MotorCoherenceOperantAll.NStims = nan(NCells,1);
-% MotorCoherenceOperantAll.LengthX = nan(NCells,1);
+MotorCoherenceOperantAll.NStims = nan(NCells,1);
+MotorCoherenceOperantAll.LengthX = nan(NCells,1);
 % MotorCoherenceOperantAll.AvAmpCoherencyT_DelayAtzero = nan(NCells,1);
 % MotorCoherenceOperantAll.AvAmpCoherencyT_WidthAtMaxPeak = nan(NCells,1);
 % MotorCoherenceOperantAll.AvAmpInfo = nan(NCells,1);
 % MotorCoherenceOperantAll.AvAmpInfo_low = nan(NCells,1);
 % MotorCoherenceOperantAll.AvAmpInfo_up = nan(NCells,1);
 % MotorCoherenceOperantAll.AvAmpInfo_pTime = nan(NCells,1);
-% MotorCoherenceOperantAll.Info_pRandSpikePerm = nan(NCells,1);
+MotorCoherenceOperantAll.Info_pRandVoc = nan(NCells,1);
 
-for cc=326:NCells
+for cc=1:NCells
     
     CellTimer = tic();
     %% load data
     CellPath = fullfile(CellsPath(cc).folder,CellsPath(cc).name);
     fprintf(1, '*** Cell %s %d/%d %s ***\n', CellPath, cc, NCells, FeatureName)
-%     Cell = load(CellPath, 'What', 'ExpType', 'Who', 'BioSound', 'Duration','SpikesArrivalTimes_Behav','QualitySSU', 'VocOverlap', 'AudioQuality', 'DelayBefore','DelayAfter', 'AuditoryCoherenceFree', 'MotorCoherenceFree','MotorCoherenceOperant');
-    Cell = load(CellPath, 'What', 'ExpType', 'Who', 'BioSound', 'Duration','SpikesArrivalTimes_Behav','QualitySSU', 'VocOverlap', 'AudioQuality', 'DelayBefore','DelayAfter');
+    Cell = load(CellPath, 'What', 'ExpType', 'Who', 'BioSound', 'Duration','SpikesArrivalTimes_Behav','QualitySSU', 'VocOverlap', 'AudioQuality', 'DelayBefore','DelayAfter', 'AuditoryCoherenceFree', 'AuditoryCoherenceOperant', 'MotorCoherenceFree','MotorCoherenceOperant');
+%     Cell = load(CellPath, 'What', 'ExpType', 'Who', 'BioSound', 'Duration','SpikesArrivalTimes_Behav','QualitySSU', 'VocOverlap', 'AudioQuality', 'DelayBefore','DelayAfter');
     
     if ~Trill
         
-        AuditoryCoherenceFree = coherence4LMC(Cell,0,'Free', 'amp', Trill,NumVoc,BootstrapType, Average);
+        AuditoryCoherenceFree_local = coherence4LMC(Cell,0,'Free', 'amp', Trill,NumVoc,BootstrapType, Average);
         
-        MotorCoherenceFree = coherence4LMC(Cell, 1,'Free', 'amp', Trill,NumVoc,BootstrapType, Average);
+        MotorCoherenceFree_local = coherence4LMC(Cell, 1,'Free', 'amp', Trill,NumVoc,BootstrapType, Average);
         
-        AuditoryCoherenceOperant = coherence4LMC(Cell, 0,'Operant', 'amp', Trill,NumVoc,BootstrapType, Average);
+        AuditoryCoherenceOperant_local = coherence4LMC(Cell, 0,'Operant', 'amp', Trill,NumVoc,BootstrapType, Average);
         
-        MotorCoherenceOperant = coherence4LMC(Cell, 1,'Operant', 'amp', Trill,NumVoc,BootstrapType, Average);
+        MotorCoherenceOperant_local = coherence4LMC(Cell, 1,'Operant', 'amp', Trill,NumVoc,BootstrapType, Average);
         
-%         AuditoryCoherenceFree = Cell.AuditoryCoherenceFree;
-%         MotorCoherenceFree = Cell.MotorCoherenceFree;
-%         MotorCoherenceOperant = Cell.MotorCoherenceOperant;
-%         if ~isfield(AuditoryCoherenceFree_local, 'Error')
-%             AuditoryCoherenceFree.Info_pRandSpikePerm = AuditoryCoherenceFree_local.Info_pRandSpikePerm;
+        AuditoryCoherenceFree = Cell.AuditoryCoherenceFree;
+        AuditoryCoherenceOperant = Cell.AuditoryCoherenceOperant;
+        MotorCoherenceFree = Cell.MotorCoherenceFree;
+        MotorCoherenceOperant = Cell.MotorCoherenceOperant;
+        if ~isfield(AuditoryCoherenceFree_local, 'Error')
+            AuditoryCoherenceFree.Info_pRandVoc = AuditoryCoherenceFree_local.Info_pRandVoc;
 %             AuditoryCoherenceFree.CoherenceavAmp = AuditoryCoherenceFree_local;
-%             AuditoryCoherenceFree.BootstrapFullTime = AuditoryCoherenceFree_local.BootstrapFullTime;
+            AuditoryCoherenceFree.BootstrapRandVoc = AuditoryCoherenceFree_local.BootstrapRandVoc;
 %             AuditoryCoherenceFree.Info_pFullTime = AuditoryCoherenceFree_local.Info_pFullTime;
 %             AuditoryCoherenceFree.NStims = AuditoryCoherenceFree_local.NStims;
 %             AuditoryCoherenceFree.LengthX = AuditoryCoherenceFree_local.LengthX;
                 
-%         end
-%         if ~isfield(MotorCoherenceFree_local, 'Error')
-%             MotorCoherenceFree.Info_pRandSpikePerm = MotorCoherenceFree_local.Info_pRandSpikePerm;
+        end
+        
+        if ~isfield(AuditoryCoherenceOperant_local, 'Error')
+            AuditoryCoherenceOperant.Info_pRandVoc = AuditoryCoherenceOperant_local.Info_pRandVoc;
+            AuditoryCoherenceOperant.BootstrapRandVoc = AuditoryCoherenceOperant_local.BootstrapRandVoc;
+        end
+        if ~isfield(MotorCoherenceFree_local, 'Error')
+            MotorCoherenceFree.Info_pRandVoc = MotorCoherenceFree_local.Info_pRandVoc;
 %             MotorCoherenceFree.CoherenceavAmp = MotorCoherenceFree_local;
-%             MotorCoherenceFree.BootstrapFullTime = MotorCoherenceFree_local.BootstrapFullTime;
+            MotorCoherenceFree.BootstrapRandVoc = MotorCoherenceFree_local.BootstrapRandVoc;
 %             MotorCoherenceFree.Info_pFullTime = MotorCoherenceFree_local.Info_pFullTime;
 %             MotorCoherenceFree.NStims = MotorCoherenceFree_local.NStims;
 %             MotorCoherenceFree.LengthX = MotorCoherenceFree_local.LengthX;
-%         end
-%         if ~isfield(MotorCoherenceOperant_local, 'Error')
-%             MotorCoherenceOperant.Info_pRandSpikePerm = MotorCoherenceOperant_local.Info_pRandSpikePerm;
+        end
+        if ~isfield(MotorCoherenceOperant_local, 'Error')
+            MotorCoherenceOperant.Info_pRandVoc = MotorCoherenceOperant_local.Info_pRandVoc;
 %             MotorCoherenceOperant.CoherenceavAmp = MotorCoherenceOperant_local;
-%             MotorCoherenceOperant.BootstrapFullTime = MotorCoherenceOperant_local.BootstrapFullTime;
+            MotorCoherenceOperant.BootstrapRandVoc = MotorCoherenceOperant_local.BootstrapRandVoc;
 %             MotorCoherenceOperant.Info_pFullTime = MotorCoherenceOperant_local.Info_pFullTime;
 %             MotorCoherenceOperant.NStims = MotorCoherenceOperant_local.NStims;
 %             MotorCoherenceOperant.LengthX = MotorCoherenceOperant_local.LengthX;
-%         end
+        end
 %         save(CellPath, 'AuditoryCoherenceFree','MotorCoherenceFree','MotorCoherenceOperant', '-append')
             save(CellPath, 'AuditoryCoherenceFree','MotorCoherenceFree','AuditoryCoherenceOperant', 'MotorCoherenceOperant','-append')
         
         if ~isfield(AuditoryCoherenceFree, 'Error')
-            AuditoryCoherenceFreeAll.CoherencyT_DelayAtzero(cc) = AuditoryCoherenceFree.CoherencyT_DelayAtzero;
-            AuditoryCoherenceFreeAll.CoherenceWeightedFreq(cc) = AuditoryCoherenceFree.WeightedSigCoherenceFreq;
-            AuditoryCoherenceFreeAll.CumSumSigCoherence50Hz(cc) = AuditoryCoherenceFree.CumSumSigCoherence50Hz;
-            AuditoryCoherenceFreeAll.MaxCoherence(cc) = AuditoryCoherenceFree.MaxCoherence1;
-            AuditoryCoherenceFreeAll.MaxCoherenceF(cc) = AuditoryCoherenceFree.MaxCoherence2;
-            AuditoryCoherenceFreeAll.CoherencePeaks{cc} = AuditoryCoherenceFree.CoherencePeaks;
-            AuditoryCoherenceFreeAll.CoherencePeaksF{cc} = AuditoryCoherenceFree.CoherencePeaksF;
-            AuditoryCoherenceFreeAll.FirstNonSigCoherenceFreq(cc) = AuditoryCoherenceFree.FirstNonSigCoherenceFreq;
-            AuditoryCoherenceFreeAll.SecondCoherenceFreqCutOff(cc) = AuditoryCoherenceFree.SecondCoherenceFreqCutOff;
-            AuditoryCoherenceFreeAll.Info(cc) = AuditoryCoherenceFree.Info;
-            AuditoryCoherenceFreeAll.Info_low(cc) = AuditoryCoherenceFree.Info_low;
-            AuditoryCoherenceFreeAll.Info_up(cc) = AuditoryCoherenceFree.Info_up;
-            AuditoryCoherenceFreeAll.Info_pRandSpikePerm(cc) = AuditoryCoherenceFree.Info_pRandSpikePerm;
+%             AuditoryCoherenceFreeAll.CoherencyT_DelayAtzero(cc) = AuditoryCoherenceFree.CoherencyT_DelayAtzero;
+%             AuditoryCoherenceFreeAll.CoherenceWeightedFreq(cc) = AuditoryCoherenceFree.WeightedSigCoherenceFreq;
+%             AuditoryCoherenceFreeAll.CumSumSigCoherence50Hz(cc) = AuditoryCoherenceFree.CumSumSigCoherence50Hz;
+%             AuditoryCoherenceFreeAll.MaxCoherence(cc) = AuditoryCoherenceFree.MaxCoherence1;
+%             AuditoryCoherenceFreeAll.MaxCoherenceF(cc) = AuditoryCoherenceFree.MaxCoherence2;
+%             AuditoryCoherenceFreeAll.CoherencePeaks{cc} = AuditoryCoherenceFree.CoherencePeaks;
+%             AuditoryCoherenceFreeAll.CoherencePeaksF{cc} = AuditoryCoherenceFree.CoherencePeaksF;
+%             AuditoryCoherenceFreeAll.FirstNonSigCoherenceFreq(cc) = AuditoryCoherenceFree.FirstNonSigCoherenceFreq;
+%             AuditoryCoherenceFreeAll.SecondCoherenceFreqCutOff(cc) = AuditoryCoherenceFree.SecondCoherenceFreqCutOff;
+%             AuditoryCoherenceFreeAll.Info(cc) = AuditoryCoherenceFree.Info;
+%             AuditoryCoherenceFreeAll.Info_low(cc) = AuditoryCoherenceFree.Info_low;
+%             AuditoryCoherenceFreeAll.Info_up(cc) = AuditoryCoherenceFree.Info_up;
+%             AuditoryCoherenceFreeAll.Info_pRandSpikePerm(cc) = AuditoryCoherenceFree.Info_pRandSpikePerm;
             AuditoryCoherenceFreeAll.NStims(cc) = AuditoryCoherenceFree.NStims;
             AuditoryCoherenceFreeAll.LengthX(cc) = AuditoryCoherenceFree.LengthX;
+            AuditoryCoherenceFreeAll.Info_pRandVoc(cc) = AuditoryCoherenceFree.Info_pRandVoc;
 %             AuditoryCoherenceFreeAll.Info_pTime(cc) = AuditoryCoherenceFree.Info_pTime;
 %             AuditoryCoherenceFreeAll.Info_pFullTime(cc) = AuditoryCoherenceFree.Info_pFullTime;
 %             AuditoryCoherenceFreeAll.AvAmpCoherencyT_DelayAtzero(cc) = AuditoryCoherenceFree_local.CoherencyT_DelayAtzero;
@@ -235,22 +244,22 @@ for cc=326:NCells
 %               AuditoryCoherenceFreeAll.Info_pRandSpikePerm(cc) = AuditoryCoherenceFree.Info_pRandSpikePerm;
         end
         if ~isfield(MotorCoherenceFree, 'Error')
-            MotorCoherenceFreeAll.CoherencyT_DelayAtzero(cc) = MotorCoherenceFree.CoherencyT_DelayAtzero;
-            MotorCoherenceFreeAll.CoherenceWeightedFreq(cc) = MotorCoherenceFree.WeightedSigCoherenceFreq;
-            MotorCoherenceFreeAll.CumSumSigCoherence50Hz(cc) = MotorCoherenceFree.CumSumSigCoherence50Hz;
-            MotorCoherenceFreeAll.MaxCoherence(cc) = MotorCoherenceFree.MaxCoherence1;
-            MotorCoherenceFreeAll.MaxCoherenceF(cc) = MotorCoherenceFree.MaxCoherence2;
-            MotorCoherenceFreeAll.CoherencePeaks{cc} = MotorCoherenceFree.CoherencePeaks;
-            MotorCoherenceFreeAll.CoherencePeaksF{cc} = MotorCoherenceFree.CoherencePeaksF;
-            MotorCoherenceFreeAll.FirstNonSigCoherenceFreq(cc) = MotorCoherenceFree.FirstNonSigCoherenceFreq;
-            MotorCoherenceFreeAll.SecondCoherenceFreqCutOff(cc) = MotorCoherenceFree.SecondCoherenceFreqCutOff;
-            MotorCoherenceFreeAll.Info(cc) = MotorCoherenceFree.Info;
-            MotorCoherenceFreeAll.Info_low(cc) = MotorCoherenceFree.Info_low;
-            MotorCoherenceFreeAll.Info_up(cc) = MotorCoherenceFree.Info_up;
-            MotorCoherenceFreeAll.Info_pRandSpikePerm(cc) = MotorCoherenceFree.Info_pRandSpikePerm;
+%             MotorCoherenceFreeAll.CoherencyT_DelayAtzero(cc) = MotorCoherenceFree.CoherencyT_DelayAtzero;
+%             MotorCoherenceFreeAll.CoherenceWeightedFreq(cc) = MotorCoherenceFree.WeightedSigCoherenceFreq;
+%             MotorCoherenceFreeAll.CumSumSigCoherence50Hz(cc) = MotorCoherenceFree.CumSumSigCoherence50Hz;
+%             MotorCoherenceFreeAll.MaxCoherence(cc) = MotorCoherenceFree.MaxCoherence1;
+%             MotorCoherenceFreeAll.MaxCoherenceF(cc) = MotorCoherenceFree.MaxCoherence2;
+%             MotorCoherenceFreeAll.CoherencePeaks{cc} = MotorCoherenceFree.CoherencePeaks;
+%             MotorCoherenceFreeAll.CoherencePeaksF{cc} = MotorCoherenceFree.CoherencePeaksF;
+%             MotorCoherenceFreeAll.FirstNonSigCoherenceFreq(cc) = MotorCoherenceFree.FirstNonSigCoherenceFreq;
+%             MotorCoherenceFreeAll.SecondCoherenceFreqCutOff(cc) = MotorCoherenceFree.SecondCoherenceFreqCutOff;
+%             MotorCoherenceFreeAll.Info(cc) = MotorCoherenceFree.Info;
+%             MotorCoherenceFreeAll.Info_low(cc) = MotorCoherenceFree.Info_low;
+%             MotorCoherenceFreeAll.Info_up(cc) = MotorCoherenceFree.Info_up;
+%             MotorCoherenceFreeAll.Info_pRandSpikePerm(cc) = MotorCoherenceFree.Info_pRandSpikePerm;
             MotorCoherenceFreeAll.NStims(cc) = MotorCoherenceFree.NStims;
             MotorCoherenceFreeAll.LengthX(cc) = MotorCoherenceFree.LengthX;
-
+            MotorCoherenceFreeAll.Info_pRandVoc(cc) = MotorCoherenceFree.Info_pRandVoc;
 %             MotorCoherenceFreeAll.Info_pTime(cc) = MotorCoherenceFree.Info_pTime;
 %             MotorCoherenceFreeAll.Info_pFullTime(cc) = MotorCoherenceFree.Info_pFullTime;
 %             MotorCoherenceFreeAll.AvAmpCoherencyT_DelayAtzero(cc) = MotorCoherenceFree_local.CoherencyT_DelayAtzero;
@@ -263,39 +272,41 @@ for cc=326:NCells
         end
 
         if ~isfield(AuditoryCoherenceOperant, 'Error')
-            AuditoryCoherenceOperantAll.CoherencyT_DelayAtzero(cc) = AuditoryCoherenceOperant.CoherencyT_DelayAtzero;
-            AuditoryCoherenceOperantAll.CoherenceWeightedFreq(cc) = AuditoryCoherenceOperant.WeightedSigCoherenceFreq;
-            AuditoryCoherenceOperantAll.CumSumSigCoherence50Hz(cc) = AuditoryCoherenceOperant.CumSumSigCoherence50Hz;
-            AuditoryCoherenceOperantAll.MaxCoherence(cc) = AuditoryCoherenceOperant.MaxCoherence1;
-            AuditoryCoherenceOperantAll.MaxCoherenceF(cc) = AuditoryCoherenceOperant.MaxCoherence2;
-            AuditoryCoherenceOperantAll.CoherencePeaks{cc} = AuditoryCoherenceOperant.CoherencePeaks;
-            AuditoryCoherenceOperantAll.CoherencePeaksF{cc} = AuditoryCoherenceOperant.CoherencePeaksF;
-            AuditoryCoherenceOperantAll.FirstNonSigCoherenceFreq(cc) = AuditoryCoherenceOperant.FirstNonSigCoherenceFreq;
-            AuditoryCoherenceOperantAll.SecondCoherenceFreqCutOff(cc) = AuditoryCoherenceOperant.SecondCoherenceFreqCutOff;
-            AuditoryCoherenceOperantAll.Info(cc) = AuditoryCoherenceOperant.Info;
-            AuditoryCoherenceOperantAll.Info_low(cc) = AuditoryCoherenceOperant.Info_low;
-            AuditoryCoherenceOperantAll.Info_up(cc) = AuditoryCoherenceOperant.Info_up;
-            AuditoryCoherenceOperantAll.Info_pRandSpikePerm(cc) = AuditoryCoherenceOperant.Info_pRandSpikePerm;
+%             AuditoryCoherenceOperantAll.CoherencyT_DelayAtzero(cc) = AuditoryCoherenceOperant.CoherencyT_DelayAtzero;
+%             AuditoryCoherenceOperantAll.CoherenceWeightedFreq(cc) = AuditoryCoherenceOperant.WeightedSigCoherenceFreq;
+%             AuditoryCoherenceOperantAll.CumSumSigCoherence50Hz(cc) = AuditoryCoherenceOperant.CumSumSigCoherence50Hz;
+%             AuditoryCoherenceOperantAll.MaxCoherence(cc) = AuditoryCoherenceOperant.MaxCoherence1;
+%             AuditoryCoherenceOperantAll.MaxCoherenceF(cc) = AuditoryCoherenceOperant.MaxCoherence2;
+%             AuditoryCoherenceOperantAll.CoherencePeaks{cc} = AuditoryCoherenceOperant.CoherencePeaks;
+%             AuditoryCoherenceOperantAll.CoherencePeaksF{cc} = AuditoryCoherenceOperant.CoherencePeaksF;
+%             AuditoryCoherenceOperantAll.FirstNonSigCoherenceFreq(cc) = AuditoryCoherenceOperant.FirstNonSigCoherenceFreq;
+%             AuditoryCoherenceOperantAll.SecondCoherenceFreqCutOff(cc) = AuditoryCoherenceOperant.SecondCoherenceFreqCutOff;
+%             AuditoryCoherenceOperantAll.Info(cc) = AuditoryCoherenceOperant.Info;
+%             AuditoryCoherenceOperantAll.Info_low(cc) = AuditoryCoherenceOperant.Info_low;
+%             AuditoryCoherenceOperantAll.Info_up(cc) = AuditoryCoherenceOperant.Info_up;
+%             AuditoryCoherenceOperantAll.Info_pRandSpikePerm(cc) = AuditoryCoherenceOperant.Info_pRandSpikePerm;
             AuditoryCoherenceOperantAll.NStims(cc) = AuditoryCoherenceOperant.NStims;
             AuditoryCoherenceOperantAll.LengthX(cc) = AuditoryCoherenceOperant.LengthX;
+            AuditoryCoherenceOperantAll.Info_pRandVoc(cc) = AuditoryCoherenceOperant.Info_pRandVoc;
         end
 
         if ~isfield(MotorCoherenceOperant, 'Error')
-            MotorCoherenceOperantAll.CoherencyT_DelayAtzero(cc) = MotorCoherenceOperant.CoherencyT_DelayAtzero;
-            MotorCoherenceOperantAll.CoherenceWeightedFreq(cc) = MotorCoherenceOperant.WeightedSigCoherenceFreq;
-            MotorCoherenceOperantAll.CumSumSigCoherence50Hz(cc) = MotorCoherenceOperant.CumSumSigCoherence50Hz;
-            MotorCoherenceOperantAll.MaxCoherence(cc) = MotorCoherenceOperant.MaxCoherence1;
-            MotorCoherenceOperantAll.MaxCoherenceF(cc) = MotorCoherenceOperant.MaxCoherence2;
-            MotorCoherenceOperantAll.CoherencePeaks{cc} = MotorCoherenceOperant.CoherencePeaks;
-            MotorCoherenceOperantAll.CoherencePeaksF{cc} = MotorCoherenceOperant.CoherencePeaksF;
-            MotorCoherenceOperantAll.FirstNonSigCoherenceFreq(cc) = MotorCoherenceOperant.FirstNonSigCoherenceFreq;
-            MotorCoherenceOperantAll.SecondCoherenceFreqCutOff(cc) = MotorCoherenceOperant.SecondCoherenceFreqCutOff;
-            MotorCoherenceOperantAll.Info(cc) = MotorCoherenceOperant.Info;
-            MotorCoherenceOperantAll.Info_low(cc) = MotorCoherenceOperant.Info_low;
-            MotorCoherenceOperantAll.Info_up(cc) = MotorCoherenceOperant.Info_up;
-            MotorCoherenceOperantAll.Info_pRandSpikePerm(cc) = MotorCoherenceOperant.Info_pRandSpikePerm;
+%             MotorCoherenceOperantAll.CoherencyT_DelayAtzero(cc) = MotorCoherenceOperant.CoherencyT_DelayAtzero;
+%             MotorCoherenceOperantAll.CoherenceWeightedFreq(cc) = MotorCoherenceOperant.WeightedSigCoherenceFreq;
+%             MotorCoherenceOperantAll.CumSumSigCoherence50Hz(cc) = MotorCoherenceOperant.CumSumSigCoherence50Hz;
+%             MotorCoherenceOperantAll.MaxCoherence(cc) = MotorCoherenceOperant.MaxCoherence1;
+%             MotorCoherenceOperantAll.MaxCoherenceF(cc) = MotorCoherenceOperant.MaxCoherence2;
+%             MotorCoherenceOperantAll.CoherencePeaks{cc} = MotorCoherenceOperant.CoherencePeaks;
+%             MotorCoherenceOperantAll.CoherencePeaksF{cc} = MotorCoherenceOperant.CoherencePeaksF;
+%             MotorCoherenceOperantAll.FirstNonSigCoherenceFreq(cc) = MotorCoherenceOperant.FirstNonSigCoherenceFreq;
+%             MotorCoherenceOperantAll.SecondCoherenceFreqCutOff(cc) = MotorCoherenceOperant.SecondCoherenceFreqCutOff;
+%             MotorCoherenceOperantAll.Info(cc) = MotorCoherenceOperant.Info;
+%             MotorCoherenceOperantAll.Info_low(cc) = MotorCoherenceOperant.Info_low;
+%             MotorCoherenceOperantAll.Info_up(cc) = MotorCoherenceOperant.Info_up;
+%             MotorCoherenceOperantAll.Info_pRandSpikePerm(cc) = MotorCoherenceOperant.Info_pRandSpikePerm;
             MotorCoherenceOperantAll.NStims(cc) = MotorCoherenceOperant.NStims;
             MotorCoherenceOperantAll.LengthX(cc) = MotorCoherenceOperant.LengthX;
+            MotorCoherenceOperantAll.Info_pRandVoc(cc) = MotorCoherenceOperant.Info_pRandVoc;
 %             MotorCoherenceOperantAll.Info_pTime(cc) = MotorCoherenceOperant.Info_pTime;
 %             MotorCoherenceOperantAll.AvAmpCoherencyT_DelayAtzero(cc) = MotorCoherenceOperant_local.CoherencyT_DelayAtzero;
 %             MotorCoherenceOperantAll.AvAmpCoherencyT_WidthAtMaxPeak(cc) = MotorCoherenceOperant_local.CoherencyT_WidthAtMaxPeak;
@@ -380,7 +391,7 @@ end
 
 %% Plots results of coherence calculations for the population
 FeatureName = {'amp' 'SpectralMean' 'sal'};
-SessionChoice = 'Operant'; % Operant or Free
+SessionChoice = 'Free'; % Operant or Free
 MS = 'Motor'; % Motor or Auditory
 Trill=0;
 % for fn = 1:length(FeatureName)
@@ -417,7 +428,7 @@ Trill=0;
 %     keyboard
     
     subplot(1,3,2)
-    Colors = [(Info_p<0.01) zeros(length(Info),1) zeros(length(Info),1)];
+    Colors = [(Info_pRandSpikePerm<0.01) zeros(length(Info),1) zeros(length(Info),1)];
     scatter(Info,MaxCoherence(:,1),20, Colors, 'filled')
 %     plot(Info,MaxCoherence(:,1), 'o','Color','k','MarkerSize',6,'MarkerFaceColor','k')
     xlabel(sprintf('Information on Coherence with sound %s (bits)', FeatureName2))
@@ -467,12 +478,13 @@ end
     hold off
     
     % Just the histogram of information with cell breaked down
-    GestureCell_logical = logical((Info_low>0.1).*(Info_p<0.01));% Gesture cells
-    SCell_logical = logical((Info_low>0.1).*(Info_p>=0.01));% On cells
+    GestureCell_logical = logical((Info_pRandSpikePerm<0.01).*(Info_pRandVoc<0.01));% Gesture cells
+    OnCell_logical = logical((Info_pRandSpikePerm<0.01).*(Info_pRandVoc>=0.01));% On cells
     NSCell_logical = Info_pRandSpikePerm>=0.01;
-    FBreak=figure();
+    SCell_logical = Info_pRandSpikePerm<0.01;
+    FBreak=figure(3);
     clf
-    histogram(Info(SCell_logical),'BinWidth',0.1,'FaceColor', [0, 0, 1]) % Vocalization On Cells; purple
+    histogram(Info(OnCell_logical),'BinWidth',0.1,'FaceColor', [0, 0, 1]) % Vocalization On Cells; purple
     hold on
     histogram(Info(GestureCell_logical),'BinWidth',0.1,'FaceColor', [0.75, 0, 0.75]) % Gesture Cells only; red
     hold on
@@ -485,16 +497,16 @@ end
     v.LineWidth = 2;
     XLIM = get(gca, 'XLim');
     set(gca, 'XLim', [XLIM(1) 5])
-    title(sprintf('%s Information (mean = %.2f +/- %.2f)', MS, nanmean(Info(~NSCell_logical)), nanstd(Info(~NSCell_logical))))
+    title(sprintf('%s Information (mean = %.2f +/- %.2f, N=%d)', MS, nanmean(Info(SCell_logical)), nanstd(Info(SCell_logical)),sum(SCell_logical)))
     box off
     hold off
     
     % Compile figure for delay and time resolution
-    figure()
+    figure(4)
     clf
     t = tiledlayout(1,1);
     ax1 = axes(t);
-    histogram(ax1,CoherencyT_DelayAtzero,'BinWidth',TR,'FaceColor', [0.85 0.325 0.098], 'orientation', 'horizontal')
+    histogram(ax1,CoherencyT_DelayAtzero(SCell_logical),'BinWidth',2*TR,'FaceColor', [0.85 0.325 0.098], 'orientation', 'horizontal')
     
 %     hold(ax1, 'on')
 %     histogram(CoherencyT_DelayAtzero(Info_p<0.01),'BinWidth',TR,'FaceColor','r')
@@ -504,17 +516,18 @@ end
     ax1.YAxisLocation = 'right';
     ax1.Box = 'off';
     ax1.Color = 'none';
-    text(20,-50, sprintf('Sig mean = %.2f +/- %.2f', nanmean(CoherencyT_DelayAtzero(~NSCell_logical)), nanstd(CoherencyT_DelayAtzero(~NSCell_logical))/(sum(~isnan(CoherencyT_DelayAtzero(~NSCell_logical))))^0.5))
+    text(2,-450, sprintf('Sig mean = %.2f +/- %.2f ms', nanmean(CoherencyT_DelayAtzero(SCell_logical)), nanstd(CoherencyT_DelayAtzero(SCell_logical))/(sum(~isnan(CoherencyT_DelayAtzero(SCell_logical))))^0.5))
 %     hold on
 %     text(29, -57, sprintf('Sig mean = %.2f +/- %.2f', nanmean(CoherencyT_DelayAtzero(Info_p<0.01)), nanstd(CoherencyT_DelayAtzero(Info_p<0.01))/(sum(~isnan(CoherencyT_DelayAtzero(Info_p<0.01))))^0.5))
     hold(ax1,'on')
     ax2 = axes(t);
-    scatter(ax2,Info(SCell_logical),CoherencyT_DelayAtzero(SCell_logical),25, [0, 0, 1], 'filled')
+    scatter(ax2,Info(OnCell_logical),CoherencyT_DelayAtzero(OnCell_logical),25, [0, 0, 1], 'filled')
     hold(ax2, 'on')
     scatter(ax2,Info(GestureCell_logical),CoherencyT_DelayAtzero(GestureCell_logical),25, [0.75, 0, 0.75], 'filled')
-    hold(ax2, 'on')
-    scatter(ax2,Info(NSCell_logical),CoherencyT_DelayAtzero(NSCell_logical),25, 'k', 'filled')
-    legend({'Vocalization On units', 'Gesture units', 'NS units'})
+%     hold(ax2, 'on')
+%     scatter(ax2,Info(NSCell_logical),CoherencyT_DelayAtzero(NSCell_logical),25, 'k', 'filled')
+    legend({'Vocalization On units', 'Gesture units'})
+%     legend({'Vocalization On units', 'Gesture units', 'NS units'})
     ylabel('Optimal Delay (ms)')
     ax2.Box = 'off';
     ax2.Color = 'none';
@@ -523,44 +536,49 @@ end
     hold on
     h=hline(0, 'k:');
     h.LineWidth = 2;
+    ylim(ax1, ylim(ax2));
     
-    
-    figure(11)
+    OptimalTimeResolution = 1000./(2*CoherenceWeightedFreq);
+    figure(5)
     clf
     t = tiledlayout(1,1);
     ax1 = axes(t);
-    histogram(ax1, CoherencyT_WidthAtMaxPeak,'BinWidth',TR,'FaceColor', [0 0.5 0], 'orientation', 'horizontal')
+    histogram(ax1, OptimalTimeResolution(SCell_logical),'BinWidth',TR,'FaceColor', [0 0.5 0], 'orientation', 'horizontal')
 %     ylabel('Time resolution (ms)')
     xlabel('Number of cells')
     ax1.XAxisLocation = 'top';
     ax1.YAxisLocation = 'right';
     ax1.Box = 'off';
     ax1.Color = 'none';
-    text(20,  50, sprintf('Sig mean = %.2f +/- %.2f', nanmean(CoherencyT_WidthAtMaxPeak(~NSCell_logical)), nanstd(CoherencyT_WidthAtMaxPeak(~NSCell_logical))/(sum(~isnan(CoherencyT_WidthAtMaxPeak(~NSCell_logical))))^0.5))
+    ax1.XLim = xlim(ax1) +[0 1];
+    ax1.YLim = [0 24];
+    text(20, 3, sprintf('Sig mean = %.2f +/- %.2f', nanmean(OptimalTimeResolution(SCell_logical)), nanstd(OptimalTimeResolution(SCell_logical))/(sum(~isnan(OptimalTimeResolution(SCell_logical))))^0.5))
 %     hold on
-%     text(-57, 29, sprintf('Sig mean = %.2f +/- %.2f', nanmean(CoherencyT_WidthAtMaxPeak(Info_p<0.01)), nanstd(CoherencyT_WidthAtMaxPeak(Info_p<0.01))/(sum(~isnan(CoherencyT_WidthAtMaxPeak(Info_p<0.01))))^0.5))
+%     text(-57, 29, sprintf('Sig mean = %.2f +/- %.2f', nanmean(OptimalTimeResolution(Info_p<0.01)), nanstd(OptimalTimeResolution(Info_p<0.01))/(sum(~isnan(OptimalTimeResolution(Info_p<0.01))))^0.5))
     
     hold(ax1,'on')
     ax2 = axes(t);
-    scatter(ax2,Info(SCell_logical),CoherencyT_WidthAtMaxPeak(SCell_logical),25, [0, 0, 1], 'filled')
+    scatter(ax2,Info(OnCell_logical),OptimalTimeResolution(OnCell_logical),25, [0, 0, 1], 'filled')
     hold(ax2, 'on')
-    scatter(ax2,Info(GestureCell_logical),CoherencyT_WidthAtMaxPeak(GestureCell_logical),25, [0.75, 0, 0.75], 'filled')
-    hold(ax2, 'on')
-    scatter(ax2,Info(NSCell_logical),CoherencyT_WidthAtMaxPeak(NSCell_logical),25, 'k', 'filled')
-    legend({'Vocalization On units', 'Gesture units', 'NS units'})
+    scatter(ax2,Info(GestureCell_logical),OptimalTimeResolution(GestureCell_logical),25, [0.75, 0, 0.75], 'filled')
+%     hold(ax2, 'on')
+%     scatter(ax2,Info(NSCell_logical),OptimalTimeResolution(NSCell_logical),25, 'k', 'filled')
+%     legend({'Vocalization On units', 'Gesture units', 'NS units'})
+    legend({'Vocalization On units', 'Gesture units'})
     ax2.Box = 'off';
     ax2.Color = 'none';
     xlabel(sprintf('Information on Coherence with sound %s (bits)',FeatureName2))
     ylabel('Time resolution (ms)')
     xlim([0 5])
+    ax2.YLim = ylim(ax1);
     
     
 
     
-    figure(2)
+    figure(6)
     clf
     subplot(2,5,1)
-    Colors = [(Info_p<0.01) zeros(length(Info),1) zeros(length(Info),1)];
+    Colors = [(Info_pRandSpikePerm<0.01) zeros(length(Info),1) zeros(length(Info),1)];
     scatter(Info,CoherencyT_DelayAtzero,20, Colors, 'filled')
     xlabel(sprintf('Information on Coherence with sound %s (bits)',FeatureName2))
     ylabel('Phase of coherency (ms)')
@@ -578,9 +596,9 @@ end
     h.LineWidth = 2;
     
     subplot(2,5,2)
-    scatter(Info,CoherencyT_WidthAtMaxPeak,20, Colors, 'filled')
+    scatter(Info,OptimalTimeResolution,20, Colors, 'filled')
     xlabel(sprintf('Information on Coherence with sound %s (bits)',FeatureName2))
-    ylabel('Time resolution of Coherency (ms)')
+    ylabel('Time resolution of Coherence (ms)')
     hold on
     v=vline(quantile(Info, 0.25),'b--');
     v.LineWidth = 2;
@@ -638,9 +656,9 @@ end
     ylim([0 50])
     
     subplot(2,5,6)
-    histogram(CoherencyT_DelayAtzero(Info_p>=0.01),'BinWidth',TR/2,'FaceColor','k')
+    histogram(CoherencyT_DelayAtzero(Info_pRandSpikePerm>=0.01),'BinWidth',TR/2,'FaceColor','k')
     hold on
-    histogram(CoherencyT_DelayAtzero(Info_p<0.01),'BinWidth',TR/2,'FaceColor','r')
+    histogram(CoherencyT_DelayAtzero(Info_pRandSpikePerm<0.01),'BinWidth',TR/2,'FaceColor','r')
     xlabel('Phase of coherency (ms)')
     ylabel('Number of cells')
     hold on
@@ -649,39 +667,39 @@ end
     hold on
     text(-57, 27, sprintf('All mean = %.2f +/- %.2f', nanmean(CoherencyT_DelayAtzero), nanstd(CoherencyT_DelayAtzero)/(sum(~isnan(CoherencyT_DelayAtzero)))^0.5))
     hold on
-    text(-57, 29, sprintf('Sig mean = %.2f +/- %.2f', nanmean(CoherencyT_DelayAtzero(Info_p<0.01)), nanstd(CoherencyT_DelayAtzero(Info_p<0.01))/(sum(~isnan(CoherencyT_DelayAtzero(Info_p<0.01))))^0.5))
+    text(-57, 29, sprintf('Sig mean = %.2f +/- %.2f', nanmean(CoherencyT_DelayAtzero(Info_pRandSpikePerm<0.01)), nanstd(CoherencyT_DelayAtzero(Info_pRandSpikePerm<0.01))/(sum(~isnan(CoherencyT_DelayAtzero(Info_pRandSpikePerm<0.01))))^0.5))
     
     subplot(2,5,7)
-    histogram(CoherencyT_WidthAtMaxPeak(Info_p>=0.01),'BinWidth',TR/2,'FaceColor','k')
+    histogram(OptimalTimeResolution(Info_pRandSpikePerm>=0.01),'BinWidth',TR/2,'FaceColor','k')
     hold on
-    histogram(CoherencyT_WidthAtMaxPeak(Info_p<0.01),'BinWidth',TR/2,'FaceColor','r')
+    histogram(OptimalTimeResolution(Info_pRandSpikePerm<0.01),'BinWidth',TR/2,'FaceColor','r')
     xlabel('Time resolution of Coherency (ms)')
     ylabel('Number of cells')
     hold on
-    text(35, 32, sprintf('All mean = %.2f +/- %.2f', nanmean(CoherencyT_WidthAtMaxPeak), nanstd(CoherencyT_WidthAtMaxPeak)/(sum(~isnan(CoherencyT_WidthAtMaxPeak)))^0.5))
+    text(35, 32, sprintf('All mean = %.2f +/- %.2f', nanmean(OptimalTimeResolution), nanstd(OptimalTimeResolution)/(sum(~isnan(OptimalTimeResolution)))^0.5))
     hold on
-    text(35, 34, sprintf('Sig mean = %.2f +/- %.2f', nanmean(CoherencyT_WidthAtMaxPeak(Info_p<0.01)), nanstd(CoherencyT_WidthAtMaxPeak(Info_p<0.01))/(sum(~isnan(CoherencyT_WidthAtMaxPeak(Info_p<0.01))))^0.5))
+    text(35, 34, sprintf('Sig mean = %.2f +/- %.2f', nanmean(OptimalTimeResolution(Info_pRandSpikePerm<0.01)), nanstd(OptimalTimeResolution(Info_pRandSpikePerm<0.01))/(sum(~isnan(OptimalTimeResolution(Info_pRandSpikePerm<0.01))))^0.5))
     
     
     
     subplot(2,5,8)
-    histogram(FirstNonSigCoherenceFreq(Info_p>=0.01), 'BinWidth',ceil(nFFT/Nyquist),'FaceColor','k')
+    histogram(FirstNonSigCoherenceFreq(Info_pRandSpikePerm>=0.01), 'BinWidth',ceil(nFFT/Nyquist),'FaceColor','k')
     hold on
-    histogram(FirstNonSigCoherenceFreq(Info_p<0.01), 'BinWidth',ceil(nFFT/Nyquist),'FaceColor','r')
+    histogram(FirstNonSigCoherenceFreq(Info_pRandSpikePerm<0.01), 'BinWidth',ceil(nFFT/Nyquist),'FaceColor','r')
     xlabel('Max significant Frequency (Hz)')
     ylabel('Number of Cells')
     
     subplot(2,5,9)
-    histogram(SecondCoherenceFreqCutOff(Info_p>=0.01), 'BinWidth',ceil(nFFT/Nyquist),'FaceColor','k')
+    histogram(SecondCoherenceFreqCutOff(Info_pRandSpikePerm>=0.01), 'BinWidth',ceil(nFFT/Nyquist),'FaceColor','k')
     hold on
-    histogram(SecondCoherenceFreqCutOff(Info_p<0.01), 'BinWidth',ceil(nFFT/Nyquist),'FaceColor','r')
+    histogram(SecondCoherenceFreqCutOff(Info_pRandSpikePerm<0.01), 'BinWidth',ceil(nFFT/Nyquist),'FaceColor','r')
     xlabel('Max 2nd peaks significant Frequency (Hz)')
     ylabel('Number of Cells')
     
     subplot(2,5,10)
-    histogram(MaxCoherenceF(Info_p>=0.01), 'BinWidth',ceil(nFFT/Nyquist),'FaceColor','k')
+    histogram(MaxCoherenceF(Info_pRandSpikePerm>=0.01), 'BinWidth',ceil(nFFT/Nyquist),'FaceColor','k')
     hold on
-    histogram(MaxCoherenceF(Info_p<0.01), 'BinWidth',ceil(nFFT/Nyquist),'FaceColor','r')
+    histogram(MaxCoherenceF(Info_pRandSpikePerm<0.01), 'BinWidth',ceil(nFFT/Nyquist),'FaceColor','r')
     % Some points with very low values of info have high values of frequency of
     % Max coherence, keep the plot focused on the majority of points
     xlim([0 50])
@@ -689,9 +707,9 @@ end
     ylabel('Number of Cells')
     
     if ~Trill
-        suplabel(sprintf('%s Coherence %s session %s N=%d cells %d with permutation test p<0.01', MS, SessionChoice, FeatureName2, sum(~isnan(Info)), sum(Info_p<0.01)), 't');
+        suplabel(sprintf('%s Coherence %s session %s N=%d cells %d with spike shuffling test p<0.01', MS, SessionChoice, FeatureName2, sum(~isnan(Info)), sum(Info_pRandSpikePerm<0.01)), 't');
     elseif Trill==1
-        suplabel(sprintf('%s Coherence %s Trills only session %s N=%d cells %d with permutation test p<0.01', MS, SessionChoice, FeatureName2, sum(~isnan(Info)), sum(Info_p<0.01)), 't');
+        suplabel(sprintf('%s Coherence %s Trills only session %s N=%d cells %d with spike shuffling test p<0.01', MS, SessionChoice, FeatureName2, sum(~isnan(Info)), sum(Info_pRandSpikePerm<0.01)), 't');
     end
     
     fprintf(1,'Cell with highest Info Value: %s', CellsPath(Info == max(Info)).name)
@@ -699,8 +717,11 @@ end
     % SpectralMean 59834_20190610_SSS_1-130.mat (cc=43/488)
     % Saliency: 59834_20190708_SSM_1-228.mat (cc=454/488)
     
+    % Amp Free session: 59834_20190604_SSM_3-229.mat (cc=7/485)
+    % Amp Operant session: 59834_20190614_SSS_1-100.mat
+    
     % Plot the values of the secondary peaks found for some cells
-    figure(4)
+    figure(7)
     scatter([CoherencePeaksF{:}], [CoherencePeaks{:}],10, 'filled', 'MarkerEdgeColor', 'k', 'MarkerFaceColor','k')
     xlabel('Frequency of secondary peaks in Coherence')
     ylabel('Values of Coherence')
@@ -852,7 +873,8 @@ clf
         Operant = load(fullfile(Path,sprintf('%sCoherence_%s_%s_Trill.mat', MS, FeatureName{fn}, 'Operant')));
         
     end
-    Colors = [(Operant.Info_pTime<0.01) zeros(length(Operant.Info),1) (Free.Info_pTime<0.01)];
+    Colors = [(Operant.Info_pRandSpikePerm<0.01) zeros(length(Operant.Info),1) (Free.Info_pRandSpikePerm<0.01)];
+    SigCells_logical = ((Operant.Info_pRandSpikePerm<0.01) + (Free.Info_pRandSpikePerm<0.01))>0;
     
     if strcmp(FeatureName{fn}, 'amp')
         FeatureName2 = 'Amplitude';
@@ -861,10 +883,11 @@ clf
     elseif strcmp(FeatureName{fn}, 'SpectralMean')
         FeatureName2 = 'Spectral Mean';
     end
-    subplot(1,2,1)
-    scatter(Operant.Info,Free.Info,40,Colors, 'filled')
+%     subplot(1,2,1)
+    scatter(Operant.Info(SigCells_logical),Free.Info(SigCells_logical),40,Colors(SigCells_logical ,:), 'filled')
+%     scatter(Operant.Info,Free.Info,40,Colors, 'filled')
     hold on
-    plot([0 7], [0 7], 'r:', 'LineWidth',2)
+    plot([0 9], [0 9], 'r:', 'LineWidth',2)
     hold off
     xlabel('Operant Session')
     ylabel('Free Session')
@@ -899,18 +922,23 @@ clf
     figure(8)
     clf
     [h,pstable]=ttest(Operant.Info(KDE_OpvsFr_p>0.05), Free.Info(KDE_OpvsFr_p>0.05))
-    [h,pall]=ttest(Operant.Info, Free.Info)
+    [h,pall]=ttest(Operant.Info(SigCells_logical), Free.Info(SigCells_logical))
+%     [h,pall]=ttest(Operant.Info, Free.Info)
     % [h,pstable]=kstest(Operant.Info(KDE_OpvsFr_p>0.05)-Free.Info(KDE_OpvsFr_p>0.05))
     % [h,pall]=kstest(Operant.Info-Free.Info)
     subplot(1,2,1)
-    histogram(Operant.Info - Free.Info,20, 'FaceColor','k')
+%     histogram(Operant.Info - Free.Info,20, 'FaceColor','k')
+    histogram(Operant.Info(SigCells_logical) - Free.Info(SigCells_logical),20, 'FaceColor','k')
     xlabel('Information on Motor Coherence difference Operant - Free')
-    ylabel('All cells')
-    xlim([-5 5])
+%     ylabel('All cells')
+    ylabel('Significant Cells for motor MI coherence during operant OR Free session')
+    xlim([-8 8])
     hold on
     VL = vline(0, 'r--');
     VL.LineWidth=2;
-    title(sprintf('Information change t-test p=%.2e N=%d', pall, sum(~isnan(Operant.Info .* Free.Info))))
+    N=sum(~isnan(Operant.Info(SigCells_logical) .* Free.Info(SigCells_logical)));
+%     title(sprintf('Information change t-test p=%.2f N=%d', pall, sum(~isnan(Operant.Info .* Free.Info))))
+    title(sprintf('Information change mean=%.2f+/-%.2f t-test p=%.2f N=%d',nanmean(Operant.Info(SigCells_logical) - Free.Info(SigCells_logical)),nanstd(Operant.Info(SigCells_logical) - Free.Info(SigCells_logical))./(N)^0.5, pall,N ))
     subplot(1,2,2)
     histogram(Operant.Info(KDE_OpvsFr_p>0.05) - Free.Info(KDE_OpvsFr_p>0.05),20, 'FaceColor','k')
     xlim([-5 5])
@@ -966,7 +994,7 @@ clf
  SessionChoice = 'Free';
     Auditory = load(fullfile(Path,sprintf('AuditoryCoherence_%s_%s.mat', FeatureName{fn}, SessionChoice)));
     Motor = load(fullfile(Path,sprintf('MotorCoherence_%s_%s.mat', FeatureName{fn}, SessionChoice)));
-    Colors = [(Motor.Info_low>0.1) zeros(length(Motor.Info),1) (Auditory.Info_low>0.1)];
+    Colors = [(Motor.Info_pRandSpikePerm<0.01) zeros(length(Motor.Info),1) (Auditory.Info_pRandSpikePerm<0.01)];
     if strcmp(FeatureName{fn}, 'amp')
         FeatureName2 = 'Amplitude';
     elseif strcmp(FeatureName{fn}, 'sal')
@@ -977,7 +1005,7 @@ clf
     subplot(3,1,1)
     scatter(Motor.Info,Auditory.Info,40,Colors, 'filled')
     hold on
-    plot([0 3], [0 3], 'r:', 'LineWidth',2)
+    plot([0 9], [0 9], 'r:', 'LineWidth',2)
     hold off
     xlabel('Motor')
     ylabel('Auditory')
@@ -990,7 +1018,7 @@ clf
     histogram(Motor.Info - Auditory.Info,20, 'FaceColor','k')
     xlabel('Information on Coherence difference Motor - Auditory')
     ylabel('All cells')
-    xlim([-1.5 1.5])
+%     xlim([-1.5 1.5])
     hold on
     VL = vline(0, 'r--');
     VL.LineWidth=2;
@@ -1012,7 +1040,43 @@ clf
     title(sprintf('D-prime Information change in Free session mean = %.2f +/- %.2f N=%d', nanmean(DPrime),nanstd(DPrime), sum(~isnan(Motor.Info .* Auditory.Info))))
     
 % end
+%% effect of sampling on values of Coherence MI
+Operant = load(fullfile(Path,sprintf('%sCoherence_%s_%s.mat', 'Motor', 'amp', 'Operant')));
+figure(); clf;
+subplot(1,2,1)
+scatter(Operant.Info, Operant.NStims,20,[(Operant.Info_pRandSpikePerm<0.01) zeros(length(Operant.Info),1) zeros(length(Operant.Info),1)], 'filled');
+ylabel('# vocalizations')
+xlabel('Motor Cohernce MI Operant')
+subplot(1,2,2)
+scatter(Operant.Info, Operant.LengthX,20,[(Operant.Info_pRandSpikePerm<0.01) zeros(length(Operant.Info),1) zeros(length(Operant.Info),1)], 'filled');
+ylabel('Sample size')
+xlabel('Motor Cohernce MI Operant')
+suplabel(sprintf('Operant Session N= %d/%d significant units', sum(Operant.Info_pRandSpikePerm<0.01), sum(~isnan(Operant.Info_pRandSpikePerm))))
 
+
+Free = load(fullfile(Path,sprintf('%sCoherence_%s_%s.mat', 'Motor', 'amp', 'Free')));
+figure(); clf;
+subplot(1,2,1)
+scatter(Free.Info, Free.NStims,20,[(Free.Info_pRandSpikePerm<0.01) zeros(length(Free.Info),1) zeros(length(Free.Info),1)], 'filled');
+ylabel('# vocalizations')
+xlabel('Motor Cohernce MI Free')
+subplot(1,2,2)
+scatter(Free.Info, Free.LengthX,20,[(Free.Info_pRandSpikePerm<0.01) zeros(length(Free.Info),1) zeros(length(Free.Info),1)], 'filled');
+ylabel('Sample size')
+xlabel('Motor Cohernce MI Free')
+suplabel(sprintf('Free Session N= %d/%d significant units', sum(Free.Info_pRandSpikePerm<0.01), sum(~isnan(Free.Info_pRandSpikePerm))))
+
+Free = load(fullfile(Path,sprintf('%sCoherence_%s_%s.mat', 'Auditory', 'amp', 'Free')));
+figure(); clf;
+subplot(1,2,1)
+scatter(Free.Info, Free.NStims,20,[zeros(length(Free.Info),1) (Free.Info_pRandSpikePerm<0.01) zeros(length(Free.Info),1)], 'filled');
+ylabel('# vocalizations')
+xlabel('Auditory Cohernce MI Free')
+subplot(1,2,2)
+scatter(Free.Info, Free.LengthX,20,[zeros(length(Free.Info),1) (Free.Info_pRandSpikePerm<0.01) zeros(length(Free.Info),1)], 'filled');
+ylabel('Sample size')
+xlabel('Auditory Cohernce MI Free')
+suplabel(sprintf('Free Session N= %d/%d significant units', sum(Free.Info_pRandSpikePerm<0.01), sum(~isnan(Free.Info_pRandSpikePerm))))
 %% Effect of sampling on value of coherence
 % Cell with Max value of coherence for operant session:
 Operant = load(fullfile(Path,sprintf('%sCoherence_%s_%s_Trill.mat', 'Motor', 'amp', 'Operant')));

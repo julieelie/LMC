@@ -10,38 +10,23 @@ BasePath = '/Volumes/JulieE8T';
 % BasePath = '/Volumes/server_home/users/JulieE/LMC';
 ListOfPaths = gather_operant_datapath(BasePath);
 
-% ListOfPaths = {
-%     %'/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190130/HoHa_190130_1007_VocTrigger_param.txt';
-%     %'/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190129/HoHa_190129_1023_VocTrigger_param.txt';
-%     '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190120/HoHa_190120_1208_VocTrigger_param.txt';
-%     '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190124/HoHa_190124_0957_VocTrigger_param.txt';
-%     '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190202/HoHa_190202_1046_VocTrigger_param.txt';
-%     '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190205/HoHa_190205_1140_VocTrigger_param.txt';
-%     '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190206/HoHa_190206_1024_VocTrigger_param.txt';
-%     '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190207/HoHa_190207_1136_VocTrigger_param.txt';
-%     '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190208/HoHa_190208_1018_VocTrigger_param.txt';
-%     % '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190211/HoHa_190211_1152_VocTrigger_param.txt';
-%     '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190212/HoHa_190212_1033_VocTrigger_param.txt';
-%     '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190213/HoHa_190213_1101_VocTrigger_param.txt';
-%     '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190214/HoHa_190214_1130_VocTrigger_param.txt';
-%     %'/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190119/HoHa_190119_1158_VocTrigger_param.txt';
-%     %'/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190118/HoHa_190118_1027_VocTrigger_param.txt';
-%     %'/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190117/HoHa_190117_1008_VocTrigger_param.txt';
-%     %'/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190116/HoHa_190116_1126_VocTrigger_param.txt'
-%     };
- Path2Run = find(contains(ListOfPaths, 'CoEd'));
- Path2Run(contains(ListOfPaths(Path2Run), '20190703'))=[];
- Path2Run(contains(ListOfPaths(Path2Run), '20190709'))=[];
- Path2Run(contains(ListOfPaths(Path2Run), '190701_0951'))=[];
- Path2Run(contains(ListOfPaths(Path2Run), '2020'))=[];
- Path2Run(contains(ListOfPaths(Path2Run), '201905'))=[];% No neural data
- Path2Run(contains(ListOfPaths(Path2Run), '190605_1406'))=[]; % No vocalization
- Path2Run(contains(ListOfPaths(Path2Run), '190603_1039'))=[]; % No vocalization
- Path2Run(contains(ListOfPaths(Path2Run), '190606_1540'))=[]; % This is not operant but free session, error in choosing the right expe
- Path2Run(contains(ListOfPaths(Path2Run), '20190712'))=[]; % No neural data
+
+Path2Run = find(contains(ListOfPaths, 'HoHa'));
+
+
+%  Path2Run = find(contains(ListOfPaths, 'CoEd'));
+%  Path2Run(contains(ListOfPaths(Path2Run), '20190703'))=[];
+%  Path2Run(contains(ListOfPaths(Path2Run), '20190709'))=[];
+%  Path2Run(contains(ListOfPaths(Path2Run), '190701_0951'))=[];
+%  Path2Run(contains(ListOfPaths(Path2Run), '2020'))=[];
+%  Path2Run(contains(ListOfPaths(Path2Run), '201905'))=[];% No neural data
+%  Path2Run(contains(ListOfPaths(Path2Run), '190605_1406'))=[]; % No vocalization
+%  Path2Run(contains(ListOfPaths(Path2Run), '190603_1039'))=[]; % No vocalization
+%  Path2Run(contains(ListOfPaths(Path2Run), '190606_1540'))=[]; % This is not operant but free session, error in choosing the right expe
+%  Path2Run(contains(ListOfPaths(Path2Run), '20190712'))=[]; % No neural data
 %%
 fprintf(1, 'Running result operant bat on %d sessions', length(Path2Run))
-for pp=1:length(Path2Run)
+for pp=5:length(Path2Run)
     
     Path2ParamFile = ListOfPaths{Path2Run(pp)};
     fprintf(1,'\n\n\n\nRunning result_operant_bat on %s\n\n', Path2ParamFile)
@@ -82,14 +67,19 @@ end
 %% RUN audio data and other behavior extraction for the reconly sessions
 List2RecOnlyPath = gather_reconly_datapath(BasePath);
 %%
-Path2RunRecOnly = find(contains(List2RecOnlyPath, 'CoEd'));
-Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '201905'))=[];% No neural data
-Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '190605_1553'))=[]; % Clock jump, no data to extract
-Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190703'))=[];% No TTL Pulses
-Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190709'))=[];% No TTL Pulses
-Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190619'))=[];% Issue of clock drift for logger 49 and 12
+% Path2RunRecOnly = find(contains(List2RecOnlyPath, 'CoEd'));
+% Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '201905'))=[];% No neural data
+% Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '190605_1553'))=[]; % Clock jump, no data to extract
+% Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190703'))=[];% No TTL Pulses
+% Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190709'))=[];% No TTL Pulses
+% Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190619'))=[];% Issue of clock drift for logger 49 and 12
 
-for pp= 34:length(Path2RunRecOnly) 
+Path2RunRecOnly = find(contains(List2RecOnlyPath, 'HoHa'));
+Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190131'))=[];% Allignment issue as of now no neural data extracted
+Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190202_1400'))=[];% No logger data
+
+
+for pp= 1:length(Path2RunRecOnly) 
 
     Path2ParamFile = List2RecOnlyPath{Path2RunRecOnly(pp)};
     fprintf(1,'\n\n\n\nRunning result_reconly_bat on %s\n\n', Path2ParamFile)
@@ -104,7 +94,8 @@ OutputPath = '/Volumes/JulieE8T/LMCResults';
 [ListSSU] = gather_neural_datapath(BasePath);
 % Define the path were the data will be saved
 % OutputPath = fullfile(BasePath, 'ResultsFiles');
-Files2Run = find(contains(ListSSU,'LMC_CoEd') .* ~contains(ListSSU, '20200109'));
+% Files2Run = find(contains(ListSSU,'LMC_CoEd') .* ~contains(ListSSU, '20200109'));
+Files2Run = find(contains(ListSSU,'LMC_HoHa'));
 %% Sanitary check of neurons
 % ( calculate the average spike rate over the...
 % whole experiment, measure stability, quality...
@@ -112,10 +103,10 @@ Files2Run = find(contains(ListSSU,'LMC_CoEd') .* ~contains(ListSSU, '20200109'))
 fprintf('NEURONS SANITARY CHECK.... ')
 % Files2Run = 1:length(ListSSU);
 % Files2Run = [1:29 87:108];
-%  Files2Run=1:488;
-for ss=Files2Run
+%  Files2Run=1:488 cells for Co; 123 cells for Ho
+for ss=1:length(Files2Run)
     fprintf(1,'File %d/%d\n',ss,length(Files2Run))
-    sanitary_check_perSSfile(ListSSU{ss}, OutputPath)
+    sanitary_check_perSSfile(ListSSU{Files2Run(ss)}, OutputPath)
 end
 fprintf(' DONE \n')
 % Data for each unit are saved under: sprintf('%s_%s_SS%s_%s-%s.mat', SubjectID, Date,SSQ,TetrodeID,SSID)
@@ -147,7 +138,7 @@ for ss=1:length(Files2Run)
 end
 GoodCellIndices = find(contains(SSQ_Files2Run, 'SS'));
 fprintf(' DONE \n')
-save('GoodCellIndices.mat','GoodCellIndices')
+save('GoodCellIndicesHo.mat','GoodCellIndices')
 %% Extract the neural data corresponding to the bouts of vocalizations identified
 % by voc_localize and voc_localize_operant (run by result_operant_bat.m) for each cell
 fprintf(' EXTRACTING NEURAL DATA CORRESPONDING TO VOCALIZATIONS.... \n')

@@ -718,7 +718,7 @@ function timerasterkdeOnSpectroAmp(SpikesArrivalTimes,Duration,Delay,Indices, Bi
     hold off
     
     % Plot the KDE and on top the average amplitude of vocalizations
-    TR=10;
+    TR=2;
     Overlap = 0;
     [YPerStim, YPerStimt,FS] = get_y_4Coherence(SpikesArrivalTimes(Indices), Duration(Indices),Delay,TR,Overlap);
     

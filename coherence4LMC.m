@@ -226,11 +226,11 @@ if BootstrapType
     warning('on', 'signal:findpeaks:largeMinPeakHeight')
     fprintf(1, 'DONE\n')
     if BootstrapType==1
-        Coherence.Bootstrap.Info = [Info_boot{:}];
-        Coherence.Bootstrap.CoherencyT_DelayAtzero = [CohT_DelayAtzero_boot{:}];
-        Coherence.Bootstrap.CoherencyT_WidthAtMaxPeak = [CohT_WidthAtMaxPeak_boot{:}];
-        Coherence.Bootstrap.WeightedSigCoherenceFreq = [WeightedSigCoherenceFreq_boot{:}];
-        Coherence.Bootstrap.CumSumSigCoherence50Hz_boot = [CumSumSigCoherence50Hz_boot{:}];
+        Coherence.BootstrapRandVoc.Info = [Info_boot{:}];
+        Coherence.BootstrapRandVoc.CoherencyT_DelayAtzero = [CohT_DelayAtzero_boot{:}];
+        Coherence.BootstrapRandVoc.CoherencyT_WidthAtMaxPeak = [CohT_WidthAtMaxPeak_boot{:}];
+        Coherence.BootstrapRandVoc.WeightedSigCoherenceFreq = [WeightedSigCoherenceFreq_boot{:}];
+        Coherence.BootstrapRandVoc.CumSumSigCoherence50Hz_boot = [CumSumSigCoherence50Hz_boot{:}];
         Info_p = sum(([Info_boot{:}] - Coherence.Info)>= 0)/NBoot;
         Coherence.Info_pRandVoc = Info_p;
     elseif BootstrapType==2

@@ -3,8 +3,8 @@ addpath(genpath('/Users/elie/Documents/CODE/LMC'))
 addpath(genpath('/Users/elie/Documents/CODE/LoggerDataProcessing'))
 addpath(genpath('/Users/elie/Documents/CODE/SoundAnalysisBats'))
 ForceExtract = 0; % set to 1 to redo the extraction of loggers otherwise the calculations will use the previous extraction data
-ForceAllign = 0; % In case the TTL pulses allignment was already done but you want to do it again, set to 1
-ForceVocExt1 = 0; % In case the localization on raw files of vocalizations that were manually extracted was already done but you want to do it again set to 1
+ForceAllign = 1; % In case the TTL pulses allignment was already done but you want to do it again, set to 1
+ForceVocExt1 = 1; % In case the localization on raw files of vocalizations that were manually extracted was already done but you want to do it again set to 1
 ForceVocExt2 = 0; % In case the localization on Loggers of vocalizations that were manually extracted was already done but you want to do it again set to 1
 ReAllignment = 0; % Incase we don't have a logger on all animals, it's better not to reallign the vocal data by cross correlation between the Microphone and the loggers
 ForceWhoID = 0; % In case the identification of bats was already done but you want to re-do it again

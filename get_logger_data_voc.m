@@ -464,6 +464,10 @@ else
                         OffsetAudiosamp(vv_out) = round(OnsetAudiosamp(vv_out) + length(Piezo_wave.(Fns_AL{ll}){vv_out}) - 2*Buffer*(10^-3)*Piezo_FS.(Fns_AL{ll})(vv_out));
                         Voc_transc_time_refined(vv_out,1) =VocExt.Voc_transc_time(vv,1) - Buffer -TimeDiff_audio*1000; % This is the new estimate of VocExt.Voc_transc_time(vv,1) in ms
                         Voc_transc_time_refined(vv_out,2) = Voc_transc_time_refined(vv_out,1) + diff(VocExt.Voc_transc_time(vv,:)); % This is the new estimate of VocExt.Voc_transc_time(vv,2) in ms
+                        if any(isnan(Voc_transc_time_refined(vv_out,:)))
+                            warning('These values should not be Nans')
+                            keyboard
+                        end
                     else
                         fprintf(1,'No better estimate of call allignment\n')
                         % calculating the portion of data to erase or add in front of the
@@ -473,7 +477,12 @@ else
                         OffsetAudiosamp(vv_out) = round(OnsetAudiosamp(vv_out) + length(Piezo_wave.(Fns_AL{ll}){vv_out}) - 2*Buffer*(10^-3)*Piezo_FS.(Fns_AL{ll})(vv_out));
                         Voc_transc_time_refined(vv_out,1) =VocExt.Voc_transc_time(vv,1); % Keep the same estimate of VocExt.Voc_transc_time(vv,1) in ms
                         Voc_transc_time_refined(vv_out,2) = VocExt.Voc_transc_time(vv,2); % Keep the same estimate of VocExt.Voc_transc_time(vv,2) in ms
+                        if any(isnan(Voc_transc_time_refined(vv_out,:)))
+                            warning('These values should not be Nans')
+                            keyboard
+                        end
                         clf(F1)
+                        
                     end
                     
                 end
@@ -492,6 +501,10 @@ else
                 OffsetAudiosamp(vv_out) = round(OnsetAudiosamp(vv_out) + length(Piezo_wave.(Fns_AL{ll}){vv_out}) - 2*Buffer*(10^-3)*Piezo_FS.(Fns_AL{ll})(vv_out));
                 Voc_transc_time_refined(vv_out,1) =VocExt.Voc_transc_time(vv,1); % Keep the same estimate of VocExt.Voc_transc_time(vv,1) in ms
                 Voc_transc_time_refined(vv_out,2) = VocExt.Voc_transc_time(vv,2); % Keep the same estimate of VocExt.Voc_transc_time(vv,2) in ms
+                if any(isnan(Voc_transc_time_refined(vv_out,:)))
+                    warning('These values should not be Nans')
+                    keyboard
+                end
             end
         end
         %% Better cut the audio loggers data that correspond to the vocalizations
