@@ -1,7 +1,17 @@
 function result_reconly_bat(Path2ParamFile, VocManExtDir, Path2RecordingTable, Logger_dir)
-addpath(genpath('/Users/elie/Documents/CODE/LMC'))
-addpath(genpath('/Users/elie/Documents/CODE/LoggerDataProcessing'))
-addpath(genpath('/Users/elie/Documents/CODE/SoundAnalysisBats'))
+addpath(genpath('/Users/elie/Documents/CODE/GitHub/LMC'))
+addpath(genpath('/Users/elie/Documents/CODE/GitHub/LoggerDataProcessing'))
+addpath(genpath('/Users/elie/Documents/CODE/GitHub/SoundAnalysisBats'))
+% Find the google drive folder
+GGFolder = '/Users/elie/Google Drive/My Drive/';
+if ~(exist(GGFolder, 'file')==7)
+    GGFolder = '/Users/elie/Google Drive/Mon Drive/';
+end
+if ~(exist(GGFolder, 'file')==7)
+    warning(sprintf('cannot find GGFolder at %s\n', GGFolder))
+    GGFolder = input('Please enter the GGFolder path: ', 's');
+    keyboard
+end
 ForceExtract = 0; % set to 1 to redo the extraction of loggers otherwise the calculations will use the previous extraction data
 ForceAllign = 1; % In case the TTL pulses allignment was already done but you want to do it again, set to 1
 ForceVocExt1 = 1; % In case the localization on raw files of vocalizations that were manually extracted was already done but you want to do it again set to 1
@@ -23,16 +33,16 @@ if nargin<2
     %     ManData = input('Working on manual extraction (1) or automatic (0)? ');
     ManData=0;
     if ManData
-        VocManExtDir = fullfile( '/Users/elie/Google Drive/BatmanData/BatmanCuts', ['20' Date]);
+        VocManExtDir = fullfile( GGFolder, 'BatmanData/BatmanCuts', ['20' Date]);
     end
 end
 
 if nargin<3
     % Set the path to the recording log
     if contains(Path2ParamFile, 'LMC')
-        Path2RecordingTable = '/Users/elie/Google Drive/Mon Drive/BatmanData/RecordingLogs/recording_logs.xlsx';
+        Path2RecordingTable = fullfile(GGFolder,'/BatmanData/RecordingLogs/recording_logs.xlsx');
     elseif contains(Path2ParamFile, 'Juvenile')
-        Path2RecordingTable = '/Users/elie/Google Drive/Mon Drive/JuvenileRecordings/JuvenileRecordingsNWAF155_Log.xlsx';
+        Path2RecordingTable = fullfile(GGFolder,'/JuvenileRecordings/JuvenileRecordingsNWAF155_Log.xlsx');
     end
 end
 if nargin<4

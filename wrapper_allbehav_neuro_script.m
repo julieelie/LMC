@@ -26,7 +26,7 @@ Path2Run = find(contains(ListOfPaths, 'HoHa'));
 %  Path2Run(contains(ListOfPaths(Path2Run), '20190712'))=[]; % No neural data
 %%
 fprintf(1, 'Running result operant bat on %d sessions', length(Path2Run))
-for pp=5:length(Path2Run)
+for pp=6:length(Path2Run)
     
     Path2ParamFile = ListOfPaths{Path2Run(pp)};
     fprintf(1,'\n\n\n\nRunning result_operant_bat on %s\n\n', Path2ParamFile)
