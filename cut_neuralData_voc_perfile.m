@@ -434,6 +434,8 @@ end
                     GuessVVTC = Re_transc_time(vv_timecheck) - Voc_transc_time(ii,1);
                     if isnan(GuessVV) && isempty(GuessVVTC) || (GuessVV)<0 && isempty(GuessVVTC)
                         OutData.ReTime(vv) = NaN; % No reward for that vocalization
+                    elseif  isempty(GuessVVTC)
+                        OutData.ReTime(vv) = NaN; % No reward for that vocalization
                     elseif GuessVV<0 && GuessVVTC>0
                         OutData.ReTime(vv) = GuessVVTC;
                     elseif GuessVV>0 && GuessVVTC<0

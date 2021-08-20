@@ -10,30 +10,56 @@ ManualPause=1;
 DataFiles = dir(fullfile(Loggers_dir, sprintf('%s_%s_VocExtractDat*_*.mat', Date, ExpStartTime)));
 
 % Get filters ready:
-DataFile = DataFiles(1);
-load(fullfile(DataFile.folder, DataFile.name), 'BioSoundCalls');
-[z,p,k] = butter(6,BandPassFilter(1:2)/(BioSoundCalls{1,1}.samprate/2),'bandpass');% a 12th order Butterworth band-pass filter; the second input argument is normalized cut-off frequency (ie. normalized to the Nyquist frequency, which is half the sampling frequency, as required by MATLAB)
+for jj = 1:length(DataFiles)
+    DataFile = DataFiles(jj);
+    load(fullfile(DataFile.folder, DataFile.name), 'BioSoundCalls');
+    ii=1;
+    while isempty(BioSoundCalls{ii,1}) && ii<=length(BioSoundCalls(:,1))
+        ii=ii+1;
+    end
+    if ~isempty(BioSoundCalls{ii,1})
+        break
+    end
+end
+
+[z,p,k] = butter(6,BandPassFilter(1:2)/(BioSoundCalls{ii,1}.samprate/2),'bandpass');% a 12th order Butterworth band-pass filter; the second input argument is normalized cut-off frequency (ie. normalized to the Nyquist frequency, which is half the sampling frequency, as required by MATLAB)
 sos_Raw = zp2sos(z,p,k); % obtain the second order section (biquad) filter to use as input in filtfilt
 
-FS_ll = round(BioSoundCalls{1,2}.samprate);
+FS_ll = round(BioSoundCalls{ii,2}.samprate);
 [z,p,k] = butter(6,BandPassFilter(1:2)/(FS_ll/2),'bandpass');
 sos_Piezo = zp2sos(z,p,k);
+clear BioSoundCalls
 
 % Loop through the datafiles
 for df=1:length(DataFiles) %1
     fprintf(1, 'Set %d/%d\n', df, length(DataFiles))
     DataFile = DataFiles(df);
     load(fullfile(DataFile.folder, DataFile.name), 'AudioGood');
-    if exist('AudioGood', 'var') && ~isnan(AudioGood(end))
+    if exist('AudioGood', 'var') && (isempty(AudioGood) || ~isnan(AudioGood(end)))
         clear AudioGood
         continue
         
     elseif exist('AudioGood', 'var') && isnan(AudioGood(end))
-        Rangevv = find(isnan(AudioGood));
-        load(fullfile(DataFile.folder, DataFile.name), 'BioSoundCalls', 'RMS', 'Duration','CorrPiezoRaw')
-        NVoc = size(BioSoundCalls,1);
+        GoAudioGood = input('It looks like we should start from here because the last vocalization is labelled as NaN in AudioGood\n There is however %d Nan\n Resume audioGood:1 skip and check the next file:0\n');
+        if GoAudioGood
+            Rangevv = find(isnan(AudioGood));
+            load(fullfile(DataFile.folder, DataFile.name), 'BioSoundCalls', 'RMS', 'Duration','CorrPiezoRaw')
+            NVoc = size(BioSoundCalls,1);
+        else
+            clear AudioGood
+            continue
+        end
     else
         load(fullfile(DataFile.folder, DataFile.name), 'BioSoundCalls')
+        if ~exist('BioSoundCalls', 'var')
+            fprintf(1, 'No Calls for that set\n')
+            BioSoundCalls = [];
+            AudioGood = [];
+            Duration = [];
+            save(fullfile(DataFile.folder, DataFile.name), 'Duration', 'AudioGood','BioSoundCalls', '-append')
+            clear AudioGood BioSoundCalls
+            continue
+        end
         NVoc = size(BioSoundCalls,1);
         CorrPiezoRaw = nan(NVoc,1);
         if ManualPause

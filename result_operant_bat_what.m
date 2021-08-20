@@ -2,26 +2,38 @@ function result_operant_bat_what(Path2ParamFile, Path2RecordingTable, Logger_dir
 addpath(genpath('/Users/elie/Documents/CODE/GitHub/LMC'))
 addpath(genpath('/Users/elie/Documents/CODE/GitHub/LoggerDataProcessing'))
 addpath(genpath('/Users/elie/Documents/CODE/GitHub/SoundAnalysisBats'))
+
+% Find the google drive folder
+GGFolder = '/Users/elie/Google Drive/My Drive/';
+if ~(exist(GGFolder, 'file')==7)
+    GGFolder = '/Users/elie/Google Drive/Mon Drive/';
+end
+if ~(exist(GGFolder, 'file')==7)
+    warning('cannot find GGFolder at %s\n', GGFolder)
+    GGFolder = input('Please enter the GGFolder path: ', 's');
+    keyboard
+end
+
 TranscExtract = 1; % set to 1 to extract logger data and transceiver time
 ForceExtract = 0; % set to 1 to redo the extraction of loggers otherwise the calculations will use the previous extraction data
-ForceAllign = 0; % In case the TTL pulses allignment was already done but you want to do it again, set to 1
-ForceVocExt3 = 0; % Used to patch the error in voc_localize_operant with call already detected issue
+% ForceAllign = 0; % In case the TTL pulses allignment was already done but you want to do it again, set to 1
+% ForceVocExt3 = 0; % Used to patch the error in voc_localize_operant with call already detected issue
 ForceVocExt1 = 0; % In case the extraction of vocalizations that triggered rewarding system was already done but you want to do it again set to 1
 ForceVocExt2 = 0; % In case the extraction of vocalizations that triggered rewarding system was already done but you want to do it again set to 1
 ForceWhoID = 0; % In case the identification of bats was already done but you want to re-do it again
-ForceWhat = 1; % In case running biosound was already done but you want to re-do it
-PlotIndivFile = 0; % Set to 1 to plot the sound pressure waveforms of individual detected vocalizations
+ForceWhat = 0; % In case running biosound was already done but you want to re-do it
+% PlotIndivFile = 0; % Set to 1 to plot the sound pressure waveforms of individual detected vocalizations
 close all
 % Get the recording data
 [AudioDataPath, DataFile ,~]=fileparts(Path2ParamFile);
 Date = DataFile(6:11);
-WavFileStruc = dir(fullfile(AudioDataPath, [DataFile(1:16) '*mic*.wav']));
+% WavFileStruc = dir(fullfile(AudioDataPath, [DataFile(1:16) '*mic*.wav']));
 
 % Get the sound snippets from the sounds that triggered detection
-DataSnipStruc = dir(fullfile(AudioDataPath, [DataFile(1:16) '*snippets/*.wav']));
+% DataSnipStruc = dir(fullfile(AudioDataPath, [DataFile(1:16) '*snippets/*.wav']));
 
 if TranscExtract && nargin<2
-    Path2RecordingTable = '/Users/elie/Google Drive/Mon Drive/BatmanData/RecordingLogs/recording_logs.xlsx';
+    Path2RecordingTable = fullfile(GGFolder,'/BatmanData/RecordingLogs/recording_logs.xlsx');
 end
 if TranscExtract && nargin<3
     % Set the path to logger data
@@ -34,50 +46,50 @@ if TranscExtract
     WorkDir = ['~' filesep 'WorkingDirectory'];
 end
 
-%% Get the sample stamp of the detected vocalizations
-fprintf(1,'*** Getting events for that day ***\n');
-DataFileStruc = dir(fullfile(AudioDataPath, [DataFile(1:16) '*events.txt']));
-Fid_Data = fopen(fullfile(DataFileStruc.folder,DataFileStruc.name));
-EventsHeader = textscan(Fid_Data, '%s\t%s\t%s\t%s\t%s\t%s\t%s\n',1);
-for hh=1:length(EventsHeader)
-    if strfind(EventsHeader{hh}{1}, 'SampleStamp')
-        EventsStampCol = hh;
-    elseif strfind(EventsHeader{hh}{1}, 'Type')
-        EventsEventTypeCol = hh;
-    elseif strfind(EventsHeader{hh}{1}, 'FoodPortFront')
-        EventsFoodPortFrontCol = hh;
-    elseif strfind(EventsHeader{hh}{1}, 'FoodPortBack')
-        EventsFoodPortBackCol = hh;
-    elseif strfind(EventsHeader{hh}{1}, 'TimeStamp(s)')
-        EventsTimeCol = hh;
-    elseif strfind(EventsHeader{hh}{1}, 'Delay2Reward')
-        EventsRewardCol = hh;
-    end
-end
-Events = textscan(Fid_Data, '%s\t%f\t%s\t%s\t%f\t%f\t%f');
-fclose(Fid_Data);
-VocId = find(strcmp('Vocalization', Events{EventsEventTypeCol}));
-
-%% Plot the cumulative number of triggers along time
-fprintf(1,'*** Plotting cumulative events for that day ***\n');
-ColorCode = get(groot,'DefaultAxesColorOrder');
-ReTriggerVocId = intersect(VocId, find(~isnan(Events{EventsRewardCol})));
-ReVocId = intersect(VocId, find(~(isnan(Events{EventsRewardCol}) + isinf(Events{EventsRewardCol}))));
-
-F=figure(100);
-plot(Events{EventsTimeCol}(VocId)/60,1:length(VocId), 'k-', 'Linewidth',2)
-hold on
-plot(Events{EventsTimeCol}(ReTriggerVocId)/60, 1:length(ReTriggerVocId), '-','Color',ColorCode(1,:),'Linewidth',2)
-hold on
-plot(Events{EventsTimeCol}(ReVocId)/60, 1:length(ReVocId), '-','Color',ColorCode(3,:),'Linewidth',2)
-legend('Sound detection events', 'Sound trigger events', 'Rewarded sound events','Location','NorthWest')
-xlabel('Time (min)')
-ylabel('Cumulative sum of events')
-hold off
-title(sprintf('Subjects: %s  Date: %s  Time: %s', DataFile(1:4), DataFile(6:11), DataFile(13:16)))
-hold off
-saveas(F,fullfile(AudioDataPath,sprintf('%s_CumTrigger.fig', DataFile(1:16))))
-saveas(F,fullfile(AudioDataPath,sprintf('%s_CumTrigger.jpeg', DataFile(1:16))))
+% %% Get the sample stamp of the detected vocalizations
+% fprintf(1,'*** Getting events for that day ***\n');
+% DataFileStruc = dir(fullfile(AudioDataPath, [DataFile(1:16) '*events.txt']));
+% Fid_Data = fopen(fullfile(DataFileStruc.folder,DataFileStruc.name));
+% EventsHeader = textscan(Fid_Data, '%s\t%s\t%s\t%s\t%s\t%s\t%s\n',1);
+% for hh=1:length(EventsHeader)
+%     if strfind(EventsHeader{hh}{1}, 'SampleStamp')
+%         EventsStampCol = hh;
+%     elseif strfind(EventsHeader{hh}{1}, 'Type')
+%         EventsEventTypeCol = hh;
+%     elseif strfind(EventsHeader{hh}{1}, 'FoodPortFront')
+%         EventsFoodPortFrontCol = hh;
+%     elseif strfind(EventsHeader{hh}{1}, 'FoodPortBack')
+%         EventsFoodPortBackCol = hh;
+%     elseif strfind(EventsHeader{hh}{1}, 'TimeStamp(s)')
+%         EventsTimeCol = hh;
+%     elseif strfind(EventsHeader{hh}{1}, 'Delay2Reward')
+%         EventsRewardCol = hh;
+%     end
+% end
+% Events = textscan(Fid_Data, '%s\t%f\t%s\t%s\t%f\t%f\t%f');
+% fclose(Fid_Data);
+% VocId = find(strcmp('Vocalization', Events{EventsEventTypeCol}));
+% 
+% %% Plot the cumulative number of triggers along time
+% fprintf(1,'*** Plotting cumulative events for that day ***\n');
+% ColorCode = get(groot,'DefaultAxesColorOrder');
+% ReTriggerVocId = intersect(VocId, find(~isnan(Events{EventsRewardCol})));
+% ReVocId = intersect(VocId, find(~(isnan(Events{EventsRewardCol}) + isinf(Events{EventsRewardCol}))));
+% 
+% F=figure(100);
+% plot(Events{EventsTimeCol}(VocId)/60,1:length(VocId), 'k-', 'Linewidth',2)
+% hold on
+% plot(Events{EventsTimeCol}(ReTriggerVocId)/60, 1:length(ReTriggerVocId), '-','Color',ColorCode(1,:),'Linewidth',2)
+% hold on
+% plot(Events{EventsTimeCol}(ReVocId)/60, 1:length(ReVocId), '-','Color',ColorCode(3,:),'Linewidth',2)
+% legend('Sound detection events', 'Sound trigger events', 'Rewarded sound events','Location','NorthWest')
+% xlabel('Time (min)')
+% ylabel('Cumulative sum of events')
+% hold off
+% title(sprintf('Subjects: %s  Date: %s  Time: %s', DataFile(1:4), DataFile(6:11), DataFile(13:16)))
+% hold off
+% saveas(F,fullfile(AudioDataPath,sprintf('%s_CumTrigger.fig', DataFile(1:16))))
+% saveas(F,fullfile(AudioDataPath,sprintf('%s_CumTrigger.jpeg', DataFile(1:16))))
 
 %% This section is getting ready a plot around the time of one given detected vocalization
 % % Calculate the offset of each soundfile output from the begining of the
@@ -164,186 +176,186 @@ saveas(F,fullfile(AudioDataPath,sprintf('%s_CumTrigger.jpeg', DataFile(1:16))))
 % Plot the results
 % List of all the detected calls
 % Chose a vocalization to center the vizualization tool
-if PlotIndivFile
-    % first get the length of all files recorded to localize extract within the
-    % files
-    Subj= DataFile(1:4);
-    Time = DataFile(13:16);
-    [Length_Y] = get_raw_file_length(AudioDataPath, Subj, Date, Time);
-    
-    fprintf(1,'Now plot the results around a given call\n')
-    if ~exist('FS', 'var')
-        [~,FS] = audioread(fullfile(WavFileStruc(1).folder, WavFileStruc(1).name));
-    end
-    Buffer = 1*FS;% We choose to have one second of recording before and after sound detection onset
-    IndCenterVoc=1;
-    while ~isempty(IndCenterVoc)
-        FullStamps = Events{EventsStampCol}(VocId);
-        
-        SoundtimeMinSec = cell(length(FullStamps),1);
-        fprintf(1,'The following vocalizations where automatically detected by voc operant.\n Chose the index of the vocalization you want to look at:\n')
-        for ss=1:length(FullStamps)
-            Ind_ = strfind(FullStamps{ss}, '_');
-            Stamp = str2double(FullStamps{ss}((Ind_+1):end));
-            if Stamp<0
-                Stamp = 2*2147483647 + Stamp; % Correcion of soundmexpro bug that coded numbers in 32 bits instead of 64bits
-            end
-            MinStamp = floor(Stamp/(60*FS));
-            SecStamp = (Stamp - (MinStamp*60*FS))/FS;
-            SoundtimeMinSec{ss} = sprintf('%dmin %.1fs', MinStamp, SecStamp);
-            fprintf(1, '%d. %s\n', ss,SoundtimeMinSec{ss})
-        end
-        IndCenterVoc = input('Index of your choice (leave empty to quit):\n');
-        if isempty(IndCenterVoc)
-            break
-        end
-        
-        Ind_ = strfind(FullStamps{IndCenterVoc}, '_');
-        Seq = str2double(FullStamps{IndCenterVoc}(1:(Ind_-1)));
-        Stamp = str2double(FullStamps{IndCenterVoc}((Ind_+1):end));
-        if Stamp<0
-            Stamp = 2*2147483647 + Stamp; % Correcion of soundmexpro bug that coded numbers in 32 bits instead of 64bits
-        end
-        
-        % Get the recording data for the corresponding sequence
-        WavFileStruc_local = dir(fullfile(AudioDataPath, sprintf('%s*mic*_%d.wav',DataFile(1:16), Seq)));
-        try
-            Wavefile_local = fullfile(WavFileStruc_local.folder, WavFileStruc_local.name);
-            [Y,FS] = audioread(Wavefile_local);
-        catch
-            fprintf(1,'Warning: the audiofile %s cannot be read properly and will not be plotted\n', Wavefile_local);
-            Y = 0;
-        end
-        Y_section_beg = max(1,Stamp - sum(Length_Y(1:(Seq-1))) - Buffer); % Make sure we don't request before the beginning of the raw wave file
-        Pre_stamp = min(Buffer, Stamp - sum(Length_Y(1:(Seq-1)))); % Length of the sound section before sound detection onset
-        Y_section_end = min(length(Y), Stamp - sum(Length_Y(1:(Seq-1))) + Buffer); % Make sure we don't request after the end of the aw wave file
-        Post_stamp = min(Buffer, length(Y)- (Stamp - sum(Length_Y(1:(Seq-1)))));% Length of the sound section after sound detection onset
-        Y_section = Y(Y_section_beg:Y_section_end);
-        
-        % Plot the waveforms of the recording around the stamp of the vocalization
-        figure(2)
-        cla
-        plot(Y_section, 'Color', 'k')
-        
-        
-        % plot the sound snippets in red on top
-        % Get the sound snippets from the sounds that triggered detection
-        DataSnipStruc = dir(fullfile(AudioDataPath, sprintf('%s*snippets/*snipfile_%d_*.wav', DataFile(1:16), Seq)));
-        NbSnip_local = length(DataSnipStruc);
-        SnipDur = nan(NbSnip_local,1);
-        Stamp_all = nan(NbSnip_local,1);
-        VocId_all = nan(NbSnip_local,1);
-        Voc_event_nb = 0;
-        for ss=1:NbSnip_local
-            IndStamp1 = strfind(DataSnipStruc(ss).name, '_');
-            IndStamp_last = IndStamp1(end);
-            Stamp_local = str2double(DataSnipStruc(ss).name((IndStamp_last+1):end-4));
-            
-            if (Stamp_local < (Stamp + Post_stamp)) && (Stamp_local > (Stamp - Pre_stamp))
-                [Ysnip,FS] = audioread(fullfile(DataSnipStruc(ss).folder, DataSnipStruc(ss).name));
-                %             Stamp_local_context = Stamp_local - (Stamp - Pre_stamp)+1;% This is where the first sample of the sound Ysnip should be in Y_section
-                % There are often lay-off between the sample value and the
-                % actual position within the recording, estimating that lay-off
-                % using cross correlation
-                DiffY = length(Y_section)-length(Ysnip);
-                XcorrY=nan(1,DiffY+1);
-                for cc=0:DiffY
-                    XcorrY(cc+1) = transpose(Y_section(cc+(1:length(Ysnip)))) * Ysnip;
-                end
-                [~,Stamp_local_context] = max(abs(XcorrY));
-                Sequence = str2double(DataSnipStruc(ss).name((IndStamp1(end-1)+1):(IndStamp1(end)-1)));
-                Voc_event_nb = Voc_event_nb + 1;
-                figure(2)
-                hold on
-                plot(Stamp_local_context:(Stamp_local_context+length(Ysnip)-1), Ysnip, 'Color', 'g--')
-                % Search for the corresponding datapoint in the event log
-                Index =[];
-                for ii=1:length(VocId)
-                    if strcmp(Events{EventsStampCol}{VocId(ii)}, sprintf('%d_%d', Sequence, Stamp_local))
-                        Index = ii;
-                        break
-                    end
-                end
-                if isempty(Index)
-                    error('event %d_%d cannot be found in the eventlog file\n', Sequence, Stamp_local);
-                else
-                    Stamp_all(Voc_event_nb) = Stamp_local;
-                    SnipDur(Voc_event_nb) = length(Ysnip);
-                    VocId_all(Voc_event_nb) = VocId(Index);
-                end
-            end
-        end
-        
-        % plot the time stamp when sound was detected (last time point of each sound snippet)
-        % color code the point given the reward status
-        % Get the VocId should be plotted, from the log
-        VocId_log = nan(1,length(VocId));
-        Stamp_all_log = nan(1,length(VocId));
-        SnipDur_log = nan(1,length(VocId));
-        Voc_event_nb_log = 0;
-        for ii=1:length(VocId)
-            FullStamp = Events{EventsStampCol}{VocId(ii)};
-            IndStamp = strfind(FullStamp, '_');
-            Seq_local = str2double(FullStamp(1:(IndStamp-1)));
-            Stamp_local = str2double(FullStamp((IndStamp+1):end));
-            if (Seq_local == Seq) && (Stamp_local >= (Stamp-Pre_stamp)) && (Stamp_local <= (Stamp+Post_stamp)) % This is a vocalization from the same section
-                Voc_event_nb_log = Voc_event_nb_log+1;
-                VocId_log(Voc_event_nb_log) = VocId(ii);
-                Stamp_all_log(Voc_event_nb_log) = Stamp_local;
-                try
-                    SnipDur_log(Voc_event_nb_log) = SnipDur(find(VocId_all==VocId(ii)));
-                catch
-                    warning('This sound detection event does not have a corresponding sound snippet %s',FullStamp);
-                    SnipDur_log(Voc_event_nb_log) = NaN;
-                end
-            end
-        end
-        VocId_log = VocId_log(1:Voc_event_nb_log);
-        Stamp_all_log = Stamp_all_log(1:Voc_event_nb_log);
-        SnipDur_log = SnipDur_log(1:Voc_event_nb_log);
-        
-        ReFront = Events{EventsFoodPortFrontCol}(VocId_log);
-        ReBack = Events{EventsFoodPortBackCol}(VocId_log);
-        Colorcode = get(groot,'DefaultAxesColorOrder');
-        ColorFront= nan(size(ReFront,1),3);
-        ColorBack= ColorFront;
-        ColorFront(find(ReFront==1),:) = repmat(Colorcode(3,:),sum(ReFront==1),1);
-        ColorBack(find(ReBack==1),:) = repmat(Colorcode(3,:), sum(ReBack==1),1);
-        ColorFront(find(ReFront==0),:) = repmat([0 0 0],sum(ReFront==0),1);
-        ColorBack(find(ReBack==0),:) = repmat([0 0 0], sum(ReBack==0),1);
-        ColorFront(find(isnan(ReFront)),:) = repmat([1 0 0],sum(isnan(ReFront)),1);
-        ColorBack(find(isnan(ReBack)),:) = repmat([1 0 0], sum(isnan(ReBack)),1);
-        figure(2)
-        hold on
-        sc=scatter(Stamp_all_log+SnipDur_log-1 - (Stamp - Pre_stamp), 1.2*ones(length(VocId_log),1), 10, ColorFront, 'filled');
-        hold on
-        sc=scatter(Stamp_all_log+SnipDur_log-1 - (Stamp - Pre_stamp), 1.6*ones(length(VocId_log),1), 10, ColorBack, 'filled');
-        
-        XaxisRes=20;
-        LengthY = length(Y_section);
-        set(gca, 'XLim',[0;LengthY]);
-        
-        if (LengthY/FS)>XaxisRes
-            XaxisStep = round(LengthY/(FS*XaxisRes));
-        else
-            XaxisStep = round(LengthY/(FS*XaxisRes),2);
-        end
-        set(gca,'XTick', 0:(XaxisStep*FS):LengthY, 'XTickLabel', 0:XaxisStep:round(LengthY/FS), 'YLim',[-1 2]);
-        xlabel('Time (s)');
-        ylabel('Sound pressure')
-    end
-    
-end
+% if PlotIndivFile
+%     % first get the length of all files recorded to localize extract within the
+%     % files
+%     Subj= DataFile(1:4);
+%     Time = DataFile(13:16);
+%     [Length_Y] = get_raw_file_length(AudioDataPath, Subj, Date, Time);
+%     
+%     fprintf(1,'Now plot the results around a given call\n')
+%     if ~exist('FS', 'var')
+%         [~,FS] = audioread(fullfile(WavFileStruc(1).folder, WavFileStruc(1).name));
+%     end
+%     Buffer = 1*FS;% We choose to have one second of recording before and after sound detection onset
+%     IndCenterVoc=1;
+%     while ~isempty(IndCenterVoc)
+%         FullStamps = Events{EventsStampCol}(VocId);
+%         
+%         SoundtimeMinSec = cell(length(FullStamps),1);
+%         fprintf(1,'The following vocalizations where automatically detected by voc operant.\n Chose the index of the vocalization you want to look at:\n')
+%         for ss=1:length(FullStamps)
+%             Ind_ = strfind(FullStamps{ss}, '_');
+%             Stamp = str2double(FullStamps{ss}((Ind_+1):end));
+%             if Stamp<0
+%                 Stamp = 2*2147483647 + Stamp; % Correcion of soundmexpro bug that coded numbers in 32 bits instead of 64bits
+%             end
+%             MinStamp = floor(Stamp/(60*FS));
+%             SecStamp = (Stamp - (MinStamp*60*FS))/FS;
+%             SoundtimeMinSec{ss} = sprintf('%dmin %.1fs', MinStamp, SecStamp);
+%             fprintf(1, '%d. %s\n', ss,SoundtimeMinSec{ss})
+%         end
+%         IndCenterVoc = input('Index of your choice (leave empty to quit):\n');
+%         if isempty(IndCenterVoc)
+%             break
+%         end
+%         
+%         Ind_ = strfind(FullStamps{IndCenterVoc}, '_');
+%         Seq = str2double(FullStamps{IndCenterVoc}(1:(Ind_-1)));
+%         Stamp = str2double(FullStamps{IndCenterVoc}((Ind_+1):end));
+%         if Stamp<0
+%             Stamp = 2*2147483647 + Stamp; % Correcion of soundmexpro bug that coded numbers in 32 bits instead of 64bits
+%         end
+%         
+%         % Get the recording data for the corresponding sequence
+%         WavFileStruc_local = dir(fullfile(AudioDataPath, sprintf('%s*mic*_%d.wav',DataFile(1:16), Seq)));
+%         try
+%             Wavefile_local = fullfile(WavFileStruc_local.folder, WavFileStruc_local.name);
+%             [Y,FS] = audioread(Wavefile_local);
+%         catch
+%             fprintf(1,'Warning: the audiofile %s cannot be read properly and will not be plotted\n', Wavefile_local);
+%             Y = 0;
+%         end
+%         Y_section_beg = max(1,Stamp - sum(Length_Y(1:(Seq-1))) - Buffer); % Make sure we don't request before the beginning of the raw wave file
+%         Pre_stamp = min(Buffer, Stamp - sum(Length_Y(1:(Seq-1)))); % Length of the sound section before sound detection onset
+%         Y_section_end = min(length(Y), Stamp - sum(Length_Y(1:(Seq-1))) + Buffer); % Make sure we don't request after the end of the aw wave file
+%         Post_stamp = min(Buffer, length(Y)- (Stamp - sum(Length_Y(1:(Seq-1)))));% Length of the sound section after sound detection onset
+%         Y_section = Y(Y_section_beg:Y_section_end);
+%         
+%         % Plot the waveforms of the recording around the stamp of the vocalization
+%         figure(2)
+%         cla
+%         plot(Y_section, 'Color', 'k')
+%         
+%         
+%         % plot the sound snippets in red on top
+%         % Get the sound snippets from the sounds that triggered detection
+%         DataSnipStruc = dir(fullfile(AudioDataPath, sprintf('%s*snippets/*snipfile_%d_*.wav', DataFile(1:16), Seq)));
+%         NbSnip_local = length(DataSnipStruc);
+%         SnipDur = nan(NbSnip_local,1);
+%         Stamp_all = nan(NbSnip_local,1);
+%         VocId_all = nan(NbSnip_local,1);
+%         Voc_event_nb = 0;
+%         for ss=1:NbSnip_local
+%             IndStamp1 = strfind(DataSnipStruc(ss).name, '_');
+%             IndStamp_last = IndStamp1(end);
+%             Stamp_local = str2double(DataSnipStruc(ss).name((IndStamp_last+1):end-4));
+%             
+%             if (Stamp_local < (Stamp + Post_stamp)) && (Stamp_local > (Stamp - Pre_stamp))
+%                 [Ysnip,FS] = audioread(fullfile(DataSnipStruc(ss).folder, DataSnipStruc(ss).name));
+%                 %             Stamp_local_context = Stamp_local - (Stamp - Pre_stamp)+1;% This is where the first sample of the sound Ysnip should be in Y_section
+%                 % There are often lay-off between the sample value and the
+%                 % actual position within the recording, estimating that lay-off
+%                 % using cross correlation
+%                 DiffY = length(Y_section)-length(Ysnip);
+%                 XcorrY=nan(1,DiffY+1);
+%                 for cc=0:DiffY
+%                     XcorrY(cc+1) = transpose(Y_section(cc+(1:length(Ysnip)))) * Ysnip;
+%                 end
+%                 [~,Stamp_local_context] = max(abs(XcorrY));
+%                 Sequence = str2double(DataSnipStruc(ss).name((IndStamp1(end-1)+1):(IndStamp1(end)-1)));
+%                 Voc_event_nb = Voc_event_nb + 1;
+%                 figure(2)
+%                 hold on
+%                 plot(Stamp_local_context:(Stamp_local_context+length(Ysnip)-1), Ysnip, 'Color', 'g--')
+%                 % Search for the corresponding datapoint in the event log
+%                 Index =[];
+%                 for ii=1:length(VocId)
+%                     if strcmp(Events{EventsStampCol}{VocId(ii)}, sprintf('%d_%d', Sequence, Stamp_local))
+%                         Index = ii;
+%                         break
+%                     end
+%                 end
+%                 if isempty(Index)
+%                     error('event %d_%d cannot be found in the eventlog file\n', Sequence, Stamp_local);
+%                 else
+%                     Stamp_all(Voc_event_nb) = Stamp_local;
+%                     SnipDur(Voc_event_nb) = length(Ysnip);
+%                     VocId_all(Voc_event_nb) = VocId(Index);
+%                 end
+%             end
+%         end
+%         
+%         % plot the time stamp when sound was detected (last time point of each sound snippet)
+%         % color code the point given the reward status
+%         % Get the VocId should be plotted, from the log
+%         VocId_log = nan(1,length(VocId));
+%         Stamp_all_log = nan(1,length(VocId));
+%         SnipDur_log = nan(1,length(VocId));
+%         Voc_event_nb_log = 0;
+%         for ii=1:length(VocId)
+%             FullStamp = Events{EventsStampCol}{VocId(ii)};
+%             IndStamp = strfind(FullStamp, '_');
+%             Seq_local = str2double(FullStamp(1:(IndStamp-1)));
+%             Stamp_local = str2double(FullStamp((IndStamp+1):end));
+%             if (Seq_local == Seq) && (Stamp_local >= (Stamp-Pre_stamp)) && (Stamp_local <= (Stamp+Post_stamp)) % This is a vocalization from the same section
+%                 Voc_event_nb_log = Voc_event_nb_log+1;
+%                 VocId_log(Voc_event_nb_log) = VocId(ii);
+%                 Stamp_all_log(Voc_event_nb_log) = Stamp_local;
+%                 try
+%                     SnipDur_log(Voc_event_nb_log) = SnipDur(find(VocId_all==VocId(ii)));
+%                 catch
+%                     warning('This sound detection event does not have a corresponding sound snippet %s',FullStamp);
+%                     SnipDur_log(Voc_event_nb_log) = NaN;
+%                 end
+%             end
+%         end
+%         VocId_log = VocId_log(1:Voc_event_nb_log);
+%         Stamp_all_log = Stamp_all_log(1:Voc_event_nb_log);
+%         SnipDur_log = SnipDur_log(1:Voc_event_nb_log);
+%         
+%         ReFront = Events{EventsFoodPortFrontCol}(VocId_log);
+%         ReBack = Events{EventsFoodPortBackCol}(VocId_log);
+%         Colorcode = get(groot,'DefaultAxesColorOrder');
+%         ColorFront= nan(size(ReFront,1),3);
+%         ColorBack= ColorFront;
+%         ColorFront(find(ReFront==1),:) = repmat(Colorcode(3,:),sum(ReFront==1),1);
+%         ColorBack(find(ReBack==1),:) = repmat(Colorcode(3,:), sum(ReBack==1),1);
+%         ColorFront(find(ReFront==0),:) = repmat([0 0 0],sum(ReFront==0),1);
+%         ColorBack(find(ReBack==0),:) = repmat([0 0 0], sum(ReBack==0),1);
+%         ColorFront(find(isnan(ReFront)),:) = repmat([1 0 0],sum(isnan(ReFront)),1);
+%         ColorBack(find(isnan(ReBack)),:) = repmat([1 0 0], sum(isnan(ReBack)),1);
+%         figure(2)
+%         hold on
+%         sc=scatter(Stamp_all_log+SnipDur_log-1 - (Stamp - Pre_stamp), 1.2*ones(length(VocId_log),1), 10, ColorFront, 'filled');
+%         hold on
+%         sc=scatter(Stamp_all_log+SnipDur_log-1 - (Stamp - Pre_stamp), 1.6*ones(length(VocId_log),1), 10, ColorBack, 'filled');
+%         
+%         XaxisRes=20;
+%         LengthY = length(Y_section);
+%         set(gca, 'XLim',[0;LengthY]);
+%         
+%         if (LengthY/FS)>XaxisRes
+%             XaxisStep = round(LengthY/(FS*XaxisRes));
+%         else
+%             XaxisStep = round(LengthY/(FS*XaxisRes),2);
+%         end
+%         set(gca,'XTick', 0:(XaxisStep*FS):LengthY, 'XTickLabel', 0:XaxisStep:round(LengthY/FS), 'YLim',[-1 2]);
+%         xlabel('Time (s)');
+%         ylabel('Sound pressure')
+%     end
+%     
+% end
 
-%% Extracting sound events
-% The samplestamp given by sound mex is not really reliable, so for each
-% sound snippet, you want to find its exact location in the continuous
-% recording files, then using TTL pulses, retrieve the time it correspond
-% to in Deuteron, if requested.
-
-% Checking what we have in terms of vocalization localization/extraction
+% %% Extracting sound events
+% % The samplestamp given by sound mex is not really reliable, so for each
+% % sound snippet, you want to find its exact location in the continuous
+% % recording files, then using TTL pulses, retrieve the time it correspond
+% % to in Deuteron, if requested.
+% 
+% % Checking what we have in terms of vocalization localization/extraction
 ExpStartTime = DataFile(13:16);
-VocExt_dir = dir(fullfile(AudioDataPath,sprintf('%s_%s_VocExtractTimes.mat', Date, ExpStartTime)));
+% VocExt_dir = dir(fullfile(AudioDataPath,sprintf('%s_%s_VocExtractTimes.mat', Date, ExpStartTime)));
 
 % Then run the logger extraction, allignment, and vocalization extraction
 if TranscExtract
@@ -466,66 +478,75 @@ if TranscExtract
         SerialNumberAL(dd) = DataInfo{ALThroatCol(find(ALThroatCol<NLCol(dd),1,'last'))};
         SerialNumberNL(dd) = DataInfo{NLCol(dd)};
     end
-    
-    % Alligning TTL pulses between soundmexpro and Deuteron
-    % for the Operant session
-    
-    TTL_dir = dir(fullfile(AudioDataPath,sprintf( '%s_%s_TTLPulseTimes.mat', Date, ExpStartTime)));
-    if isempty(TTL_dir) || ForceAllign
-        fprintf(1,'*** Alligning TTL pulses for the operant session ***\n');
-        align_soundmexAudio_2_logger(AudioDataPath, Logger_dir, ExpStartTime,'TTL_pulse_generator','Avisoft','Method','risefall', 'Session_strings', {'all voc reward start', 'all voc reward stop'}, 'Logger_list', [SerialNumberAL; SerialNumberNL]);
-    else
-        fprintf(1,'*** ALREADY DONE: Alligning TTL pulses for the operant session ***\n');
-    end
-    if isempty(VocExt_dir) || ForceVocExt1
-        fprintf(1,'*** Localizing and extracting vocalizations that triggered the sound detection ***\n');
-        voc_localize_operant(AudioDataPath, DataFile(1:4),Date, ExpStartTime, 'UseSnip',0)
-    else
-        fprintf(1,'*** ALREADY DONE: Localizing and extracting vocalizations that triggered the sound detection ***\n');
-    end
-    
-    load(fullfile(AudioDataPath, sprintf('%s_%s_VocExtractTimes.mat', Date, ExpStartTime)),'Re_transc_time');
-    if ~exist('Re_transc_time','var') || ForceVocExt3
-        fprintf(1,'*** Localizing and extracting reward times ***\n');
-        voc_localize_operant_patch(AudioDataPath, DataFile(1:4),Date, ExpStartTime)
-    end
-    %% Identify the same vocalizations on the piezos and save sound extracts, onset and offset times
-    fprintf(' LOCALIZING VOCALIZATIONS ON PIEZO RECORDINGS\n')
-    LogVoc_dir = dir(fullfile(Logger_dir, sprintf('%s_%s_VocExtractData.mat', Date, ExpStartTime)));
-    if isempty(LogVoc_dir) || ForceVocExt1 || ForceVocExt2 || ForceVocExt3
-        get_logger_data_voc(AudioDataPath, Logger_dir,Date, ExpStartTime, 'SerialNumber',SerialNumberAL);
-    else
-        fprintf(1,'Using already processed data\n')
-        
-    end
-    
-    %% Identify who is calling
-    fprintf(' IDENTIFY WHO IS CALLING\n')
-    WhoCall_dir = dir(fullfile(Logger_dir, sprintf('*%s_%s*whocalls*', Date, ExpStartTime)));
-    if isempty(WhoCall_dir) || ForceVocExt1 || ForceWhoID || ForceVocExt2
-        who_calls_patch(AudioDataPath, Logger_dir,Date, ExpStartTime,200,1,1,0,'Working_dir','/Users/elie/Documents/WorkingWhoPatch');
-    else
-        fprintf(1,'Using already processed data\n')
-    end
+%     
+%     % Alligning TTL pulses between soundmexpro and Deuteron
+%     % for the Operant session
+%     
+%     TTL_dir = dir(fullfile(AudioDataPath,sprintf( '%s_%s_TTLPulseTimes.mat', Date, ExpStartTime)));
+%     if isempty(TTL_dir) || ForceAllign
+%         fprintf(1,'*** Alligning TTL pulses for the operant session ***\n');
+%         align_soundmexAudio_2_logger(AudioDataPath, Logger_dir, ExpStartTime,'TTL_pulse_generator','Avisoft','Method','risefall', 'Session_strings', {'all voc reward start', 'all voc reward stop'}, 'Logger_list', [SerialNumberAL; SerialNumberNL]);
+%     else
+%         fprintf(1,'*** ALREADY DONE: Alligning TTL pulses for the operant session ***\n');
+%     end
+%     if isempty(VocExt_dir) || ForceVocExt1
+%         fprintf(1,'*** Localizing and extracting vocalizations that triggered the sound detection ***\n');
+%         voc_localize_operant(AudioDataPath, DataFile(1:4),Date, ExpStartTime, 'UseSnip',0)
+%     else
+%         fprintf(1,'*** ALREADY DONE: Localizing and extracting vocalizations that triggered the sound detection ***\n');
+%     end
+%     
+%     load(fullfile(AudioDataPath, sprintf('%s_%s_VocExtractTimes.mat', Date, ExpStartTime)),'Re_transc_time');
+%     if ~exist('Re_transc_time','var') || ForceVocExt3
+%         fprintf(1,'*** Localizing and extracting reward times ***\n');
+%         voc_localize_operant_patch(AudioDataPath, DataFile(1:4),Date, ExpStartTime)
+%     end
+%     %% Identify the same vocalizations on the piezos and save sound extracts, onset and offset times
+%     fprintf(' LOCALIZING VOCALIZATIONS ON PIEZO RECORDINGS\n')
+%     LogVoc_dir = dir(fullfile(Logger_dir, sprintf('%s_%s_VocExtractData.mat', Date, ExpStartTime)));
+%     if isempty(LogVoc_dir) || ForceVocExt1 || ForceVocExt2 || ForceVocExt3
+%         get_logger_data_voc(AudioDataPath, Logger_dir,Date, ExpStartTime, 'SerialNumber',SerialNumberAL);
+%     else
+%         fprintf(1,'Using already processed data\n')
+%         
+%     end
+%     
+%     %% Identify who is calling
+%     fprintf(' IDENTIFY WHO IS CALLING\n')
+%     WhoCall_dir = dir(fullfile(Logger_dir, sprintf('*%s_%s*whocalls*', Date, ExpStartTime)));
+%     if isempty(WhoCall_dir) || ForceVocExt1 || ForceWhoID || ForceVocExt2
+%         who_calls_patch(AudioDataPath, Logger_dir,Date, ExpStartTime,200,1,1,0,'Working_dir','/Users/elie/Documents/WorkingWhoPatch');
+%     else
+%         fprintf(1,'Using already processed data\n')
+%     end
     % Save the ID of the bat for each logger
-    save(fullfile(Logger_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, 200)), 'BatID','LoggerName','-append')
-
-     %% Explore what is said
+        % Save the ID of the bat for each logger
+    try
+        save(fullfile(Logger_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, 200)), 'BatID','LoggerName','-append')
+    catch
+        save(fullfile(Logger_dir, sprintf('%s_%s_VocExtractData1_%d.mat', Date, ExpStartTime, 200)), 'BatID','LoggerName','-append')
+    end
+          %% Explore what is said
     fprintf('\n*** Identify what is said ***\n')
     WhatCall_dir = dir(fullfile(Logger_dir,'VocExtracts', sprintf('*%s_%s*Elmt*Raw.wav', Date, ExpStartTime)));
-    if isempty(WhatCall_dir) || ForceVocExt1 || ForceVocExt2 || ForceWhat
+    if isempty(WhatCall_dir) || ForceVocExt1 || ForceWhoID || ForceVocExt2 || ForceWhat
         what_calls(Logger_dir,Date, ExpStartTime);
     else
         fprintf('\n*** ALREADY DONE: Identify what is said ***\n')
     end
     
-elseif isempty(VocExt_dir) || ForceVocExt1
-    fprintf(1,'*** Localizing and extracting vocalizations that triggered the sound detection ***\n');
-    fprintf(1,'NOTE: no transceiver time extraction\n')
-    voc_localize_operant(AudioDataPath, DataFile(1:4),Date, ExpStartTime, 'UseSnip',0,'TransceiverTime',0)
-else
-    fprintf(1,'*** ALREADY DONE: Localizing and extracting vocalizations that triggered the sound detection ***\n');
-end
+    %% Check the audio quality of what was saved under what calls by simply calculating a correlation between microphone and logger
+    fprintf('\n*** Identify Audio quality ***\n')
+    audioQuality_calls(Logger_dir,Date, ExpStartTime);
+    fprintf('\n*** DONE: Identify Audio quality ***\n')
+    
+% elseif isempty(VocExt_dir) || ForceVocExt1
+%     fprintf(1,'*** Localizing and extracting vocalizations that triggered the sound detection ***\n');
+%     fprintf(1,'NOTE: no transceiver time extraction\n')
+%     voc_localize_operant(AudioDataPath, DataFile(1:4),Date, ExpStartTime, 'UseSnip',0,'TransceiverTime',0)
+% else
+%     fprintf(1,'*** ALREADY DONE: Localizing and extracting vocalizations that triggered the sound detection ***\n');
+% end
 
 
 

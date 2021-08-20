@@ -246,6 +246,10 @@ for ff=1:length(DataDir)
                     keyboard
                 end
                 load(fullfile(DataFileWho(nf).folder, DataFileWho(nf).name), 'IndVocStartRaw_merged','IndVocStopRaw_merged', 'IndVocStartPiezo_merged', 'IndVocStopPiezo_merged','BioSoundCalls','AudioGood','BioSoundFilenames');
+                if (length(AudioGood) == sum(isnan(AudioGood))) && ~isempty(AudioGood)
+                    warning('AudioQuatlity was probably not assessed')
+                    keyboard
+                end
                 load(fullfile(DataFileBeforeCuration(nf).folder, DataFileBeforeCuration(nf).name), 'FS','Piezo_wave','Raw_wave','Piezo_FS','Voc_transc_time_refined','VocFilename');
                 % Call sequences with identified vocalizations and re-order the
                 % vocalization in chornological order (calculated in
@@ -377,9 +381,15 @@ for ff=1:length(DataDir)
                                     RMS_overlap = nan(length(All_overlap_ind),1);
                                     for ovi=1:length(All_overlap_ind)
                                         VocCall_overlap = VocCall(nf) + (All_overlap_ind(ovi) - intersect(OnsetInd,OffsetInd));
-                                        RMS_overlap(ovi) = BioSoundCalls{VocCall_overlap,2}.rms;
+                                        if isempty(BioSoundCalls{VocCall_overlap,2})
+                                            RMS_overlap(ovi) = NaN;
+                                        else
+                                            RMS_overlap(ovi) = BioSoundCalls{VocCall_overlap,2}.rms;
+                                        end
                                     end
-                                    if all(BioSoundCalls{VocCall(nf),2}.rms>RMS_overlap)
+                                    if isempty(BioSoundCalls{VocCall(nf),2})
+                                        VocOverlap{NExpe}(sum(VocCall)) = 1; % we cannot compare RMS let's be cautious and consider this vocalzation is the quietest
+                                    elseif all(BioSoundCalls{VocCall(nf),2}.rms>RMS_overlap)
                                         VocOverlap{NExpe}(sum(VocCall)) = 2;
                                     else
                                         VocOverlap{NExpe}(sum(VocCall)) = 1;
@@ -442,7 +452,11 @@ for ff=1:length(DataDir)
 
                                 % Identify the type of call VocTr for a Trill,
                                 % VocBa for a bark and VocUn for undefined Voc
-                                What{NExpe}{sum(VocCall)} = ['Voc' BioSoundCalls{VocCall(nf),1}.type];
+                                if ~isempty(BioSoundCalls{VocCall(nf),1})
+                                    What{NExpe}{sum(VocCall)} = ['Voc' BioSoundCalls{VocCall(nf),1}.type];
+                                else
+                                    What{NExpe}{sum(VocCall)} = 'VoNan'; % Biosound could not be calculated on this extract probably because it was too short...
+                                end
     %                             What{NExpe}{VocCall} = identify_CallType(Raw_wave{VocInd(vv)}(IndVocStartRaw_merged{VocInd(vv)}{ll}(nn):IndVocStopRaw_merged{VocInd(vv)}{ll}(nn)),Piezo_wave.(Fns_AL{ll}){VocInd(vv)}(IndVocStartPiezo_merged{VocInd(vv)}{ll}(nn):IndVocStopPiezo_merged{VocInd(vv)}{ll}(nn)));
 
                                 % Finding the spikes that are during, before

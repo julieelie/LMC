@@ -748,9 +748,9 @@ function timerasterkdeOnSpectroAmp(SpikesArrivalTimes,Duration,Delay,Indices, Bi
     
     
     figure()
-    [z,p,k] = butter(6,7/(FS/2),'low');
+    [z,p,k] = butter(6,60/(FS/2),'low');
     sos_lowY = zp2sos(z,p,k);
-    [z,p,k] = butter(6,7/(1000/2),'low');
+    [z,p,k] = butter(6,60/(1000/2),'low');
     sos_lowX = zp2sos(z,p,k);
     YPerStimLow = YPerStim;
     XAmp_MatLow = XAmp_Mat;
@@ -780,6 +780,25 @@ function timerasterkdeOnSpectroAmp(SpikesArrivalTimes,Duration,Delay,Indices, Bi
     xlabel('Time (ms)')
     ylabel('Rate (Hz)')
     
+    % Calculate the Amplitude MRF
+    AmpWindow = [0 50];
+    NStims=length(Indices);
+    AllAmp = [zeros(NStims, Delay(1)) XAmp_MatLow zeros(NStims, Delay(2))];
+    YPerStimLowMat = cell2mat(YPerStimLow');
+    StepIndices = find((YPerStimt{1}>(-Delay(1)-AmpWindow(1))).*(YPerStimt{1}<(max(YPerStimt{1})-AmpWindow(2))));
+    Nsteps = length(StepIndices);
+    ConvMat = nan(Nsteps*NStims,length(AmpWindow(1):AmpWindow(2)));
+    
+    
+    for oo=1:NStims
+        for step = 1:Nsteps
+            XAmp_startInd = YPerStimt{1}(StepIndices(step)) + Delay(1);
+            XAmp_local = AllAmp(oo, XAmp_startInd+(AmpWindow(1):AmpWindow(2)));
+            ConvMat((oo-1)*Nsteps+step,:)= XAmp_local.* YPerStimLow{oo}(StepIndices(step));
+        end
+    end
+    figure()
+    shadedErrorBar(AmpWindow(1) : AmpWindow(2),mean(ConvMat),std(ConvMat,0,1)./(size(ConvMat,1))^0.5,{'-','Color',[0.6350, 0.0780, 0.1840, 0.7], 'LineWidth',2})
 end
 
 

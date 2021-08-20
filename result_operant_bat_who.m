@@ -1,4 +1,4 @@
-function result_operant_bat_who(Path2ParamFile, Path2RecordingTable, Logger_dir)
+resulfunction result_operant_bat_who(Path2ParamFile, Path2RecordingTable, Logger_dir)
 addpath(genpath('/Users/elie/Documents/CODE/GitHub/LMC'))
 addpath(genpath('/Users/elie/Documents/CODE/GitHub/LoggerDataProcessing'))
 addpath(genpath('/Users/elie/Documents/CODE/GitHub/SoundAnalysisBats'))
