@@ -145,7 +145,7 @@ if PlotCoherenceFig
     figure(3)
 % figure()
     clf
-    subplot(1,3,1)
+    subplot(2,3,1)
     plot(CoherencyT_xTimeDelay, CoherencyT_filt, 'LineWidth',2);
     if ~isempty(P)
         hold on
@@ -163,7 +163,7 @@ if PlotCoherenceFig
     %     hold on
     %     plot(Freqs, Coherence_low, '--b','LineWidth',2)
     %     hold off
-    subplot(1,3,2)
+    subplot(2,3,2)
     shadedErrorBar(Freqs, Coherence_value,[(Coherence_up-Coherence_value)'; (-Coherence_low+Coherence_value)'], {'LineWidth',2,'Color','k'});
     hold on
     plot([Freqs(1) Freqs(end)], [0 0], 'r--', 'LineWidth',2);
@@ -196,7 +196,7 @@ if PlotCoherenceFig
         else
             maxFreqInd = find(FirstNonSigCoherenceFreq==Freqs) +2;
         end
-        subplot(1,3,3)
+        subplot(2,3,3)
         shadedErrorBar(Freqs(1:maxFreqInd), Coherence_value(1:maxFreqInd),[(Coherence_up(1:maxFreqInd)-Coherence_value(1:maxFreqInd))'; (-Coherence_low(1:maxFreqInd)+Coherence_value(1:maxFreqInd))'], {'LineWidth',2,'Color','k'});
         hold on
         plot([Freqs(1) Freqs(maxFreqInd)], [0 0], 'r--', 'LineWidth',2);

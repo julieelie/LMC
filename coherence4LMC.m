@@ -28,7 +28,7 @@ if nargin<9
     Delay=200; % The segment of data taken into account is -Delay ms before the vocalization onset and +200ms after the vocalization offset
 end
 
-PlotCoherenceFig = 0; % To plot the result of coherence calculation for each cell
+PlotCoherenceFig = 1; % To plot the result of coherence calculation for each cell
 StimXYDataPlot=0;
 TR=2; % 2ms is chosen as the Time resolution for the neural data
 Fs = 1/(TR*10^-3); % the data is then sampled at the optimal frequency given the neural time resolution choosen
@@ -101,6 +101,7 @@ end
 [YPerStim, YPerStimt] = get_y_4Coherence(Cell.SpikesArrivalTimes_Behav(IndVoc), Cell.Duration(IndVoc),Delay,TR);
 Y = [YPerStim{:}]';
 Y_ZS = zscore(Y);
+
 if nansum(Y)<=2
     fprintf(1,'Cell: Non Spiking cell, No calculation!!\n')
     Coherence.Error = 'Non Spiking cell, No calculation!!';
@@ -140,6 +141,8 @@ end
 X = [XPerStim{:}]';
 X_ZS = zscore(X);
 
+        
+
 if StimXYDataPlot
     if strcmp(FeatureName, 'amp') %#ok<UNRCH>
         F_high = 10000;
@@ -168,6 +171,19 @@ Coherence.NStims = NStims;
 if PlotCoherenceFig
     figure(3) %#ok<UNRCH>
 %     suplabel(sprintf('Coherence Cell %d/%d', cc, NCells), 't');
+    [XACF, Lags] = xcorr(X_ZS, ceil(1000/TR));
+%         [z,p,k] = butter(6,Cell.MotorCoherenceOperant.FirstNonSigCoherenceFreq/((2*1000/TR)/2),'low');
+%         sos_low = zp2sos(z,p,k);
+%         XAmpACF_filt=filtfilt(sos_low,1,XAmpACF);
+    subplot(2,3,1)
+    XLIM = get(gca, 'XLim');
+    subplot(2,3,4)
+    plot(Lags.*round(TR), XACF, 'k-', 'LineWidth',2); xlabel('Time (ms)'); ylabel('AC X ZS');%hold on;plot(Lags.*round(TR/2), XAmpACF_filt, 'r-', 'LineWidth',2);
+    [YACF, YLags] = xcorr(Y_ZS, ceil(1000/TR));
+    set(gca, 'XLim', XLIM)
+    subplot(2,3,5)
+    plot(YLags.*TR, YACF, 'k-', 'LineWidth',2); xlabel('Time (ms)'); ylabel('AC Y ZS');
+    set(gca, 'XLim', XLIM)
     drawnow
 end
 %% Bootsrap the calculation of coherence and information with permutation...
@@ -335,7 +351,7 @@ fprintf(1, '------------------Done with Calculations %s %s Self=%d in %ds-------
         XPerStim = cell(1,length(Duration));
         XPerStimt = cell(1,length(Duration));
         if ischar(DefaultVal) && strcmp(DefaultVal, 'mean')
-            DefaultValue = 1;
+            DefaultValue = NaN;
         else
             DefaultValue = DefaultVal;
         end
@@ -351,7 +367,7 @@ fprintf(1, '------------------Done with Calculations %s %s Self=%d in %ds-------
             if ~ischar(DefaultVal)
                 XPerStim_temp(isnan(XPerStim_temp)) = DefaultValue;
             else
-                XPerStim_temp(isnan(XPerStim_temp)) = nanmean(XPerStim_temp);
+                XPerStim_temp(isnan(XPerStim_temp)) = nanmean(FeatureVal);
             end
             % Warning, resample gives very weird results here!!!
             %     [XPerStim{stim}] = resample(XPerStim_temp, Fs, 1000);
@@ -423,7 +439,7 @@ fprintf(1, '------------------Done with Calculations %s %s Self=%d in %ds-------
         % Loop through the stimuli and fill in the matrix
         for stim=1:length(Duration)
             % Time slots for the neural response
-            TimeBinsY = -Delay(1) : (Delay(2) + Duration(stim));
+            TimeBinsY = -Delay(1) : (Delay(2) + round(Duration(stim)));
             SpikePattern = zeros(1,length(TimeBinsY)-1);
             for isp = 1:length(SAT{stim})
                 SpikeInd = round(SAT{stim}(isp));
