@@ -1358,18 +1358,26 @@ ylim([0 7])
 Session = 'Operant';
 Self = 1;
 Delay = 200;
+FilterSize = 250; % (in ms)
 MC = load(fullfile(HDPath,sprintf('MotorCoherence_%s_%s.mat', 'amp', Session)));
 GoodInfo=find(~isnan(MC.Info));
 % GoodInfo=find(MC.Info_pRandSpikePerm<0.05);
 NCells = length(GoodInfo);
-CoeffVar = nan(NCells,1);
-FanoFactor = cell(NCells,1);
-GammaA = nan(NCells,1);
-SSEGam = nan(NCells,1);
-SSEExp = nan(NCells,1);
+CoeffVar_Original = nan(NCells,1);
+FanoFactor_Original = cell(NCells,1);
+GammaA_Original = nan(NCells,1);
+SSEGam_Original = nan(NCells,1);
+SSEExp_Original = nan(NCells,1);
+CoeffVar_Rescaled = nan(NCells,1);
+FanoFactor_Rescaled = cell(NCells,1);
+GammaA_Rescaled = nan(NCells,1);
+SSEGam_Rescaled = nan(NCells,1);
+SSEExp_Rescaled = nan(NCells,1);
 SpikeCountPerStim = nan(NCells,2);
+GammaA_GLM = nan(NCells,1);
+GammaAmpDispersion = nan(NCells,1);
 %% The loop
-for nc=179:NCells
+for nc=9:NCells %(demo cell= 560)
     cc=GoodInfo(nc);
 %     cc=574;
     fprintf(1,'Cell %d/%d\n',nc,NCells)
@@ -1410,71 +1418,65 @@ for nc=179:NCells
         end
     end
     
-    % Get the optimal Time resolution value
+    % Get the optimal Time resolution value given by coherence for
+    % Amplitude and spike rate signal
     TR = round(1000./(2*MC.CoherenceWeightedFreq(cc)));
-    NBins = floor(FilterSize/(2*TR)); % Number of time bins before and after optimal Delay (CoherencyT_DelayAtzero)
+    
     % Compute neural vectors
     % Neural Data loop
-    % neural response is a vector that compile all spike counts starting
-    % at 200ms (-Delay(1)) before stim onset and stop at 200ms (Delay(2)) after
-    % stim offset
+    % neural response takes into account all spikes starting
+    % at 200 - FilterSize/2 ms before stim onset and stop at 200 - FilterSize/2 ms after
+    % stim offset to make sure we're not looking at spike for which we
+    % cannot establish the corresponding time varying acoustic feature from
+    % -FilterSize/2 ms to FilterSize/2 ms.
+    TLim = [FilterSize/2-200 200-FilterSize/2];
+    [YPerStim, YPerStimt, YPatterns, SATPerStim, ISIPerStim] = get_y_4GammaFit(Cell.SpikesArrivalTimes_Behav(IndVoc), Cell.Duration(IndVoc),TLim,TR);
     
-    if isnan(MC.CoherencyT_DelayAtzero(cc)) % Let's try to figure out a value for this
-        figure(6);clf; plot(Cell.MotorCoherenceOperant.CoherencyT_xTimeDelay, Cell.MotorCoherenceOperant.CoherencyT_filt, 'LineWidth',2);xlabel('Time Delay');ylabel('Coherency')
-        [P,Locs] = findpeaks(-Cell.MotorCoherenceOperant.CoherencyT_filt);
-        
-        if ~isempty(Locs)
-            [P,IndM] = max(P);
-            Locs = Locs(IndM);
-            CoherencyT_DelayAtzero = Cell.MotorCoherenceOperant.CoherencyT_xTimeDelay(Locs);
-            CrossZero1 = Cell.MotorCoherenceOperant.CoherencyT_xTimeDelay(find(Cell.MotorCoherenceOperant.CoherencyT_filt(1:Locs)<=mean(Cell.MotorCoherenceOperant.CoherencyT_filt), 1, 'last')+1);
-            CrossZero2 = Cell.MotorCoherenceOperant.CoherencyT_xTimeDelay(Locs + find(Cell.MotorCoherenceOperant.CoherencyT_filt(Locs+1:end)<=mean(Cell.MotorCoherenceOperant.CoherencyT_filt), 1, 'first')-1);
-            if isempty(CrossZero2)
-                CrossZero2 = Cell.MotorCoherenceOperant.CoherencyT_xTimeDelay(Locs + find(Cell.MotorCoherenceOperant.CoherencyT_filt(Locs+1:end)==min(Cell.MotorCoherenceOperant.CoherencyT_filt(Locs+1:end)), 1, 'first')-1);
-            end
-            CoherencyT_WidthAtMaxPeak = CrossZero2 - CrossZero1;
-            
-            warning('No delay was originally found for that cell: hyp: inverse coherency curve?')
-            
-        else
-            warning('No delay was originally found for that cell: hyp: Very Large frequency?')
-            CoherencyT_DelayAtzero=Cell.MotorCoherenceOperant.CoherencyT_xTimeDelay(Cell.MotorCoherenceOperant.CoherencyT_filt == max(Cell.MotorCoherenceOperant.CoherencyT_filt));
-%             keyboard
-            %                 continue
-        end
-        if abs(CoherencyT_DelayAtzero)<=200
-            TLim = [CoherencyT_DelayAtzero-200+NBins*TR CoherencyT_DelayAtzero+200-NBins*TR];
-        else % this is an abherent delay because there is only 200ms before and after each vocaliztaion when calculating the coherence so center the filter at 0
-            TLim = [NBins*TR-200 200-NBins*TR];
-         end
-    else
-        if abs(MC.CoherencyT_DelayAtzero(cc))<=200
-            TLim = [MC.CoherencyT_DelayAtzero(cc)-200+NBins*TR MC.CoherencyT_DelayAtzero(cc)+200-NBins*TR];
-        else % this is an abherent delay because there is only 200ms before and after each vocaliztaion when calculating the coherence so center the filter at 0
-            TLim = [NBins*TR-200 200-NBins*TR];
-        end
-    end
-    [YPerStim, YPerStimt, YPatterns,YCountPerStim] = get_y_4Coherence(Cell.SpikesArrivalTimes_Behav(IndVoc), Cell.Duration(IndVoc),TLim,TR);
     % These are the spike arrival times for each vocalization
     SAT = cellfun(@find, YPatterns, 'UniformOutput', false);
+    % Let's keep track of the average number of spikes per stim
     SpikeCountPerStim(nc,1) = nanmean(cellfun(@length, SAT));
     SpikeCountPerStim(nc,2) = nanstd(cellfun(@length, SAT));
-    % These are the inter-spike interval for each vocalization
-    ISIPerStim = cellfun(@diff, SAT, 'UniformOutput', false);
-    if isempty([ISIPerStim{:}]) || length([ISIPerStim{:}])<20
+    
+    % Correct the time of spikes by the time varying rate to see what is
+    % the underlying homogenous Gamma/Poisson process
+    [ISIPerStim_Rescaled, ISIvecold, YPatterns_Rescaled]=time_rescaled_ISI(YPatterns, YPerStim);
+    
+    % ISIPerStim are the original inter-spike interval for each vocalization
+    if isempty([ISIPerStim{:}]) || length([ISIPerStim{:}])<10
         warning('too few spikes! cannot calculate ISI!/n')
         continue
     end
     % This is the coefficient of variation of ISI
-    CoeffVar(nc) = std([ISIPerStim{:}])/mean([ISIPerStim{:}]);
-    % This is the Fano Factor of the spike count (=1 for a poisson process)
-    FanoFactor{nc} = ((cellfun(@std, YPatterns)).^2) ./ cellfun(@mean, YPatterns);
+    CoeffVar_Original(nc) = std([ISIPerStim{:}])/mean([ISIPerStim{:}]);
+    CoeffVar_Rescaled(nc) = std([ISIPerStim_Rescaled{:}])/mean([ISIPerStim_Rescaled{:}]);
+    % This is the Fano Factor of the spike count per bin TR (=1 for a poisson process)
+    SpikeCountPerBin_Rescaled = cell(size(YPatterns_Rescaled));
+    for ss=1:length(YPatterns_Rescaled)
+        VocDuration = length(YPatterns_Rescaled{ss});
+        TimeBins = 1:TR:VocDuration;
+        SpikeCountPerBin_Rescaled{ss} = nan(length(TimeBins)-1,1);
+        for tt=1:(length(TimeBins)-1)
+            SpikeCountPerBin_Rescaled{ss}(tt) = sum(YPatterns_Rescaled{ss}(TimeBins(tt):(TimeBins(tt+1)-1)));
+        end
+    end
+    SpikeCountPerBin = cell(size(YPatterns));
+    for ss=1:length(YPatterns)
+        VocDuration = length(YPatterns{ss});
+        TimeBins = 1:TR:VocDuration;
+        SpikeCountPerBin{ss} = nan(length(TimeBins)-1,1);
+        for tt=1:(length(TimeBins)-1)
+            SpikeCountPerBin{ss}(tt) = sum(YPatterns{ss}(TimeBins(tt):(TimeBins(tt+1)-1)));
+        end
+    end
+    FanoFactor_Original{nc} = ((cellfun(@std, SpikeCountPerBin)).^2) ./ cellfun(@mean, SpikeCountPerBin);
+    FanoFactor_Rescaled{nc} = ((cellfun(@std, SpikeCountPerBin_Rescaled)).^2) ./ cellfun(@mean, SpikeCountPerBin_Rescaled);
     % plot the histogram of ISI
-    figure(20);clf
+    figure(20);subplot(2,1,1);cla
     H=histogram([ISIPerStim{:}], 'BinWidth',1); xlabel('ISI (ms)');
     % fit the distribution of ISI with a gamma distribution
     Gam = fitdist([ISIPerStim{:}]', 'Gamma');
-    GammaA(nc) = Gam.a;
+    GammaA_Original(nc) = Gam.a;
     % fit the distribution of ISI with an exponential (Poisson process)
     Poi = fitdist([ISIPerStim{:}]', 'Exponential');
     % add the2 fit to the figure
@@ -1483,25 +1485,126 @@ for nc=179:NCells
     Xgam = gampdf(XISI, Gam.a, Gam.b);
     % Calculate SSE
     PdfH = H.BinCounts./sum(H.BinCounts);
-    SSEGam(nc) = sum((PdfH-Xgam).^2);
-    SSEExp(nc) = sum((PdfH-Xexp).^2);
+    SSEGam_Original(nc) = sum((PdfH-Xgam).^2);
+    SSEExp_Original(nc) = sum((PdfH-Xexp).^2);
     % plot everything
-    figure(20);clf
+    figure(20);subplot(2,1,1); cla
     yyaxis right; plot(XISI, Xexp, '-', 'LineWidth',2, 'Color', [0.929 0.694 0.125]);
     hold on; yyaxis right; plot(XISI, Xgam, '-', 'LineWidth',2);
-    hold on; yyaxis left; H=histogram([ISIPerStim{:}], 'BinWidth',1); xlabel('ISI (ms)');hold off
+    hold on; yyaxis left; H=histogram([ISIPerStim{:}], 'BinWidth',1); xlabel('Original ISI (ms)');hold off
     legend({'ISI','Exp fit', 'Gamma fit'})
-    title(sprintf('ISI fit Gamma parameter = %.2f SSEGam = %.2e SSEExp = %.2e FanoFactor = %.2f +/- %.2f', Gam.a, SSEGam(nc), SSEExp(nc), nanmean(FanoFactor{nc}), nanstd(FanoFactor{nc})/(length(FanoFactor{nc}))^0.5))
-%     pause(1)
+    title(sprintf('ISI fit Gamma parameter = %.2f SSEGam = %.2e SSEExp = %.2e FanoFactor = %.2f +/- %.2f', Gam.a, SSEGam_Original(nc), SSEExp_Original(nc), nanmean(FanoFactor_Original{nc}), nanstd(FanoFactor_Original{nc})/(length(FanoFactor_Original{nc}))^0.5))
+    suplabel('Original data', 't')
+    
+    % plot the histogram of ISI Rescaled
+    figure(20);subplot(2,1,2);cla
+    H=histogram([ISIPerStim_Rescaled{:}], 'BinWidth',1); xlabel('ISI Rescaled (ms)');
+    % fit the distribution of ISI with a gamma distribution
+    Gam = fitdist([ISIPerStim_Rescaled{:}]', 'Gamma');
+    GammaA_Rescaled(nc) = Gam.a;
+    % fit the distribution of ISI with an exponential (Poisson process)
+    Poi = fitdist([ISIPerStim_Rescaled{:}]', 'Exponential');
+    % add the2 fit to the figure
+    XISI = H.BinEdges(1):(H.BinEdges(end)-1);
+    Xexp = pdf('Exponential',XISI,Poi.mu);
+    Xgam = gampdf(XISI, Gam.a, Gam.b);
+    % Calculate SSE
+    PdfH = H.BinCounts./sum(H.BinCounts);
+    SSEGam_Rescaled(nc) = sum((PdfH-Xgam).^2);
+    SSEExp_Rescaled(nc) = sum((PdfH-Xexp).^2);
+    figure(20);subplot(2,1,2);cla
+    yyaxis right; plot(XISI, Xexp, '-', 'LineWidth',2, 'Color', [0.929 0.694 0.125]);
+    hold on; yyaxis right; plot(XISI, Xgam, '-', 'LineWidth',2);
+    hold on; yyaxis left; H=histogram([ISIPerStim_Rescaled{:}], 'BinWidth',1); xlabel('ISI Rescaled (ms)');hold off
+    legend({'ISI Rescaled','Exp fit', 'Gamma fit'})
+    title(sprintf('ISI Rescaled fit Gamma parameter = %.2f SSEGam = %.2e SSEExp = %.2e FanoFactor = %.2f +/- %.2f', Gam.a, SSEGam_Rescaled(nc), SSEExp_Rescaled(nc), nanmean(FanoFactor_Rescaled{nc}), nanstd(FanoFactor_Rescaled{nc})/(length(FanoFactor_Rescaled{nc}))^0.5))
+    suplabel(sprintf('Cell ID: %s', MC.CellsPath(cc).name), 't')
+    
+    % Estimate the shape parameter of gamma distribution based on a linear
+    % model with Amplitude 
+     % Calculate acoustic features input to the models
+        % acoustic data is a Matrix of the value of the acoustic feature sampled
+        % at 1000Hz that for each Spike (at t) starts
+        % t-FilterSize/2 and stops at
+        % t+FilterSize/2 with t references to zero at stim onset
+        DefaultVal = 0;%zero should be the default value for the amplitude, we know here that there is no sound
+        [XAmpPerStim]  = get_x_4gammafit(Cell.BioSound(IndVoc,2), Cell.Duration(IndVoc), SATPerStim, FilterSize,DefaultVal,'amp');
+        XAmp = [XAmpPerStim{:}]';
+            
+        [~, XAmp_Mu, XAmp_Sigma] = zscore(reshape(XAmp,numel(XAmp),1));
+        XAmp_ZS = (XAmp - XAmp_Mu) ./ XAmp_Sigma;
+        if any(isnan(XAmp_ZS))
+            keyboard
+        end
+        [AmpPC,AmpScore,AmpLatent,~,AmpPCAExplained,AmpPCAMu] = pca(XAmp_ZS);
+        NPC = find(cumsum(AmpPCAExplained)>95,1);
+        % Run the gamma model
+        % Now let's fit the data with a GLM gamma
+        [B_GLM,Dev, Stats] = glmfit(AmpScore(:,1:NPC),[ISIPerStim{:}],'gamma', 'link', 'log');
+        GamModel = fitglm(AmpScore(:,1:NPC),[ISIPerStim{:}],'linear','Distribution','gamma', 'DispersionFlag', true,'Link', 'log');
+        
+        % estimated shape
+        fprintf(1,'The model estimates a shape of %.2f\n', 1/GamModel.Dispersion)
+        fprintf(1, 'The model estimates the intercept to be %.1f\n', GamModel.Coefficients.Estimate(1) - log(1/GamModel.Dispersion))
+        fprintf(1, 'The model estimates the Beta coefficients to be:\n')
+        GammaA_GLM(nc) = 1/GamModel.Dispersion;
+        GammaAmpDispersion(nc) = GamModel.Dispersion;
+        GamModel.Coefficients.Estimate
+        figure(20)
+        suplabel(sprintf('GLM Gamma shape = %.2f', GammaA_GLM(nc)))
+        drawnow
+%     pause()
 end
+save(fullfile(HDPath, ('OperantVocPoissonGammaNeuralNoise.mat')), 'CoeffVar_Original', 'FanoFactor_Original', 'GammaA_Original', 'SSEGam_Original', 'SSEExp_Original', 'CoeffVar_Rescaled', 'FanoFactor_Rescaled', 'GammaA_Rescaled', 'SSEGam_Rescaled', 'SSEExp_Rescaled', 'SpikeCountPerStim','GammaA_GLM', 'GammaAmpDispersion')
 
 %% Plot figures of Poisson vs Gamma cell behavior
 Session = 'Operant';
 MC = load(fullfile(HDPath,sprintf('MotorCoherence_%s_%s.mat', 'amp', Session)));
-figure(); subplot(2,2,1); scatter(SSEExp - SSEGam, GammaA, 20,[0 0 0],'filled'); xlabel('Exp Error - Gamma Error'); ylabel('Gamma fit shape');
-subplot(2,2,2); scatter(CoeffVar, GammaA, 20,[0 0 0],'filled'); xlabel('Coeficient of variation std/mean'); ylabel('Gamma fit shape');
-subplot(2,2,3); scatter(cellfun(@nanmean, FanoFactor), GammaA, 20,[0 0 0],'filled'); xlabel('FanoFactor (var/mean)'); ylabel('Gamma fit shape');
-subplot(2,2,4); scatter(MC.Info(GoodInfo), GammaA, 20, [0 0 0], 'filled'); xlabel(' Info on Motor coherence with amplitude');ylabel('Gamma fit shape');
+NPoissonCells_Original = sum((cellfun(@nanmean, FanoFactor_Original)<1.02) .* (cellfun(@nanmean, FanoFactor_Original)>0.98) .* (CoeffVar_Original>0.95) .* (CoeffVar_Original<1.05));
+NTotCells = sum(~isnan(CoeffVar_Original));
+FanoFactorAv_Original = cellfun(@nanmean, FanoFactor_Original);
+figure(21);clf; subplot(2,3,1); cubehelix_niceplot(cellfun(@nanmean, FanoFactor_Original), GammaA_Original, SpikeCountPerStim(:,1),3, ' '); xlabel('FanoFactor (var/mean)'); ylabel('Gamma fit shape');
+subplot(2,3,2); cubehelix_niceplot(CoeffVar_Original, GammaA_Original, SpikeCountPerStim(:,1),3, ' ' ); xlabel('Coefficient of variation std/mean'); ylabel('Gamma fit shape');
+subplot(2,3,4); cubehelix_niceplot(FanoFactorAv_Original, CoeffVar_Original, SpikeCountPerStim(:,1),3, sprintf('%d cells are Poisson like (%f.2 %%)', NPoissonCells_Original, NPoissonCells_Original*100/NTotCells)); xlabel('FanoFactor (var/mean)'); ylabel('Coefficient of variation std/mean'); hold on; vline([0.98 1.02], {'k', 'k'});hold on;  hline([0.95 1.05], {'k', 'k'})
+subplot(2,3,5); cubehelix_niceplot(FanoFactorAv_Original(~isnan(GammaA_Original)), CoeffVar_Original(~isnan(GammaA_Original)), GammaA_Original(~isnan(GammaA_Original)),3, sprintf('%d cells are Poisson like (%f.2 %%)', NPoissonCells_Original, NPoissonCells_Original*100/NTotCells)); xlabel('FanoFactor (var/mean)'); ylabel('Coefficient of variation std/mean'); hold on; vline([0.98 1.02], {'k', 'k'});hold on;  hline([0.95 1.05], {'k', 'k'})
+subplot(2,3,6); cubehelix_niceplot(MC.Info(GoodInfo), CoeffVar_Original, SpikeCountPerStim(:,1),3); xlabel(' Info on Motor coherence with amplitude');ylabel('Coefficient of variation std/mean');
+suplabel('Original data','t')
+FanoFactorAv_Rescaled = cellfun(@nanmean, FanoFactor_Rescaled);
+NPoissonCells_Rescaled = sum((cellfun(@nanmean, FanoFactor_Rescaled)<1.02) .* (cellfun(@nanmean, FanoFactor_Rescaled)>0.98) .* (CoeffVar_Rescaled>0.95) .* (CoeffVar_Rescaled<1.05));
+figure(22);clf; subplot(2,3,1); cubehelix_niceplot(cellfun(@nanmean, FanoFactor_Rescaled), GammaA_Rescaled, SpikeCountPerStim(:,1),3, ' '); xlabel('FanoFactor (var/mean)'); ylabel('Gamma fit shape');
+subplot(2,3,2); cubehelix_niceplot(CoeffVar_Rescaled, GammaA_Rescaled, SpikeCountPerStim(:,1),3, ' ' ); xlabel('Coefficient of variation std/mean'); ylabel('Gamma fit shape');
+subplot(2,3,4); cubehelix_niceplot(FanoFactorAv_Rescaled, CoeffVar_Rescaled, SpikeCountPerStim(:,1),3, sprintf('%d cells are Poisson like (%f.2 %%)', NPoissonCells_Rescaled, NPoissonCells_Rescaled*100/NTotCells)); xlabel('FanoFactor (var/mean)'); ylabel('Coefficient of variation std/mean'); hold on; vline([0.98 1.02], {'k', 'k'});hold on;  hline([0.95 1.05], {'k', 'k'})
+subplot(2,3,5); cubehelix_niceplot(FanoFactorAv_Rescaled(~isnan(GammaA_Rescaled)), CoeffVar_Rescaled(~isnan(GammaA_Rescaled)), GammaA_Rescaled(~isnan(GammaA_Rescaled)),3, sprintf('%d cells are Poisson like (%f.2 %%)', NPoissonCells_Rescaled, NPoissonCells_Rescaled*100/NTotCells)); xlabel('FanoFactor (var/mean)'); ylabel('Coefficient of variation std/mean'); hold on; vline([0.98 1.02], {'k', 'k'});hold on;  hline([0.95 1.05], {'k', 'k'})
+subplot(2,3,6); cubehelix_niceplot(MC.Info(GoodInfo), CoeffVar_Rescaled, SpikeCountPerStim(:,1),3); xlabel(' Info on Motor coherence with amplitude');ylabel('Coefficient of variation std/mean');
+suplabel('Rescaled data', 't')
+
+figure(); subplot(1,3,1);scatter(CoeffVar_Original, CoeffVar_Rescaled, 'filled'); hold on ; line([0 2], [0 2], 'Color','k');xlabel('Coefficient of variation original'); ylabel('Coeffificient of variation rescaled')
+subplot(1,3,2);scatter(cellfun(@nanmean,FanoFactor_Original), cellfun(@nanmean,FanoFactor_Rescaled), 'filled'); hold on ; line([0.93 1.05], [0.93 1.05], 'Color','k');xlabel('FanoFactor original'); ylabel('FanoFactor rescaled')
+subplot(1,3,3);scatter(GammaA_Original, GammaA_Rescaled, 'filled'); hold on ; line([0 45], [0 45], 'Color','k');xlabel('GammaA original'); ylabel('GammaA rescaled')
+
+
+%% Gamma model for all cells
+% now we have a better estimate of the shape for the Gamma noise
+        % (shape obtained with the GLM fit)
+        % Let's use that shape to get a better estimate for the time
+        % varying spike rate (let's say that we fix the CV of the estimate
+        % of the ISI across time (CVe = SE/mean = 0.1 or 0.5?), then given
+        % the shape of the gamma distribution of the noise, how many spikes
+        % do we need in nearest neighbour spike rate estimate to get the
+        % bet estimate of the rate. Because the mean of the distribution of
+        % ISI is the same as the mean of your estimates of the mean, and
+        % mean = shape * scale at any time point and var = shape * scale^2,
+        % then SE = (var/n)^0.5 = scale * (shape/n)^0.5 = mean / (shape *
+        % n)^0.5 -> n = (mean/SE)^2 * 1/shape = 1/(shape * CVe^2)
+        CVe = 0.2; % This is the coeffcient of variation of the estimate of the mean interspike interval, we constrain the system by deciding to fix it at 0.2 (that's the noise on the calculatoin of the mean) 
+        NumNearNeighSpike = round(GamModel.Dispersion/(CVe.^2));
+        [YPerStim, YPerStimt, YPatterns, SATPerStim, ISIPerStim] = get_y_4GammaFit(Cell.SpikesArrivalTimes_Behav(IndVoc), Cell.Duration(IndVoc),TLim,TR, NumNearNeighSpike);
+        
+        % Now that we have a better estimate of the time varying rate, we
+        % need to generate spike patterns with gamma noise that follow that
+        % rate for each vocalization
+
+
 %% Explore Cell by cell the profile of coherence and scatter plots of cell tuning for Good Cells
 %% Then for all cells
 InputFig=0;
@@ -4467,6 +4570,56 @@ end
 
 end
 
+function [XPerStim] = get_x_4gammafit(BioSound, Duration, SATPerStim, FilterSize, DefaultVal,Feature)
+% This function calculate for each stim and at each spike arrival time SAT,
+% the value of amplitude in a window FilterSize centered around SAT.
+DebugFig=0;
+
+% calculate the cell array of acoustic data for each cell. For each
+% voc, XPerStim is a matrix where each column is a spike and each row corresponds to the values of
+% the acoustic feature in the window starting FilterSize/2 ms before SAT and FilterSize/2 ms after.
+%  Fs = round(1/((TR-Overlap).*10^-3));
+% Vectors of the acoustic features
+XPerStim = cell(1,length(Duration));
+if ischar(DefaultVal) && strcmp(DefaultVal, 'mean')
+    DefaultValue = NaN;
+else
+    DefaultValue = DefaultVal;
+end
+
+for stim = 1:length(Duration)
+    if abs(round(length(BioSound{stim}.sound)/BioSound{stim}.samprate*10^3) - round(Duration(stim)))>1
+        keyboard
+    end
+    % Get the time varying feature for that stim 
+    FeatureVal = BioSound{stim}.(sprintf('%s',Feature));
+    % loop through spikes and get the corresponding feature value vector
+    XPerStim{stim} = DefaultValue .* ones(FilterSize+1, length(SATPerStim{stim}));
+    for isp = 1:length(SATPerStim{stim})
+        SAT = SATPerStim{stim}(isp);
+        Xt = round(SAT + (-FilterSize/2 : FilterSize/2));
+        if any(Xt>=0)
+            Xtpos = find(Xt>=0);
+            XPerStim{stim}(Xtpos(1:min(length(Xtpos), length(FeatureVal))), isp) = FeatureVal(1:min(length(Xtpos), length(FeatureVal)));
+        end  
+    end
+    
+    
+    if DebugFig
+        figure(200)
+        clf
+        imagesc(XPerStim{stim}'); colorbar()
+        set(gca, 'XTick', (1 :25: FilterSize+1),'XTickLabel', (-FilterSize/2 :25: FilterSize/2))
+        xlabel('Time ms')
+        ylabel('spike #')
+        title(sprintf('%s Stim %d/%d',Feature, stim,length(Duration)));
+        pause(1)
+    end
+end
+
+
+end
+
 
 function [XPerStim,XPerStimt] = get_x_4GLM(BioSound, Duration, Delay,TR,DefaultVal,Feature, Overlap)
 if nargin<7
@@ -4578,7 +4731,7 @@ end
 
 end
 
-function [YPerStim, YPerStimt,SpikePattern,YCountPerStim] = get_y_4Coherence(SAT, Duration,Delay,TR,Overlap)
+function [YPerStim, YPerStimt,SpikePattern,YCountPerStim] = get_y_4Coherence(SAT, Duration,Delay,TR,Overlap, Fs)
 DebugFig = 0;
 if nargin<5
     Overlap = 0;
@@ -4600,7 +4753,9 @@ T_pts = (0:2*nStd*Tau) - nStd*Tau; % centered tpoints around the mean = 0 and ta
 Expwav = exp(-0.5*(T_pts).^2./Tau^2)/(Tau*(2*pi)^0.5);
 Expwav = Expwav./sum(Expwav);
 % Frequency at which the neural data should be sampled
-Fs = round(1/((TR-Overlap).*10^-3));
+if nargin<6
+    Fs = round(1/((TR-Overlap).*10^-3));
+end
 SpikePattern = cell(length(Duration),1);
 % Loop through the stimuli and fill in the matrix
 for stim=1:length(Duration)
@@ -4702,6 +4857,116 @@ for stim=1:length(Duration)
     %             % Find the number of spikes
     %             YPerStim{stim}(tt) = sum( (SAT{stim}>=TimeBinsY(tt)) .* (SAT{stim}<TimeBinsY(tt+1)));
     %         end
+end
+
+end
+
+
+
+function [YPerStim, YPerStimt,SpikePattern, SATPerStim, ISIPerStim] = get_y_4GammaFit(SAT, Duration,Delay,TR, ONNK)
+if nargin<5
+    ONNK = 4;
+end
+DebugFig=0;
+if length(Delay)==1
+    Delay = [-Delay Delay];
+end
+% Calculate the time varying rate applying a time varying gaussian window TR on the
+% spike pattern. The spike pattern considered starts -Delay ms
+% before the onset of the vocalization and stops Delay ms after the
+% offset of the vocalization
+YPerStim = cell(1,length(Duration));
+YPerStimt = cell(1,length(Duration));
+SATPerStim = cell(1,length(Duration));
+ISIPerStim = cell(1,length(Duration));
+% Gaussian window of std equal to Tau (68% of Gaussian centered in 2*Tau)
+% Tau is chosen as the 4th closest neighbor spike
+nStd =(max(Duration) - Delay(1) + Delay(2))/10; % before set as 4
+
+
+SpikePattern = cell(length(Duration),1);
+% Loop through the stimuli and fill in the matrix
+for stim=1:length(Duration)
+    
+    % Time slots for the neural response
+    TimeBinsY = Delay(1) : (Delay(2) + round(Duration(stim)));
+    % Spike pattern for that stim
+    SpikePattern{stim} = zeros(1,length(TimeBinsY)-1);
+    % make sure Spike arrival times are chronological
+    SAT_local = sort(SAT{stim});
+    % get the indices of spikes within that stim
+    SpikeInd = round(SAT_local);
+    if length(SpikeInd)<(ONNK+1)
+        warning('Too few spike for this event no calculation')
+        continue
+    end
+    SpikeInd = find((SpikeInd>=Delay(1)) .* (SpikeInd<(Delay(2) + Duration(stim))));
+    NSpikes = length(SpikeInd);
+    SATPerStim{stim} = SAT_local(SpikeInd);
+    ISIPerStim{stim} = nan(1,length(SpikeInd));
+    % Now for each spike fillin the spike pattern and convolve it in NNKE with a gaussian which std is taken to
+    % be the 4th nearest neighbor (ONNK)
+    NNKE = zeros(NSpikes,length(TimeBinsY));
+    GoodSpikes = ones(NSpikes,1);
+    for isp = 1:NSpikes
+        SpikePattern{stim}(round(SATPerStim{stim}(isp)) - Delay(1) +1) = SpikePattern{stim}(round(SATPerStim{stim}(isp)) - Delay(1) +1) +1;
+        NNKE(isp,(round(SATPerStim{stim}(isp)) - Delay(1) +1)) = 1;
+        % Now try a time varying kernel for rate estimation (nearest neighbor?)
+        if (isp-ONNK)>0 && (isp+ONNK)<=length(SATPerStim{stim})
+            Tau = min(abs(SATPerStim{stim}(isp) - [SATPerStim{stim}(isp+ONNK) SATPerStim{stim}(isp-ONNK)]));
+        elseif (isp-ONNK)>0 && (SpikeInd(isp) + ONNK)<=length(SAT_local) % The ONNKthnearest spike in the future is out of the vocalization zone but still available
+            Tau = min(abs(SATPerStim{stim}(isp)- [SATPerStim{stim}(isp-ONNK) SAT_local(SpikeInd(isp) + ONNK)]) );
+        elseif (isp+ONNK)<=length(SATPerStim{stim}) && (SpikeInd(isp)-ONNK)>0 % The ONKth nearest spike in the past is out of the vocalization zone but still available
+            Tau = min(abs(SATPerStim{stim}(isp)- [SATPerStim{stim}(isp+ONNK) SAT_local(SpikeInd(isp) - ONNK)]));
+        elseif (isp-ONNK)>0 % There is no accessible ONNKth nearest spike in the future only take the distance to the ONNKth spike in the past
+            Tau = abs(SATPerStim{stim}(isp)- SATPerStim{stim}(isp-ONNK));
+        elseif (isp+ONNK)<=length(SATPerStim{stim}) % there is no accessible ONNKth nearest spike in the past, only take distance to the OKKNth spike in the future
+            Tau = abs(SATPerStim{stim}(isp)- SATPerStim{stim}(isp+ONNK));
+        elseif (SpikeInd(isp)-ONNK)>0 && (SpikeInd(isp) + ONNK)<=length(SAT_local) % There are accessible spikes outside of the vocalization zone both in future and past
+            Tau = min(abs(SATPerStim{stim}(isp)- [SAT_local(SpikeInd(isp) - ONNK) SAT_local(SpikeInd(isp) + ONNK)]) );
+        elseif (SpikeInd(isp)-ONNK)>0  % There are accessible spikes outside of the vocalization zone only in past
+            Tau = abs(SATPerStim{stim}(isp)- SAT_local(SpikeInd(isp) - ONNK));
+        elseif (SpikeInd(isp) + ONNK)<=length(SAT_local)  % There are accessible spikes outside of the vocalization zone only in future
+            Tau = abs(SATPerStim{stim}(isp)- SAT_local(SpikeInd(isp) + ONNK));
+        elseif length(SAT_local)<(2*ONNK+1) % this is expected take a default value...
+            Tau = max(Tau,TR/2);
+        else
+            warning('ISSUE CANNOT FIND THE %dth nearest spike!!', ONNK);
+            keyboard
+        end
+        Tau = max(Tau,TR/2);
+        
+        % Now get the time to the previous spike for each spike
+        if (isp-1)>0
+            ISIPerStim{stim}(isp) = abs(SATPerStim{stim}(isp) - SATPerStim{stim}(isp-1));
+        elseif (SpikeInd(isp)-1)>0 % The 1st nearest spike in the past is out of the vocalization zone but still available
+            ISIPerStim{stim}(isp)  = abs(SATPerStim{stim}(isp)- SAT_local(SpikeInd(isp) - 1));
+        else
+            warning('Cannot find a previous spike cancelling that spike')
+            GoodSpikes(isp) = 0;
+        end
+        % construct the Gaussian
+        T_pts = (0:2*nStd*Tau) - nStd*Tau; % centered tpoints around the mean = 0 and take data into account up to nstd away on each side
+        Expwav = exp(-0.5*(T_pts).^2./Tau^2)/(Tau*(2*pi)^0.5);
+        Expwav = Expwav./sum(Expwav);
+        NNKE(isp,:) = conv(NNKE(isp,:), Expwav,'same');
+    end
+    ISIPerStim{stim} = ISIPerStim{stim}(logical(GoodSpikes));
+    SATPerStim{stim} = SATPerStim{stim}(logical(GoodSpikes));
+    NNKE = NNKE(logical(GoodSpikes),:);
+    YPerStim{stim} = sum(NNKE,1);
+    if length(YPerStim{stim})~= length(TimeBinsY)
+        warning('Unexpected length')
+        keyboard
+    end
+    YPerStimt{stim} = TimeBinsY;
+    if DebugFig
+        figure(200); clf
+        hist(SATPerStim{stim}); hold on; yyaxis right; plot(YPerStimt{stim}, YPerStim{stim}, '-r','LineWidth',2); xlabel('Time (ms)')
+        title(sprintf('%dth nearest neighbor rate estimation STim %d/%d', ONNK, stim,length(Duration)));
+        pause(1)
+    end
+    
 end
 
 end
