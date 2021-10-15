@@ -2,6 +2,7 @@ addpath(genpath('/Users/elie/Documents/CODE/GitHub/SoundAnalysisBats'));
 addpath(genpath('/Users/elie/Documents/CODE/GitHub/LoggerDataProcessing'));
 addpath(genpath('/Users/elie/Documents/CODE/GitHub/LMC'));
 addpath(genpath('/Users/elie/Documents/CODE/GitHub/GeneralCode'));
+addpath(genpath('/Users/elie/Documents/CODE/GitHub/TimeVaryingAcSemSTRF'));
 DatFig=0; %Set to 1 to see input data figures for each cell
 OutFig = 1;%Set to 1 to see output data figures for each cell
 
@@ -1354,14 +1355,15 @@ xlim([0 7])
 ylim([0 7])
 
 % end
-%% Explore the neural noise: Poisson or Gamma?!
+%% Explore the neural noise: Poisson or Gamma?! And calculate fit for gamma and Poisson distributions
 Session = 'Operant';
 Self = 1;
 Delay = 200;
+InputFig=0;
 FilterSize = 250; % (in ms)
 MC = load(fullfile(HDPath,sprintf('MotorCoherence_%s_%s.mat', 'amp', Session)));
-GoodInfo=find(~isnan(MC.Info));
-% GoodInfo=find(MC.Info_pRandSpikePerm<0.05);
+% GoodInfo=find(~isnan(MC.Info));
+GoodInfo=find(MC.Info_pRandSpikePerm<0.05);
 NCells = length(GoodInfo);
 CoeffVar_Original = nan(NCells,1);
 FanoFactor_Original = cell(NCells,1);
@@ -1374,10 +1376,30 @@ GammaA_Rescaled = nan(NCells,1);
 SSEGam_Rescaled = nan(NCells,1);
 SSEExp_Rescaled = nan(NCells,1);
 SpikeCountPerStim = nan(NCells,2);
+SpikeCountTot = nan(NCells,1);
 GammaA_GLM = nan(NCells,1);
 GammaAmpDispersion = nan(NCells,1);
+ModelAmpGLMGamma_Coeff = cell(NCells,2);% first column are time point X-Y of each coefficient (filter) that are reported in column 2 for each cell for the model with Amp
+ModelAmpGLMGammaDev_cv = cell(NCells,1); % for each cell, vector of Deviance distribution obtain in leave one vocalization out cross-validation with Gamma GLM
+ModelAmpGLMGammaGoodnessOfFit = nan(NCells,3); % Goodness of fit of the GLM Gamma model with Amplitude obtained on average in cross-validation (leave one vocalization out; column 1) with its STE (column 2) and a score (0->1) of how good the Gamma framework is attapted to that neuron (proportion of cross validation folds with Floor model being better than ceiling model)
+ModelCeilGLMGammaDev_cv = cell(NCells,1); % for each cell, vector of Deviance distribution obtain in leave one vocalization out cross-validation with Gamma GLM with ceiling model
+ModelFloorGLMGammaDev_cv = cell(NCells,1); % for each cell, vector of Deviance distribution obtain in leave one vocalization out cross-validation with Gamma GLM with Floor model = average ISI
+
+ModelAmpGLMPoisson_Coeff = cell(NCells,2);% first column are time point X-Y of each coefficient (filter) that are reported in column 2 for each cell for the model with Amp
+ModelAmpGLMPoissonDev_test  = nan(NCells, 2);% first column is pvalue of the chi2 test, second column is the Chi2Stat/diff(DFE)
+ModelAmpGLMPoissonDev_cv = cell(NCells,1); % for each cell, vector of Deviance distribution obtain in leave one vocalization out cross-validation with Poisson GLM
+ModelAmpGLMPoissonGoodnessOfFit = nan(NCells,3); % Goodness of fit of the GLM Poisson model with Amplitude obtained on average in cross-validation (leave one vocalization out; column 1) with its STE (column 2) and a score (0->1) of how good the Gamma framework is attapted to that neuron (proportion of cross validation folds with Floor model being better than ceiling model)
+ModelGaussCeilGLMPoissonDev_cv = cell(NCells,1); % for each cell, vector of Deviance distribution obtain in leave one vocalization out cross-validation with Poisson GLM with ceiling model = Gaussian filter on spike count
+ModelNNCeilGLMPoissonDev_cv = cell(NCells,1); % for each cell, vector of Deviance distribution obtain in leave one vocalization out cross-validation with Poisson GLM with ceiling model = NN filter on spike count with optimal number of spikes given by Gamma dispersion parameter
+ModelFloor0GLMPoissonDev_cv = cell(NCells,1); % for each cell, vector of Deviance distribution obtain in leave one vocalization out cross-validation with Poisson GLM with Floor model = average spike count over windows and tims
+ModelFloorTimeGLMPoissonDev_cv = cell(NCells,1); % for each cell, vector of Deviance distribution obtain in leave one vocalization out cross-validation with Poisson GLM with Floor model = time average spike count over stims
+
+BestShift = nan(NCells,1); % Optimal delay used in the model to center the filter
+
+NBoots = 100;
+Response_samprate = 1000; % sampling rate of neural data in Hz
 %% The loop
-for nc=9:NCells %(demo cell= 560)
+for nc=1:NCells %(demo cell= 560 or 207; or 78
     cc=GoodInfo(nc);
 %     cc=574;
     fprintf(1,'Cell %d/%d\n',nc,NCells)
@@ -1418,35 +1440,51 @@ for nc=9:NCells %(demo cell= 560)
         end
     end
     
-    % Get the optimal Time resolution value given by coherence for
+    %% Get the optimal Time resolution value given by coherence for
     % Amplitude and spike rate signal
     TR = round(1000./(2*MC.CoherenceWeightedFreq(cc)));
     
-    % Compute neural vectors
+    %% Compute neural vectors
     % Neural Data loop
     % neural response takes into account all spikes starting
     % at 200 - FilterSize/2 ms before stim onset and stop at 200 - FilterSize/2 ms after
     % stim offset to make sure we're not looking at spike for which we
     % cannot establish the corresponding time varying acoustic feature from
     % -FilterSize/2 ms to FilterSize/2 ms.
-    TLim = [FilterSize/2-200 200-FilterSize/2];
-    [YPerStim, YPerStimt, YPatterns, SATPerStim, ISIPerStim] = get_y_4GammaFit(Cell.SpikesArrivalTimes_Behav(IndVoc), Cell.Duration(IndVoc),TLim,TR);
+    TLim_G = [FilterSize/2-200 200-FilterSize/2];
+    [YPerStimG, ~, YPatternsG, SATPerStim, ISIPerStim] = get_y_4GammaFit(Cell.SpikesArrivalTimes_Behav(IndVoc), Cell.Duration(IndVoc),TLim_G,TR);
     
     % These are the spike arrival times for each vocalization
-    SAT = cellfun(@find, YPatterns, 'UniformOutput', false);
+    SAT = cellfun(@find, YPatternsG, 'UniformOutput', false);
     % Let's keep track of the average number of spikes per stim
     SpikeCountPerStim(nc,1) = nanmean(cellfun(@length, SAT));
     SpikeCountPerStim(nc,2) = nanstd(cellfun(@length, SAT));
+    SpikeCountTot(nc) = nansum(cellfun(@length, SAT));
     
     % Correct the time of spikes by the time varying rate to see what is
     % the underlying homogenous Gamma/Poisson process
-    [ISIPerStim_Rescaled, ISIvecold, YPatterns_Rescaled]=time_rescaled_ISI(YPatterns, YPerStim);
+    [ISIPerStim_Rescaled, ISIvecold, YPatterns_Rescaled]=time_rescaled_ISI(YPatternsG, YPerStimG);
+       
     
     % ISIPerStim are the original inter-spike interval for each vocalization
-    if isempty([ISIPerStim{:}]) || length([ISIPerStim{:}])<10
+    if isempty([ISIPerStim{:}]) || length([ISIPerStim{:}])<10 || isempty([ISIPerStim_Rescaled{:}]) || length([ISIPerStim_Rescaled{:}])<10
         warning('too few spikes! cannot calculate ISI!/n')
         continue
     end
+    
+    
+    % neural response for Poisson model is a vector that compile all spike counts starting
+    % at 200ms (-Delay(1)) before stim onset and stop at 200ms (Delay(2)) after
+    % stim offset
+    NBins = floor(FilterSize/(2*TR)); % Number of time bins before and after vocalization onset (0)
+    [TLim_P, BestShift(nc)]= find_bestShift(MC.CoherencyT_DelayAtzero(cc), Cell, NBins, TR);
+%     TLim_P = [NBins*TR-200 200-NBins*TR]; 
+    [YPerStim, YPerStimt, YPatterns,YCountPerStim] = get_y_4Coherence(Cell.SpikesArrivalTimes_Behav(IndVoc), Cell.Duration(IndVoc),TLim_P,TR);
+    Y = [YPerStim{:}]';
+    YCount = [YCountPerStim{:}]';
+    [Y_ZS_P, Y_Mu, Y_Sigma] = zscore(Y);
+    
+    %% Calculate and plot estimates of the noise distribution
     % This is the coefficient of variation of ISI
     CoeffVar_Original(nc) = std([ISIPerStim{:}])/mean([ISIPerStim{:}]);
     CoeffVar_Rescaled(nc) = std([ISIPerStim_Rescaled{:}])/mean([ISIPerStim_Rescaled{:}]);
@@ -1460,13 +1498,13 @@ for nc=9:NCells %(demo cell= 560)
             SpikeCountPerBin_Rescaled{ss}(tt) = sum(YPatterns_Rescaled{ss}(TimeBins(tt):(TimeBins(tt+1)-1)));
         end
     end
-    SpikeCountPerBin = cell(size(YPatterns));
-    for ss=1:length(YPatterns)
-        VocDuration = length(YPatterns{ss});
+    SpikeCountPerBin = cell(size(YPatternsG));
+    for ss=1:length(YPatternsG)
+        VocDuration = length(YPatternsG{ss});
         TimeBins = 1:TR:VocDuration;
         SpikeCountPerBin{ss} = nan(length(TimeBins)-1,1);
         for tt=1:(length(TimeBins)-1)
-            SpikeCountPerBin{ss}(tt) = sum(YPatterns{ss}(TimeBins(tt):(TimeBins(tt+1)-1)));
+            SpikeCountPerBin{ss}(tt) = sum(YPatternsG{ss}(TimeBins(tt):(TimeBins(tt+1)-1)));
         end
     end
     FanoFactor_Original{nc} = ((cellfun(@std, SpikeCountPerBin)).^2) ./ cellfun(@mean, SpikeCountPerBin);
@@ -1494,7 +1532,7 @@ for nc=9:NCells %(demo cell= 560)
     hold on; yyaxis left; H=histogram([ISIPerStim{:}], 'BinWidth',1); xlabel('Original ISI (ms)');hold off
     legend({'ISI','Exp fit', 'Gamma fit'})
     title(sprintf('ISI fit Gamma parameter = %.2f SSEGam = %.2e SSEExp = %.2e FanoFactor = %.2f +/- %.2f', Gam.a, SSEGam_Original(nc), SSEExp_Original(nc), nanmean(FanoFactor_Original{nc}), nanstd(FanoFactor_Original{nc})/(length(FanoFactor_Original{nc}))^0.5))
-    suplabel('Original data', 't')
+    
     
     % plot the histogram of ISI Rescaled
     figure(20);subplot(2,1,2);cla
@@ -1518,11 +1556,45 @@ for nc=9:NCells %(demo cell= 560)
     hold on; yyaxis left; H=histogram([ISIPerStim_Rescaled{:}], 'BinWidth',1); xlabel('ISI Rescaled (ms)');hold off
     legend({'ISI Rescaled','Exp fit', 'Gamma fit'})
     title(sprintf('ISI Rescaled fit Gamma parameter = %.2f SSEGam = %.2e SSEExp = %.2e FanoFactor = %.2f +/- %.2f', Gam.a, SSEGam_Rescaled(nc), SSEExp_Rescaled(nc), nanmean(FanoFactor_Rescaled{nc}), nanstd(FanoFactor_Rescaled{nc})/(length(FanoFactor_Rescaled{nc}))^0.5))
-    suplabel(sprintf('Cell ID: %s', MC.CellsPath(cc).name), 't')
+    suplabel(sprintf('Cell ID: %s  Info = %.2f bit/s', MC.CellsPath(cc).name,Cell.MotorCoherenceOperant.Info), 't');
     
-    % Estimate the shape parameter of gamma distribution based on a linear
-    % model with Amplitude 
-     % Calculate acoustic features input to the models
+     %% Calculate acoustic features input to the Poisson model
+        % acoustic data is a Matrix of the value of the acoustic feature sampled
+        % at 1000Hz that for each row (at t) starts
+        % t-NBins*TR and stops at
+        % t+NBins*TR with t references to zero at stim onset
+        DefaultVal = 0;%zero should be the default value for the amplitude, we know here that there is no sound
+        XAmp = nan(length(Y), 2*NBins+1);
+        Bins = -NBins:NBins;
+        for bb = 1:(2*NBins+1)
+            if ((Bins(bb))*TR- BestShift(nc))<0
+                fprintf(1, 'Calculating the Regressor Amplitude %d/%d that anticipates neural response by %d ms\n', bb, (2*NBins+1),(Bins(bb))*TR- BestShift(nc));
+            elseif ((Bins(bb))*TR- BestShift(nc))>0
+                fprintf(1, 'Calculating the Regressor Amplitude %d/%d that follows neural response by %d ms\n', bb, (2*NBins+1), (Bins(bb))*TR- BestShift(nc));
+            elseif ((Bins(bb))*TR- BestShift(nc))==0
+                fprintf(1, 'Calculating the Regressor Amplitude %d/%d that is just alligned at stimulus onset with neural response\n', bb, (2*NBins+1));
+            end
+%             Range = TLim_P + (Bins(bb))*TR;
+            Range = TLim_P - BestShift(nc) + (Bins(bb))*TR;
+            [XAmpPerStim,XAmpPerStimt]  = get_x_4coherence(Cell.BioSound(IndVoc,2), Cell.Duration(IndVoc), Range,TR,DefaultVal,'amp');
+            XAmp(:,bb) = [XAmpPerStim{:}]';
+%             if InputFig
+%                 plotxyfeaturescoherence(Cell.BioSound(IndVoc,2),YPerStim,YPerStimt,XAmpPerStim,XAmpPerStimt,TR,Range,Cell.Duration(IndVoc), 10000,'Amplitude')
+%             end
+        end
+        [~, XAmp_Mu, XAmp_Sigma] = zscore(reshape(XAmp,numel(XAmp),1));
+        XAmp_ZS_P = (XAmp - XAmp_Mu) ./ XAmp_Sigma;
+        if any(isnan(XAmp_ZS_P))
+            keyboard
+        end
+        [AmpPC_P,AmpScore_P,AmpLatent_P,~,AmpPCAExplained_P,AmpPCAMu_P] = pca(XAmp_ZS_P);
+        NPC_P = find(cumsum(AmpPCAExplained_P)>95,1);
+        figure(17);clf;subplot(1,2,1); plot(cumsum(AmpPCAExplained_P), 'k-', 'LineWidth',2); ylabel('Explained variance of Amp by PCA'); xlabel('# of Principal Components')
+        hold on; vline(NPC_P, 'g', sprintf('Optimal # PC = %d', NPC_P));
+        title(sprintf('Cell %d/%d Poisson Model\n',nc,NCells))
+        
+    
+    %% Calculate acoustic features input to the Gamma model
         % acoustic data is a Matrix of the value of the acoustic feature sampled
         % at 1000Hz that for each Spike (at t) starts
         % t-FilterSize/2 and stops at
@@ -1532,30 +1604,475 @@ for nc=9:NCells %(demo cell= 560)
         XAmp = [XAmpPerStim{:}]';
             
         [~, XAmp_Mu, XAmp_Sigma] = zscore(reshape(XAmp,numel(XAmp),1));
-        XAmp_ZS = (XAmp - XAmp_Mu) ./ XAmp_Sigma;
-        if any(isnan(XAmp_ZS))
+        XAmp_ZS_G = (XAmp - XAmp_Mu) ./ XAmp_Sigma;
+        if any(isnan(XAmp_ZS_G))
             keyboard
         end
-        [AmpPC,AmpScore,AmpLatent,~,AmpPCAExplained,AmpPCAMu] = pca(XAmp_ZS);
-        NPC = find(cumsum(AmpPCAExplained)>95,1);
-        % Run the gamma model
-        % Now let's fit the data with a GLM gamma
-        [B_GLM,Dev, Stats] = glmfit(AmpScore(:,1:NPC),[ISIPerStim{:}],'gamma', 'link', 'log');
-        GamModel = fitglm(AmpScore(:,1:NPC),[ISIPerStim{:}],'linear','Distribution','gamma', 'DispersionFlag', true,'Link', 'log');
+        [AmpPC_G,AmpScore_G,AmpLatent_G,~,AmpPCAExplained_G,AmpPCAMu_G] = pca(XAmp_ZS_G);
+        NPC_G = find(cumsum(AmpPCAExplained_G)>95,1);
+        figure(17);subplot(1,2,2);plot(cumsum(AmpPCAExplained_G), 'k-', 'LineWidth',2); ylabel('Explained variance of Amp by PCA'); xlabel('# of Principal Components')
+        hold on; vline(NPC_G, 'g', sprintf('Optimal # PC = %d', NPC_G));
+        title(sprintf('Cell %d/%d Gamma Model\n',nc,NCells))
         
+        %% Run the gamma model and get the estimate of the shape as well
+        % Now let's fit the data with a GLM gamma
+%         [B_GLM,Dev, Stats] = glmfit(AmpScore(:,1:NPC),[ISIPerStim{:}],'gamma', 'link', 'log');
+        GamModel = fitglm(AmpScore_G(:,1:NPC_G),[ISIPerStim{:}],'linear','Distribution','gamma', 'DispersionFlag', true,'Link', 'log');
+        ModelAmpGLMGamma_Coeff{nc,2} =  [GamModel.Coefficients.Estimate(1); AmpPC_G * [GamModel.Coefficients.Estimate(2:(NPC_G+1)); zeros(size(AmpPC_G,2)-NPC_G,1)]]';
+        ModelAmpGLMGamma_Coeff{nc,1} = -(-FilterSize/2 : FilterSize/2);
         % estimated shape
         fprintf(1,'The model estimates a shape of %.2f\n', 1/GamModel.Dispersion)
         fprintf(1, 'The model estimates the intercept to be %.1f\n', GamModel.Coefficients.Estimate(1) - log(1/GamModel.Dispersion))
-        fprintf(1, 'The model estimates the Beta coefficients to be:\n')
         GammaA_GLM(nc) = 1/GamModel.Dispersion;
         GammaAmpDispersion(nc) = GamModel.Dispersion;
-        GamModel.Coefficients.Estimate
         figure(20)
-        suplabel(sprintf('GLM Gamma shape = %.2f', GammaA_GLM(nc)))
+        suplabel(sprintf('GLM Gamma shape = %.2f', GammaA_GLM(nc)));
         drawnow
-%     pause()
+        
+         figure(2); clf
+        subplot(2,2,1); plot(Cell.MotorCoherenceOperant.CoherencyT_xTimeDelay, Cell.MotorCoherenceOperant.CoherencyT_filt, 'LineWidth',2);xlabel('Time Delay (ms)');ylabel('Coherency')
+        set(gca, 'XLim', [-FilterSize FilterSize]);
+        subplot(2,2,2); plot(ModelAmpGLMGamma_Coeff{nc,1},ModelAmpGLMGamma_Coeff{nc,2}(2:end), 'LineWidth',2);ylabel('Gamma GLM Betas (Y~Xamp)');
+        set(gca, 'XLim', [-FilterSize FilterSize]);
+        %% Goodness of fit of the Gamma Amplitude model
+        % Log likelihood of the model
+        LLAmpGLMGamma = sum(log(gampdf([ISIPerStim{:}]', 1/GamModel.Dispersion, GamModel.Fitted.Response * GamModel.Dispersion)));
+        if round(LLAmpGLMGamma,3)~=round(GamModel.LogLikelihood,3)
+            error('Unexpected value of Log Likelihood')
+        end
+        
+        % To Calculate LL for the ceiling models let's obtain the time
+        % varying rate for each vocalization
+        % now we have a better estimate of the shape for the Gamma noise
+        % (shape obtained with the GLM fit)
+        % Let's use that shape to get a better estimate for the time
+        % varying spike rate for each vocalization (let's say that we fix the CV of the estimate
+        % of the ISI across time (CVe = SE/mean = 0.1 or 0.5?), then given
+        % the shape of the gamma distribution of the noise, how many spikes
+        % do we need in nearest neighbour spike rate estimate to get the
+        % bet estimate of the rate. Because the mean of the distribution of
+        % ISI is the same as the mean of your estimates of the mean, and
+        % mean = shape * scale at any time point and var = shape * scale^2,
+        % then SE = (var/n)^0.5 = scale * (shape/n)^0.5 = mean / (shape *
+        % n)^0.5 -> n = (mean/SE)^2 * 1/shape = 1/(shape * CVe^2)
+        CVe = 0.5; % This is the coeffcient of variation of the estimate of the mean interspike interval, we constrain the system by deciding to fix it at 0.5 (that's the noise on the calculatoin of the mean)
+        NumNearNeighSpike = 1 + round(GammaAmpDispersion(nc)/(CVe.^2));
+        TLimLarge = [-300 300]; % calculate the rate over a large time window
+        [YPerStimLarge, YPerStimtLarge, YPatternsLarge, SATPerStimLarge, ISIPerStimLarge] = get_y_4GammaFit(Cell.SpikesArrivalTimes_Behav(IndVoc), max(Cell.Duration(IndVoc)).*ones(length(IndVoc),1),TLimLarge,TR, NumNearNeighSpike);
+        % Now for each SAT calculate the local ISI of the ceiling model
+        % (the average integral of the rate between each spike and the previous
+        % spike)
+        
+        InstantISIPerStim = get_instantISI(YPerStimLarge, YPerStimtLarge,SATPerStim,ISIPerStim);
+        
+        % Run the leave one out Vocalization CV
+        ModelAmpGLMGammaDev_cv{nc} = nan(size(ISIPerStim));
+        ModelCeilGLMGammaDev_cv{nc} = nan(size(ISIPerStim));
+        ModelFloorGLMGammaDev_cv{nc} = nan(size(ISIPerStim));
+        LLSatGLMGamma = nan(size(ISIPerStim));
+        LLCeilGLMGamma = nan(size(ISIPerStim));
+        LLFloorGLMGamma = nan(size(ISIPerStim));
+        LLAmpGLMGamma_cv = nan(size(ISIPerStim));
+        FirstIndStim = [1 cumsum(cellfun(@length,ISIPerStim))+1]; FirstIndStim(end) = [];
+        LastIndStim = cumsum(cellfun(@length,ISIPerStim));
+        ModelAmpGLMGooFi = nan(NStims,1);
+        WrongFloor = 0;
+        for Stim = 1:NStims
+            if isempty(ISIPerStim{Stim}) || isempty(YPerStimLarge{Stim}) || any(isinf(InstantISIPerStim{Stim}))  % No spike! not a good sim for cross validation
+                continue
+            end
+            ISIPerStim_cv = ISIPerStim;
+            ISIPerStim_cv(Stim) = [];
+            AmpScore_cv = AmpScore_G;
+            AmpScore_cv(FirstIndStim(Stim):LastIndStim(Stim),:)=[];
+            GamModel_cv = fitglm(AmpScore_cv(:,1:NPC_G),[ISIPerStim_cv{:}],'linear','Distribution','gamma', 'DispersionFlag', true,'Link', 'log');
+            ISI_pred = predict(GamModel_cv, AmpScore_G(FirstIndStim(Stim):LastIndStim(Stim),1:NPC_G));
+            LLAmpGLMGamma_cv(Stim) = sum(log(gampdf(ISIPerStim{Stim}', 1/GamModel_cv.Dispersion, ISI_pred * GamModel_cv.Dispersion)));
+            if isinf(LLAmpGLMGamma_cv(Stim))
+                continue
+            end
+            % Calculate the time varying ceiling spike rate taken as the average over all other vocalizations
+            SAT_large_cv = SATPerStimLarge;
+            SAT_large_cv(Stim) = [];
+            IndVoc_cv = IndVoc;
+            IndVoc_cv(Stim)=[];
+            [KDE,t,Error]=kde_wrapper([SAT_large_cv{:}],-300:(Cell.Duration(IndVoc(Stim))+300),1,NStims-1);
+        
+            % Now for each SAT calculate the local ISI of the ceiling model
+            % (the average integral of the rate between each spike and the previous
+            % spike)
+            InstantISI = get_instantISI(KDE, t,SATPerStim(Stim), ISIPerStim(Stim));
+        
+            % Obtain the goodness of fit of the model by croos validation
+            % (leave one vocalization out)
+            % Log likelihood of the saturated model
+            LLSatGLMGamma(Stim) = sum(log(gampdf(ISIPerStim{Stim}, 1/GamModel_cv.Dispersion, ISIPerStim{Stim} .* GamModel_cv.Dispersion))); % Not sure I got the LL of the saturated model correct but we don't use it :-P
+            ModelAmpGLMGammaDev_cv{nc}(Stim) = 2*(LLSatGLMGamma(Stim) - LLAmpGLMGamma_cv(Stim));
+            if ModelAmpGLMGammaDev_cv{nc}(Stim)<0
+                warning('Deviance should not be negative, Check calculations')
+                keyboard
+            end
+            
+            % calculate LL for the Floor model
+            LLFloorGLMGamma(Stim) = sum(log(gampdf(ISIPerStim{Stim}, 1/GamModel_cv.Dispersion, mean([ISIPerStim_cv{:}]) * GamModel_cv.Dispersion)));
+            ModelFloorGLMGammaDev_cv{nc}(Stim) = 2*(LLSatGLMGamma(Stim) - LLFloorGLMGamma(Stim));
+            if ModelFloorGLMGammaDev_cv{nc}(Stim)<0
+                warning('Deviance should not be negative, Check calculations')
+                keyboard
+            end
+        
+            % LogLikelihood Ceiling models
+            LLCeilGLMGamma(Stim) = sum(log(gampdf(ISIPerStim{Stim}, 1/GamModel_cv.Dispersion, InstantISIPerStim{Stim} .* GamModel_cv.Dispersion)));
+            LLCeilMeanGLMGamma = sum(log(gampdf(ISIPerStim{Stim}, 1/GamModel_cv.Dispersion, InstantISI{:} .* GamModel_cv.Dispersion)));
+            ModelCeilGLMGammaDev_cv{nc}(Stim) = 2*(LLSatGLMGamma(Stim) - LLCeilGLMGamma(Stim));
+            if ModelCeilGLMGammaDev_cv{nc}(Stim)<0
+                warning('Deviance should not be negative, Check calculations')
+                keyboard
+            end
+            if (LLFloorGLMGamma(Stim)>=LLCeilGLMGamma(Stim)) && (LLFloorGLMGamma(Stim)>=LLAmpGLMGamma_cv(Stim))
+                warning('not expected that the Floor model has a higher LL than the ceiling model and the Feature Model')
+%                 keyboard
+                WrongFloor = WrongFloor+1;
+            elseif (LLFloorGLMGamma(Stim)>=LLCeilGLMGamma(Stim)) && (LLFloorGLMGamma(Stim)<LLAmpGLMGamma_cv(Stim))
+                warning('not expected that the Floor model has a higher LL than the ceiling model and but NOT the Feature Model')
+                WrongFloor = WrongFloor+1;
+%                 keyboard
+            elseif (LLFloorGLMGamma(Stim)<LLCeilGLMGamma(Stim)) && (LLFloorGLMGamma(Stim)>=LLAmpGLMGamma_cv(Stim))
+                warning('not expected that the Floor model has a higher LL than the Feature Model')
+%                 keyboard
+            end
+            % Goodness of fit
+            ModelAmpGLMGooFi(Stim) = (LLAmpGLMGamma_cv(Stim) - LLFloorGLMGamma(Stim))/(LLCeilGLMGamma(Stim) - LLFloorGLMGamma(Stim));
+            if isnan(ModelAmpGLMGooFi(Stim))
+                keyboard
+            end
+        end
+        NumCV = sum(~isnan(ModelAmpGLMGooFi));
+        ModelAmpGLMGammaGoodnessOfFit(nc,1) = nanmean(ModelAmpGLMGooFi); % Goodness of fit of the GLM Gamma model with Amplitude obtained on average in cross-validation (leave one vocalization out; column 1) with its STE (column 2)
+        ModelAmpGLMGammaGoodnessOfFit(nc,2) = nanstd(ModelAmpGLMGooFi)*(NumCV)^-0.5;
+        ModelAmpGLMGammaGoodnessOfFit(nc,3) = WrongFloor/NumCV; % Estimate of how good is the GLM Gamma framework for that neuron
+        
+        figure(2); 
+        subplot(2,2,3);histogram(ModelAmpGLMGammaDev_cv{nc}, 'FaceColor', 'k', 'EdgeColor', 'k'); ylabel('# CV folds'); xlabel('Cross validated Deviance for GLM (leave one vocalization out)');
+        hold on; MeanLine = vline(mean(ModelAmpGLMGammaDev_cv{nc})); MeanLine.LineWidth=2; MeanLine.LineStyle = '-';
+        hold on;STELine1=vline(mean(ModelAmpGLMGammaDev_cv{nc})-2*std(ModelAmpGLMGammaDev_cv{nc})/NStims^0.5); STELine1.LineWidth=2;
+        hold on;STELine2=vline(mean(ModelAmpGLMGammaDev_cv{nc})+2*std(ModelAmpGLMGammaDev_cv{nc})/NStims^0.5);STELine2.LineWidth=2;
+        
+        subplot(2,2,3);hold on; histogram(ModelCeilGLMGammaDev_cv{nc}, 'FaceColor', [0 0.447 0.741], 'EdgeColor', [0 0.447 0.741]); 
+        hold on; MeanLine = vline(mean(ModelCeilGLMGammaDev_cv{nc})); MeanLine.LineWidth=2; MeanLine.LineStyle = '-';MeanLine.Color = 'k';
+        hold on;STELine1=vline(mean(ModelCeilGLMGammaDev_cv{nc})-2*std(ModelCeilGLMGammaDev_cv{nc})/NStims^0.5); STELine1.LineWidth=2; STELine1.Color = 'k';
+        hold on;STELine2=vline(mean(ModelCeilGLMGammaDev_cv{nc})+2*std(ModelCeilGLMGammaDev_cv{nc})/NStims^0.5);STELine2.LineWidth=2;STELine2.Color = 'k';
+        
+        subplot(2,2,3);hold on; histogram(ModelFloorGLMGammaDev_cv{nc}, 'FaceColor', [0.494 0.184 0.556], 'EdgeColor', [0.494 0.184 0.556]); 
+        hold on; MeanLine = vline(mean(ModelFloorGLMGammaDev_cv{nc})); MeanLine.LineWidth=2; MeanLine.LineStyle = '-';MeanLine.Color = 'k';
+        hold on;STELine1=vline(mean(ModelFloorGLMGammaDev_cv{nc})-2*std(ModelFloorGLMGammaDev_cv{nc})/NStims^0.5); STELine1.LineWidth=2; STELine1.Color = 'k';
+        hold on;STELine2=vline(mean(ModelFloorGLMGammaDev_cv{nc})+2*std(ModelFloorGLMGammaDev_cv{nc})/NStims^0.5);STELine2.LineWidth=2;STELine2.Color = 'k';
+        
+        subplot(2,2,4)
+        histogram(ModelAmpGLMGooFi, 'FaceColor', 'k', 'EdgeColor', 'k'); ylabel('# CV folds'); xlabel('Goodness of fit')
+        title(sprintf('GLM goodness of fit = %.2f +/- %.2f . reliability: %.2f', ModelAmpGLMGammaGoodnessOfFit(nc,1), ModelAmpGLMGammaGoodnessOfFit(nc,2), 1-ModelAmpGLMGammaGoodnessOfFit(nc,3)))
+        suplabel(sprintf('Cell %d/%d Gamma GLM\n',nc,NCells), 't');
+        
+        %% Now run a Poisson model
+        % Full model to get the optimal filter
+        ModelGLMPoissonAmp = fitglm(AmpScore_P(:,1:NPC_P), YCount, 'linear','Distribution','Poisson','Link', 'log');
+        ModelAmpGLMPoisson_Coeff{nc,2} =  [ModelGLMPoissonAmp.Coefficients.Estimate(1)'; AmpPC_P * [ModelGLMPoissonAmp.Coefficients.Estimate(2:(NPC_P+1)); zeros(size(AmpPC_P,2)-NPC_P,1)]]';
+        ModelAmpGLMPoisson_Coeff{nc,1} = -(Bins*TR - BestShift(nc)); % - here to be in the same order as the coherence (I think!)
+        DT = ModelGLMPoissonAmp.devianceTest;
+        ModelAmpGLMPoissonDev_test(nc,1) = DT.pValue(2);
+        ModelAmpGLMPoissonDev_test(nc,2) = DT.chi2Stat(2)/abs(diff(DT.DFE));
+        % weird filter here as compared to what I got without PCA below.
+        % Beta coefficints of regularized GLM seems to be -1 the ones I
+        % obtained with unregularized GLM?!
+        % [ModelGLMAmpB2, ModelGLMAmpDev2, ModelGLMAmpStats2] = glmfit(XAmp_ZS_P, YCount, 'Poisson');
+%         YCount_pred_all = glmval(ModelGLMAmpB, AmpScore_P(:,1:NPC_P), 'log');
+%         LL_Saturated_Check = LL_Calculus2(YCount,YCount);
+%         LL_amp_Check = LL_Calculus2(YCount, YCount_pred_all);
+        
+        
+        figure(4);clf;
+        subplot(2,2,1); plot(Cell.MotorCoherenceOperant.CoherencyT_xTimeDelay, Cell.MotorCoherenceOperant.CoherencyT_filt, 'LineWidth',2);xlabel('Time Delay (ms)');ylabel('Coherency')
+        set(gca, 'XLim', [-FilterSize FilterSize]);
+        subplot(2,2,2); plot(ModelAmpGLMPoisson_Coeff{nc,1},ModelAmpGLMPoisson_Coeff{nc,2}(2:end), 'LineWidth',2);xlabel('Time Delay (X-Y) (ms)');ylabel('Poisson GLM Betas (Y~Xamp)');
+        set(gca, 'XLim', [-FilterSize FilterSize])
+        
+        %% Goodness of fit of the Poisson GLM model
+        FirstIndStim = [1 cumsum(cellfun(@length,YPerStim))+1]; FirstIndStim(end) = [];
+        LastIndStim = cumsum(cellfun(@length,YPerStim));
+        % Log likelihood of the model
+        LLAmpGLMPoisson = LL_Calculus2(YCount,ModelGLMPoissonAmp.Fitted.Response,TR*2);
+        if round(LLAmpGLMPoisson,3)~=round(ModelGLMPoissonAmp.LogLikelihood,3)
+%             error('Unexpected value of Log Likelihood')
+            warning('Unexpected value of Log Likelihood')
+        end
+        LL_Floor = LL_Calculus2(YCount, mean(YCount).*ones(size(YCount)),TR*2);
+        [MaxDur,StimMax] = max(cellfun(@length, YPerStimt));
+        MeanYCountPerStim = nan(size(YPerStimt{StimMax}'));
+        for tt=1:MaxDur
+            Ind = cellfun(@(x) find(x==YPerStimt{StimMax}(tt)), YPerStimt, 'UniformOutput', false);
+            Values = nan(size(Ind));
+            for ii = 1:length(Ind)
+                if isempty(Ind{ii})
+                    continue
+                else
+                    Values(ii) = YCountPerStim{ii}(Ind{ii});
+                end
+            end
+            MeanYCountPerStim(tt) = nanmean(Values);
+        end
+        MeanYCountLocal = nan(size(YCount));
+        for Stim = 1:NStims
+            MeanYCountLocal(FirstIndStim(Stim):LastIndStim(Stim)) = MeanYCountPerStim(1:length(YPerStimt{Stim})); % This asssumes that all time first indeices are the same accross stims
+        end
+        LL_FloorTime = LL_Calculus2(YCount, MeanYCountLocal,TR*2);
+        LLSaturated = LL_Calculus2(YCount, YCount,TR*2);
+        [YPerStimCeil, YPerStimtCeil, YPatternsCeil, SATPerStimCeil, ISIPerStimCeil] = get_y_4GammaFit(Cell.SpikesArrivalTimes_Behav(IndVoc), Cell.Duration(IndVoc),TLim_P,TR, NumNearNeighSpike, 1);
+        GoodVoc = ~cellfun(@isempty, YPerStimCeil);
+        LLNNCeiling = LL_Calculus2([YCountPerStim{GoodVoc}]', [YPerStimCeil{GoodVoc}]'.*TR,TR*2); % YCount is the number of spike per TRms windows, while YPerStim is the spike rate in spike/ms in bins of TR ms
+        LLGaussCeiling = LL_Calculus2(YCount, [YPerStim{:}]'.*TR,TR*2); % YCount is the number of spike per TRms windows, while YPerStim is the spike rate in spike/ms in bins of TR ms
+        
+        Jitter = rand(size(YCount))*0.6-0.3;
+        figure(40);clf
+        subplot(1,4,1);scatter(YCount+Jitter, ModelGLMPoissonAmp.Fitted.Response, 'filled'); xlabel('Original Spike Count'); ylabel('GLM Poisson Amp Prediction')
+        set(gca, 'YLim', get(gca, 'XLim'))
+        title(sprintf('Deviance = %.2f', 2*(LLSaturated-LLAmpGLMPoisson)/NStims))
+        hold on; hline(mean(YCount), 'r--', 'Average Count')
+        subplot(1,4,2); scatter(YCount+Jitter, MeanYCountLocal, 'filled'); xlabel('Original Spike Count'); ylabel('Time varying average count over voc')
+        set(gca, 'YLim', get(gca, 'XLim'))
+        title(sprintf('Deviance = %.2f', 2*(LLSaturated-LL_FloorTime)/NStims))
+        hold on; hline(mean(YCount), 'r--', 'Average Count')
+        subplot(1,4,3); scatter([YCountPerStim{GoodVoc}]'+Jitter(1:length([YCountPerStim{GoodVoc}])), [YPerStimCeil{GoodVoc}]'.*TR, 'filled'); xlabel('Original Spike Count'); ylabel('KNN Filter on count per stim')
+        set(gca, 'YLim', get(gca, 'XLim'))
+        title(sprintf('Deviance = %.2f', 2*(LLSaturated-LLNNCeiling)/sum(GoodVoc)))
+        hold on; hline(mean(YCount), 'r--', 'Average Count')
+        subplot(1,4,4); scatter(YCount+Jitter, [YPerStim{:}]'.*TR, 'filled'); xlabel('Original Spike Count'); ylabel('Gaussian Filter on count per stim')
+        set(gca, 'YLim', get(gca, 'XLim'))
+        title(sprintf('Deviance = %.2f', 2*(LLSaturated-LLGaussCeiling)/NStims))
+        hold on; hline(mean(YCount), 'r--', 'Average Count')
+        suplabel(sprintf('Cell %d/%d .  Deviance Average Count = %.2f', nc, NCells,2*(LLSaturated-LL_Floor)/NStims), 't');
+        
+        % Run a leave one out vocalization cross validation to get the goodness of fit
+        ModelAmpGLMPoissonDev_cv{nc} = nan(size(YPerStim));
+        ModelFloor0GLMPoissonDev_cv{nc} = nan(size(YPerStim));
+        ModelFloorTimeGLMPoissonDev_cv{nc} = nan(size(YPerStim));
+        ModelGaussCeilGLMPoissonDev_cv{nc} = nan(size(YPerStim));
+        ModelNNCeilGLMPoissonDev_cv{nc} = nan(size(YPerStim));
+        
+        WrongFloor = 0;
+        for Stim=1:NStims
+            % Generalized linear model apporach
+            YCount_cv = YCount;
+            YCount_cv(FirstIndStim(Stim):LastIndStim(Stim)) = [];
+            XAmpScore_cv = AmpScore_P(:,1:NPC_P);
+            XAmpScore_cv(FirstIndStim(Stim):LastIndStim(Stim),:) = [];
+            [ModelGLMAmp_cvB,ModelGLMAmp_cvDev,~] = glmfit(XAmpScore_cv, YCount_cv, 'Poisson');
+            YCount_pred = glmval(ModelGLMAmp_cvB, AmpScore_P(FirstIndStim(Stim):LastIndStim(Stim),1:NPC_P), 'log');
+            LL_Saturated = LL_Calculus2(YCount(FirstIndStim(Stim):LastIndStim(Stim)),YCount(FirstIndStim(Stim):LastIndStim(Stim)),TR*2);
+            LL_amp = LL_Calculus2(YCount(FirstIndStim(Stim):LastIndStim(Stim)), YCount_pred,TR*2);
+            ModelAmpGLMPoissonDev_cv{nc}(Stim) = -2*(LL_amp - LL_Saturated);
+            if ModelAmpGLMPoissonDev_cv{nc}(Stim)<0
+                warning('Deviance should not be negative, Check calculations')
+                keyboard
+            end
+            % Get the Floor0 model for the GLM approach
+            LL_Floor = LL_Calculus2(YCount(FirstIndStim(Stim):LastIndStim(Stim)), mean(YCount_cv),TR*2);
+            ModelFloor0GLMPoissonDev_cv{nc}(Stim) = -2*(LL_Floor - LL_Saturated);
+            if ModelFloor0GLMPoissonDev_cv{nc}(Stim)<0
+                warning('Deviance should not be negative, Check calculations')
+                keyboard
+            end
+            
+            %get the FloorTime
+            YCountPerStim_cv = YCountPerStim;
+            YCountPerStim_cv(Stim) = [];
+            YPerStimt_cv = YPerStimt;
+            YPerStimt_cv(Stim) = [];
+            MeanYCountPerStim = nan(size(YCountPerStim{Stim}'));
+            for tt=1:length(YCountPerStim{Stim})
+                Ind = cellfun(@(x) find(x==YPerStimt{Stim}(tt)), YPerStimt_cv, 'UniformOutput', false);
+                Values = nan(size(Ind));
+                for ii = 1:length(Ind)
+                    if isempty(Ind{ii})
+                        continue
+                    else
+                        Values(ii) = YCountPerStim_cv{ii}(Ind{ii});
+                    end
+                end
+                MeanYCountPerStim(tt) = nanmean(Values);
+            end
+            LL_FloorTime = LL_Calculus2(YCount(FirstIndStim(Stim):LastIndStim(Stim)), MeanYCountPerStim,TR*2);
+            ModelFloorTimeGLMPoissonDev_cv{nc}(Stim) = -2*(LL_FloorTime - LL_Saturated);
+            if ModelFloorTimeGLMPoissonDev_cv{nc}(Stim)<0
+                warning('Deviance should not be negative, Check calculations')
+                keyboard
+            end
+            
+            % Get the Gauss ceiling model value
+%             [~, Spike_arrival] = poisson_spiketrain_gen(YPerStim(Stim), YPerStimt(Stim),TLim_P, TR, Response_samprate, NBoots);
+%             % Run through the number of bootstrap loops to calculate ceil deviance
+%             DevianceCeil_local = nan(NBoots,1);
+%             for tt=1:size(Spike_arrival,2)
+%                 [YPerStimbb, YPerStimtbb,~,YCountPerStimbb] = get_y_4Coherence(Spike_arrival(1,tt), Cell.Duration(IndVoc(Stim)),TLim_P,TR);
+%                 Ybb = [YPerStimbb{:}]';
+%                 LL_Ceilbb = LL_Calculus2(YCount(FirstIndStim(Stim):LastIndStim(Stim)), Ybb*TR,TR*2); % YCount is the number of spike per TRms windows, while YPerStim is the spike rate in spike/ms in bins of TR ms
+%                 DevianceCeil_local(tt) = -2*(LL_Ceilbb - LL_Saturated);
+%                 if InputFig
+%                     figure(16);
+%                     clf
+%                     Win = YPerStimt{Stim} + TR - TLim_P(1);
+%                     hist(Spike_arrival{1,tt},Win(end))
+%                     title(sprintf('NSpike = %d, DevianceCeil = %.2f',length(Spike_arrival{1,tt}),DevianceCeil_local(tt)))
+%                     xlim([0 Win(end)]+TLim_P(1))
+%                     h=findobj(gca, 'Type', 'patch');
+%                     h.FaceColor = 'k';
+%                     h.EdgeColor = 'k';
+%                     hold on
+%                     yyaxis right
+%                     plot(YPerStimt{Stim},YPerStim{Stim}, 'LineWidth',2)
+%                     ylabel('Original rate mHz')
+%                     hold on
+%                     plot(YPerStimtbb{1},YPerStimbb{1}, 'LineWidth',2)
+%                     hold on
+%                     Hmean=hline(mean(Y));
+%                     Hmean.LineWidth = 2;
+%                     pause
+%                 end
+%                 
+%             end
+%             ModelGaussCeilGLMPoissonDev_cv{nc}(Stim) = mean(DevianceCeil_local);
+%             if ModelGaussCeilGLMPoissonDev_cv{nc}(Stim) <0
+%                 warning('Deviance should not be negative, Check calculations')
+%                 keyboard
+%             end
+%             if ModelFloor0GLMPoissonDev_cv{nc}(Stim)< ModelGaussCeilGLMPoissonDev_cv{nc}(Stim)
+%                 WrongFloor = WrongFloor +1;
+%             end
+            LL_CeilGauss = LL_Calculus2(YCount(FirstIndStim(Stim):LastIndStim(Stim)), YPerStim{Stim}'*TR,TR*2);
+            ModelGaussCeilGLMPoissonDev_cv{nc}(Stim) = -2*(LL_CeilGauss - LL_Saturated);
+
+            % Get the NN ceiling model value
+%             [~, Spike_arrival] = poisson_spiketrain_gen(YPerStimCeil(Stim), YPerStimtCeil(Stim),TLim_P, TR, Response_samprate, NBoots); % I tried to use the NN spike rate estimation but it's usually too low and give very few spikes in spike patterns with the generative functions which end up not working well when estimating again the NN rate based on these spike patterns
+%             % Run through the number of bootstrap loops to calculate ceil deviance
+%             DevianceCeil_local = nan(NBoots,1);
+%             for tt=1:size(Spike_arrival,2)
+%                 [YPerStimbb, YPerStimtbb, ~] = get_y_4GammaFit(Spike_arrival(1,tt), Cell.Duration(IndVoc(Stim)),TLim_P,TR, NumNearNeighSpike, 1);
+%                 if isempty(YPerStimbb{:}) % This spike pattern did not have enough spikes for get_y_4GammaFit to generate the time varying NN rate
+%                     continue
+%                 end
+%                 Ybb = [YPerStimbb{:}]';
+%                 LL_Ceilbb = LL_Calculus2(YCount(FirstIndStim(Stim):LastIndStim(Stim)), Ybb*TR,TR*2); % YCount is the number of spike per TRms windows, while YPerStim is the spike rate in spike/ms in bins of TR ms
+%                 DevianceCeil_local(tt) = -2*(LL_Ceilbb - LL_Saturated);
+%                 if InputFig
+%                     figure(16);
+%                     clf
+%                     Win = YPerStimt{Stim} + TR - TLim_P(1);
+%                     hist(Spike_arrival{1,tt},Win(end))
+%                     title(sprintf('NSpike = %d, DevianceCeil = %.2f',length(Spike_arrival{1,tt}),DevianceCeil_local(tt)))
+%                     xlim([0 Win(end)]+TLim_P(1))
+%                     h=findobj(gca, 'Type', 'patch');
+%                     h.FaceColor = 'k';
+%                     h.EdgeColor = 'k';
+%                     hold on
+%                     yyaxis right
+%                     plot(YPerStimt{Stim},YPerStim{Stim}, 'LineWidth',2)
+%                     ylabel('Original rate mHz')
+%                     hold on
+%                     plot(YPerStimtbb{1},YPerStimbb{1}, 'LineWidth',2)
+%                     hold on
+%                     Hmean=hline(mean(Y));
+%                     Hmean.LineWidth = 2;
+%                     pause
+%                 end
+%                 
+%             end
+%             ModelNNCeilGLMPoissonDev_cv{nc}(Stim) = nanmean(DevianceCeil_local);
+            % Estimation skipping the generation of random spike patterns
+            if ~isempty(YPerStimCeil{Stim})
+                LL_CeilNN = LL_Calculus2(YCount(FirstIndStim(Stim):LastIndStim(Stim)), YPerStimCeil{Stim}'*TR,TR*2);
+                ModelNNCeilGLMPoissonDev_cv{nc}(Stim) = -2*(LL_CeilNN - LL_Saturated);
+                if ModelNNCeilGLMPoissonDev_cv{nc}(Stim) <0
+                    warning('Deviance should not be negative, Check calculations')
+                    keyboard
+                end
+            end
+            
+        end
+        
+        figure(4) 
+        subplot(2,2,3);histogram(ModelAmpGLMPoissonDev_cv{nc}, 'FaceColor', 'k', 'EdgeColor', 'k'); ylabel('# CV folds'); xlabel('Cross validated Deviance for GLM (leave one vocalization out)');
+        
+        subplot(2,2,3);hold on; histogram(ModelGaussCeilGLMPoissonDev_cv{nc}, 'FaceColor', [0 0.447 0.741], 'EdgeColor', [0 0.447 0.741]); 
+        
+        subplot(2,2,3);hold on; histogram(ModelFloor0GLMPoissonDev_cv{nc}, 'FaceColor', [0.494 0.184 0.556], 'EdgeColor', [0.494 0.184 0.556]); 
+        
+        hold on; MeanLine = vline(mean(ModelFloor0GLMPoissonDev_cv{nc})); MeanLine.LineWidth=2; MeanLine.LineStyle = '-';MeanLine.Color = 'k';
+        hold on;STELine1=vline(mean(ModelFloor0GLMPoissonDev_cv{nc})-2*std(ModelFloor0GLMPoissonDev_cv{nc})/NStims^0.5); STELine1.LineWidth=2; STELine1.Color = 'k';
+        hold on;STELine2=vline(mean(ModelFloor0GLMPoissonDev_cv{nc})+2*std(ModelFloor0GLMPoissonDev_cv{nc})/NStims^0.5);STELine2.LineWidth=2;STELine2.Color = 'k';
+        
+        hold on; MeanLine = vline(mean(ModelGaussCeilGLMPoissonDev_cv{nc})); MeanLine.LineWidth=2; MeanLine.LineStyle = '-';MeanLine.Color = 'b';
+        hold on;STELine1=vline(mean(ModelGaussCeilGLMPoissonDev_cv{nc})-2*std(ModelGaussCeilGLMPoissonDev_cv{nc})/NStims^0.5); STELine1.LineWidth=2; STELine1.Color = 'b';
+        hold on;STELine2=vline(mean(ModelGaussCeilGLMPoissonDev_cv{nc})+2*std(ModelGaussCeilGLMPoissonDev_cv{nc})/NStims^0.5);STELine2.LineWidth=2;STELine2.Color = 'b';
+        
+        hold on; MeanLine = vline(mean(ModelAmpGLMPoissonDev_cv{nc})); MeanLine.LineWidth=2; MeanLine.LineStyle = '--';MeanLine.Color = 'r';
+        hold on;STELine1=vline(mean(ModelAmpGLMPoissonDev_cv{nc})-2*std(ModelAmpGLMPoissonDev_cv{nc})/NStims^0.5); STELine1.LineWidth=2;STELine1.Color = 'r';
+        hold on;STELine2=vline(mean(ModelAmpGLMPoissonDev_cv{nc})+2*std(ModelAmpGLMPoissonDev_cv{nc})/NStims^0.5);STELine2.LineWidth=2;STELine1.Color = 'r';
+        
+        figure(5); clf
+        subplot(1,5,1); histogram(ModelGaussCeilGLMPoissonDev_cv{nc}, 'FaceColor', [0 0.447 0.741], 'EdgeColor', [0 0.447 0.741]);
+        hold on; MeanLine = vline(mean(ModelGaussCeilGLMPoissonDev_cv{nc})); MeanLine.LineWidth=2; MeanLine.LineStyle = '-';MeanLine.Color = 'b';
+        hold on;STELine1=vline(mean(ModelGaussCeilGLMPoissonDev_cv{nc})-2*std(ModelGaussCeilGLMPoissonDev_cv{nc})/NStims^0.5); STELine1.LineWidth=2; STELine1.Color = 'b';
+        hold on;STELine2=vline(mean(ModelGaussCeilGLMPoissonDev_cv{nc})+2*std(ModelGaussCeilGLMPoissonDev_cv{nc})/NStims^0.5);STELine2.LineWidth=2;STELine2.Color = 'b';
+        title('Gaussian filter on spike count')
+        subplot(1,5,2); histogram(ModelNNCeilGLMPoissonDev_cv{nc}, 'FaceColor', [0 0.447 0.741], 'EdgeColor', [0 0.447 0.741]);
+        hold on; MeanLine = vline(nanmean(ModelNNCeilGLMPoissonDev_cv{nc})); MeanLine.LineWidth=2; MeanLine.LineStyle = '-';MeanLine.Color = 'b';
+        hold on;STELine1=vline(nanmean(ModelNNCeilGLMPoissonDev_cv{nc})-2*nanstd(ModelNNCeilGLMPoissonDev_cv{nc})/NStims^0.5); STELine1.LineWidth=2; STELine1.Color = 'b';
+        hold on;STELine2=vline(nanmean(ModelNNCeilGLMPoissonDev_cv{nc})+2*nanstd(ModelNNCeilGLMPoissonDev_cv{nc})/NStims^0.5);STELine2.LineWidth=2;STELine2.Color = 'b';
+        title('NN filter on spike count')
+        subplot(1,5,3); histogram(ModelAmpGLMPoissonDev_cv{nc}, 'FaceColor', 'k', 'EdgeColor', 'k'); ylabel('# CV folds'); xlabel('Cross validated Deviance for GLM Poisson (leave one vocalization out)');
+        hold on; MeanLine = vline(mean(ModelAmpGLMPoissonDev_cv{nc})); MeanLine.LineWidth=2; MeanLine.LineStyle = '--';MeanLine.Color = 'r';
+        hold on;STELine1=vline(mean(ModelAmpGLMPoissonDev_cv{nc})-2*std(ModelAmpGLMPoissonDev_cv{nc})/NStims^0.5); STELine1.LineWidth=2;STELine1.Color = 'r';
+        hold on;STELine2=vline(mean(ModelAmpGLMPoissonDev_cv{nc})+2*std(ModelAmpGLMPoissonDev_cv{nc})/NStims^0.5);STELine2.LineWidth=2;STELine1.Color = 'r';
+        title('Amplitude')
+        subplot(1,5,4); histogram(ModelFloorTimeGLMPoissonDev_cv{nc}, 'FaceColor', [0.494 0.184 0.556], 'EdgeColor', [0.494 0.184 0.556]); 
+        hold on; MeanLine = vline(nanmean(ModelFloorTimeGLMPoissonDev_cv{nc})); MeanLine.LineWidth=2; MeanLine.LineStyle = '-';MeanLine.Color = 'k';
+        hold on;STELine1=vline(nanmean(ModelFloorTimeGLMPoissonDev_cv{nc})-2*nanstd(ModelFloorTimeGLMPoissonDev_cv{nc})/NStims^0.5); STELine1.LineWidth=2; STELine1.Color = 'k';
+        hold on;STELine2=vline(nanmean(ModelFloorTimeGLMPoissonDev_cv{nc})+2*nanstd(ModelFloorTimeGLMPoissonDev_cv{nc})/NStims^0.5);STELine2.LineWidth=2;STELine2.Color = 'k';
+        title('Voc Average spike count')
+        subplot(1,5,5); histogram(ModelFloor0GLMPoissonDev_cv{nc}, 'FaceColor', [0.494 0.184 0.556], 'EdgeColor', [0.494 0.184 0.556]); 
+        hold on; MeanLine = vline(mean(ModelFloor0GLMPoissonDev_cv{nc})); MeanLine.LineWidth=2; MeanLine.LineStyle = '-';MeanLine.Color = 'k';
+        hold on;STELine1=vline(mean(ModelFloor0GLMPoissonDev_cv{nc})-2*std(ModelFloor0GLMPoissonDev_cv{nc})/NStims^0.5); STELine1.LineWidth=2; STELine1.Color = 'k';
+        hold on;STELine2=vline(mean(ModelFloor0GLMPoissonDev_cv{nc})+2*std(ModelFloor0GLMPoissonDev_cv{nc})/NStims^0.5);STELine2.LineWidth=2;STELine2.Color = 'k';
+        title('Voc and bin Average spike count')
+        
+        ModelAmpGLMPoissonGooFi = (ModelFloor0GLMPoissonDev_cv{nc} - ModelAmpGLMPoissonDev_cv{nc}) ./ (ModelFloor0GLMPoissonDev_cv{nc} - ModelGaussCeilGLMPoissonDev_cv{nc});
+        ModelAmpGLMPoissonGoodnessOfFit(nc,1) = mean(ModelAmpGLMPoissonGooFi);
+        ModelAmpGLMPoissonGoodnessOfFit(nc,2) = std(ModelAmpGLMPoissonGooFi)/(length(ModelAmpGLMPoissonGooFi))^0.5;
+        ModelAmpGLMPoissonGoodnessOfFit(nc,3) = WrongFloor/NStims;
+        ModelAmpGLMPoissonDevR2 = (ModelFloor0GLMPoissonDev_cv{nc} - ModelAmpGLMPoissonDev_cv{nc}) ./ ModelFloor0GLMPoissonDev_cv{nc};
+        Goofi2 = (mean(ModelFloor0GLMPoissonDev_cv{nc}) - mean(ModelAmpGLMPoissonDev_cv{nc})) ./ (mean(ModelFloor0GLMPoissonDev_cv{nc}) - mean(ModelGaussCeilGLMPoissonDev_cv{nc}));
+        
+        figure(4)
+        title(sprintf('GLM DevR2  = %.2f +/- %.2f  Goodness of fit = %.2f +/- %.2f reliability: %.2f', mean(ModelAmpGLMPoissonDevR2), std(ModelAmpGLMPoissonDevR2)/(length(ModelAmpGLMPoissonDevR2))^0.5, ModelAmpGLMPoissonGoodnessOfFit(nc,1), ModelAmpGLMPoissonGoodnessOfFit(nc,2), 1-ModelAmpGLMPoissonGoodnessOfFit(nc,3)))
+        
+        subplot(2,2,4)
+        histogram(ModelAmpGLMPoissonGooFi, 'FaceColor', 'k', 'EdgeColor', 'k'); ylabel('# CV folds'); xlabel('Goodness of fit')
+        hold on; MeanLine = vline(Goofi2); MeanLine.LineWidth=2; MeanLine.LineStyle = '-';MeanLine.Color = 'k';
+        title(sprintf('GooFi2 = %.2f', Goofi2))
+        suplabel(sprintf('Cell %d/%d Poisson GLM\n',nc,NCells), 't');
+        
+        drawnow
+        %     pause()
 end
-save(fullfile(HDPath, ('OperantVocPoissonGammaNeuralNoise.mat')), 'CoeffVar_Original', 'FanoFactor_Original', 'GammaA_Original', 'SSEGam_Original', 'SSEExp_Original', 'CoeffVar_Rescaled', 'FanoFactor_Rescaled', 'GammaA_Rescaled', 'SSEGam_Rescaled', 'SSEExp_Rescaled', 'SpikeCountPerStim','GammaA_GLM', 'GammaAmpDispersion')
+CellsPaths = MC.CellsPath(GoodInfo);
+save(fullfile(HDPath, ('OperantVocPoissonGammaNeuralNoiseGLM.mat')), 'CellsPaths','CoeffVar_Original',...
+    'FanoFactor_Original', 'GammaA_Original', 'SSEGam_Original', 'SSEExp_Original',...
+    'CoeffVar_Rescaled', 'FanoFactor_Rescaled', 'GammaA_Rescaled', 'SSEGam_Rescaled',...
+'SSEExp_Rescaled', 'SpikeCountPerStim','GammaA_GLM', 'GammaAmpDispersion',...
+'SpikeCountTot','GammaA_GLM', 'GammaAmpDispersion', 'ModelAmpGLMGamma_Coeff' ,...
+'ModelAmpGLMGammaDev_cv','ModelAmpGLMGammaGoodnessOfFit','ModelCeilGLMGammaDev_cv',...
+'ModelFloorGLMGammaDev_cv','ModelAmpGLMPoisson_Coeff','ModelAmpGLMPoissonDev_test', 'ModelAmpGLMPoissonDev_cv',...
+'ModelAmpGLMPoissonGoodnessOfFit', 'ModelGaussCeilGLMPoissonDev_cv','ModelNNCeilGLMPoissonDev_cv',...
+'ModelFloor0GLMPoissonDev_cv','ModelFloorTimeGLMPoissonDev_cv')
 
 %% Plot figures of Poisson vs Gamma cell behavior
 Session = 'Operant';
@@ -1565,45 +2082,149 @@ NTotCells = sum(~isnan(CoeffVar_Original));
 FanoFactorAv_Original = cellfun(@nanmean, FanoFactor_Original);
 figure(21);clf; subplot(2,3,1); cubehelix_niceplot(cellfun(@nanmean, FanoFactor_Original), GammaA_Original, SpikeCountPerStim(:,1),3, ' '); xlabel('FanoFactor (var/mean)'); ylabel('Gamma fit shape');
 subplot(2,3,2); cubehelix_niceplot(CoeffVar_Original, GammaA_Original, SpikeCountPerStim(:,1),3, ' ' ); xlabel('Coefficient of variation std/mean'); ylabel('Gamma fit shape');
-subplot(2,3,4); cubehelix_niceplot(FanoFactorAv_Original, CoeffVar_Original, SpikeCountPerStim(:,1),3, sprintf('%d cells are Poisson like (%f.2 %%)', NPoissonCells_Original, NPoissonCells_Original*100/NTotCells)); xlabel('FanoFactor (var/mean)'); ylabel('Coefficient of variation std/mean'); hold on; vline([0.98 1.02], {'k', 'k'});hold on;  hline([0.95 1.05], {'k', 'k'})
-subplot(2,3,5); cubehelix_niceplot(FanoFactorAv_Original(~isnan(GammaA_Original)), CoeffVar_Original(~isnan(GammaA_Original)), GammaA_Original(~isnan(GammaA_Original)),3, sprintf('%d cells are Poisson like (%f.2 %%)', NPoissonCells_Original, NPoissonCells_Original*100/NTotCells)); xlabel('FanoFactor (var/mean)'); ylabel('Coefficient of variation std/mean'); hold on; vline([0.98 1.02], {'k', 'k'});hold on;  hline([0.95 1.05], {'k', 'k'})
+subplot(2,3,4); cubehelix_niceplot(FanoFactorAv_Original, CoeffVar_Original, SpikeCountPerStim(:,1),3, sprintf('%d cells are Poisson like (%.2f %%)', NPoissonCells_Original, NPoissonCells_Original*100/NTotCells)); xlabel('FanoFactor (var/mean)'); ylabel('Coefficient of variation std/mean'); hold on; vline([0.98 1.02], {'k', 'k'});hold on;  hline([0.95 1.05], {'k', 'k'})
+subplot(2,3,5); cubehelix_niceplot(FanoFactorAv_Original(~isnan(GammaA_Original)), CoeffVar_Original(~isnan(GammaA_Original)), GammaA_Original(~isnan(GammaA_Original)),3, sprintf('%d cells are Poisson like (%.2f %%)', NPoissonCells_Original, NPoissonCells_Original*100/NTotCells)); xlabel('FanoFactor (var/mean)'); ylabel('Coefficient of variation std/mean'); hold on; vline([0.98 1.02], {'k', 'k'});hold on;  hline([0.95 1.05], {'k', 'k'})
 subplot(2,3,6); cubehelix_niceplot(MC.Info(GoodInfo), CoeffVar_Original, SpikeCountPerStim(:,1),3); xlabel(' Info on Motor coherence with amplitude');ylabel('Coefficient of variation std/mean');
 suplabel('Original data','t')
 FanoFactorAv_Rescaled = cellfun(@nanmean, FanoFactor_Rescaled);
 NPoissonCells_Rescaled = sum((cellfun(@nanmean, FanoFactor_Rescaled)<1.02) .* (cellfun(@nanmean, FanoFactor_Rescaled)>0.98) .* (CoeffVar_Rescaled>0.95) .* (CoeffVar_Rescaled<1.05));
 figure(22);clf; subplot(2,3,1); cubehelix_niceplot(cellfun(@nanmean, FanoFactor_Rescaled), GammaA_Rescaled, SpikeCountPerStim(:,1),3, ' '); xlabel('FanoFactor (var/mean)'); ylabel('Gamma fit shape');
 subplot(2,3,2); cubehelix_niceplot(CoeffVar_Rescaled, GammaA_Rescaled, SpikeCountPerStim(:,1),3, ' ' ); xlabel('Coefficient of variation std/mean'); ylabel('Gamma fit shape');
-subplot(2,3,4); cubehelix_niceplot(FanoFactorAv_Rescaled, CoeffVar_Rescaled, SpikeCountPerStim(:,1),3, sprintf('%d cells are Poisson like (%f.2 %%)', NPoissonCells_Rescaled, NPoissonCells_Rescaled*100/NTotCells)); xlabel('FanoFactor (var/mean)'); ylabel('Coefficient of variation std/mean'); hold on; vline([0.98 1.02], {'k', 'k'});hold on;  hline([0.95 1.05], {'k', 'k'})
-subplot(2,3,5); cubehelix_niceplot(FanoFactorAv_Rescaled(~isnan(GammaA_Rescaled)), CoeffVar_Rescaled(~isnan(GammaA_Rescaled)), GammaA_Rescaled(~isnan(GammaA_Rescaled)),3, sprintf('%d cells are Poisson like (%f.2 %%)', NPoissonCells_Rescaled, NPoissonCells_Rescaled*100/NTotCells)); xlabel('FanoFactor (var/mean)'); ylabel('Coefficient of variation std/mean'); hold on; vline([0.98 1.02], {'k', 'k'});hold on;  hline([0.95 1.05], {'k', 'k'})
+subplot(2,3,4); cubehelix_niceplot(FanoFactorAv_Rescaled, CoeffVar_Rescaled, SpikeCountPerStim(:,1),3, sprintf('%d cells are Poisson like (%.2f %%)', NPoissonCells_Rescaled, NPoissonCells_Rescaled*100/NTotCells)); xlabel('FanoFactor (var/mean)'); ylabel('Coefficient of variation std/mean'); hold on; vline([0.98 1.02], {'k', 'k'});hold on;  hline([0.95 1.05], {'k', 'k'})
+subplot(2,3,5); cubehelix_niceplot(FanoFactorAv_Rescaled(~isnan(GammaA_Rescaled)), CoeffVar_Rescaled(~isnan(GammaA_Rescaled)), GammaA_Rescaled(~isnan(GammaA_Rescaled)),3, sprintf('%d cells are Poisson like (%.2f %%)', NPoissonCells_Rescaled, NPoissonCells_Rescaled*100/NTotCells)); xlabel('FanoFactor (var/mean)'); ylabel('Coefficient of variation std/mean'); hold on; vline([0.98 1.02], {'k', 'k'});hold on;  hline([0.95 1.05], {'k', 'k'})
 subplot(2,3,6); cubehelix_niceplot(MC.Info(GoodInfo), CoeffVar_Rescaled, SpikeCountPerStim(:,1),3); xlabel(' Info on Motor coherence with amplitude');ylabel('Coefficient of variation std/mean');
 suplabel('Rescaled data', 't')
 
-figure(); subplot(1,3,1);scatter(CoeffVar_Original, CoeffVar_Rescaled, 'filled'); hold on ; line([0 2], [0 2], 'Color','k');xlabel('Coefficient of variation original'); ylabel('Coeffificient of variation rescaled')
-subplot(1,3,2);scatter(cellfun(@nanmean,FanoFactor_Original), cellfun(@nanmean,FanoFactor_Rescaled), 'filled'); hold on ; line([0.93 1.05], [0.93 1.05], 'Color','k');xlabel('FanoFactor original'); ylabel('FanoFactor rescaled')
-subplot(1,3,3);scatter(GammaA_Original, GammaA_Rescaled, 'filled'); hold on ; line([0 45], [0 45], 'Color','k');xlabel('GammaA original'); ylabel('GammaA rescaled')
+figure(23);clf; subplot(2,2,1);scatter(CoeffVar_Original, CoeffVar_Rescaled, 'filled'); hold on ; line([0 2], [0 2], 'Color','k');xlabel('Coefficient of variation original'); ylabel('Coeffificient of variation rescaled')
+subplot(2,2,2);scatter(cellfun(@nanmean,FanoFactor_Original), cellfun(@nanmean,FanoFactor_Rescaled), 'filled'); hold on ; line([0.93 1.05], [0.93 1.05], 'Color','k');xlabel('FanoFactor original'); ylabel('FanoFactor rescaled')
+subplot(2,2,3);scatter(GammaA_Original, GammaA_Rescaled, 'filled'); hold on ; line([0 5], [0 5], 'Color','k');xlabel('GammaA original'); ylabel('GammaA rescaled')
+%subplot(2,2,4);scatter(GammaA_Original, GammaA_GLM, 'filled'); hold on ; line([0 5], [0 5], 'Color','k');xlabel('GammaA original'); ylabel('GammaA GLM')
+subplot(2,2,4); cubehelix_niceplot(GammaA_Original(~isnan(GammaA_Original)), GammaA_GLM(~isnan(GammaA_Original)), GammaA_Rescaled(~isnan(GammaA_Original)),3, 'The 3 estimations of Gamma shape (Rescaled data color coded)'); xlabel('GammaA Original'); ylabel('GammaA GLM');
 
+% Finding the right CVe
+figure(24);clf
+for CVe = 0.1:0.1:0.5
+    hold on
+    scatter(GammaAmpDispersion, round(GammaAmpDispersion/(CVe.^2)), 'filled');
+end
+xlabel('GammaAmpDispersion')
+ylabel('# Nearest neighbor spikes')
+xlim([0 6])
+legend({'CVe=0.1' 'CVe=0.2' 'CVe=0.3' 'CVe=0.4' 'CVe=0.5'})
+legend('AutoUpdate', 'Off')
+yyaxis right; histogram(GammaAmpDispersion(GoodGamma), 'Normalization', 'cdf')
+ylim([0 1])
+ylabel('CDF of GammaAmpDispersion')
 
+figure()
+histogram(GammaA_GLM)
+
+GLMPoissonRun = ~isnan(cellfun(@mean, ModelAmpGLMPoissonDev_cv));
+DeviancePoissonAmpR2_0 = (cellfun(@nanmean, ModelFloor0GLMPoissonDev_cv)-cellfun(@nanmean, ModelAmpGLMPoissonDev_cv))./ cellfun(@nanmean, ModelFloor0GLMPoissonDev_cv);
+DeviancePoissonTVR2_0 = (cellfun(@nanmean, ModelFloor0GLMPoissonDev_cv)-cellfun(@nanmean, ModelFloorTimeGLMPoissonDev_cv))./ cellfun(@nanmean, ModelFloor0GLMPoissonDev_cv);
+GooFiPoissonVocAmp_0 = (cellfun(@nanmean, ModelFloor0GLMPoissonDev_cv)-cellfun(@nanmean, ModelAmpGLMPoissonDev_cv))./ (cellfun(@nanmean, ModelFloor0GLMPoissonDev_cv)-cellfun(@nanmean, ModelGaussCeilGLMPoissonDev_cv));
+figure(25);clf
+subplot(1,3,1);scatter(cellfun(@mean, ModelGaussCeilGLMPoissonDev_cv(GLMPoissonRun)), cellfun(@mean, ModelFloor0GLMPoissonDev_cv(GLMPoissonRun)), 'filled'); xlabel('Ceiling Deviance Poisson'); ylabel('Floor Deviance Poisson')
+MaxAxis = max([get(gca,('XLim')) get(gca,('YLim'))]);
+hold on; plot([0 MaxAxis], [0 MaxAxis], 'k--')
+subplot(1,3,2);cubehelix_niceplot(cellfun(@mean, ModelAmpGLMPoissonDev_cv(GLMPoissonRun)), cellfun(@mean, ModelFloor0GLMPoissonDev_cv(GLMPoissonRun)), DeviancePoissonAmpR2_0(GLMPoissonRun),3,'Deviance R2'); xlabel('Amp Deviance Poisson'); ylabel('Floor Deviance Poisson')
+MaxAxis = max([get(gca,('XLim')) get(gca,('YLim'))]);
+hold on; plot([0 MaxAxis], [0 MaxAxis], 'k--')
+subplot(1,3,3);scatter(cellfun(@mean, ModelGaussCeilGLMPoissonDev_cv(GLMPoissonRun)), cellfun(@mean, ModelAmpGLMPoissonDev_cv(GLMPoissonRun)), 'filled'); xlabel('Ceiling Deviance Poisson'); ylabel('Amp Deviance Poisson')
+MaxAxis = max([get(gca,('XLim')) get(gca,('YLim'))]);
+hold on; plot([0 MaxAxis], [0 MaxAxis], 'k--')
+suplabel('Poisson GLM', 't')
+
+figure(26);clf
+subplot(2,2,1);cubehelix_niceplot(cellfun(@mean, ModelAmpGLMPoissonDev_cv(GLMPoissonRun)), cellfun(@mean, ModelFloor0GLMPoissonDev_cv(GLMPoissonRun)), DeviancePoissonAmpR2_0(GLMPoissonRun),3,'Deviance R2'); xlabel('Amp Deviance Poisson'); ylabel('Floor Deviance Poisson')
+hold on; plot([0 45], [0 45], 'k--')
+PosDev_01 = (DeviancePoissonAmpR2_0-DeviancePoissonTVR2_0)>0;
+subplot(2,2,2);plot([ones(sum(~PosDev_01),1) 2*ones(sum(~PosDev_01),1)]', [DeviancePoissonAmpR2_0(~PosDev_01) DeviancePoissonTVR2_0(~PosDev_01)]', 'k*-', 'LineWidth',1); hold on;plot([ones(sum(PosDev_01),1) 2*ones(sum(PosDev_01),1)]', [DeviancePoissonAmpR2_0(PosDev_01) DeviancePoissonTVR2_0(PosDev_01)]', 'r*-', 'LineWidth',1); 
+% hold on; plot([ones(length(DeviancePoissonAmpR2_0),1) 2*ones(length(DeviancePoissonAmpR2_0),1)]', [DeviancePoissonVocTVR2_0 DeviancePoissonAmpR2_0]', 'k*-', 'LineWidth',1);
+ylabel('Deviance Poisson R2'); xlabel('Model'); set(gca, 'XTick', [1 2 ], 'XTickLabel', {'Amp' 'Mean TV Rate'}, 'XLim', [0 3])
+text(2.1, 0.25,'Linear w Amp','Color', 'r')
+text(2.1, 0.23,'non-Linear w Amp?','Color', 'k')
+subplot(2,2,3);scatter(MC.Info(GoodInfo(GLMPoissonRun)), DeviancePoissonAmpR2_0(GLMPoissonRun),40, [ModelAmpGLMPoissonDev_test(GLMPoissonRun,1)<0.01 zeros(sum(GLMPoissonRun),1) zeros(sum(GLMPoissonRun),1)], 'filled'); ylabel('Poisson Deviance R2'); xlabel('Info on Coherence with Amp')
+subplot(2,2,4); scatter(MC.Info(GoodInfo(GLMPoissonRun)), GooFiPoissonVocAmp_0(GLMPoissonRun), 'filled'); ylabel('Poisson GooFi'); xlabel('Info on Coherence with Amp')
+
+GLMGammaRun = ~isnan(cellfun(@mean, ModelAmpGLMGammaDev_cv));
+DevianceGammaR2 = (cellfun(@mean, ModelFloorGLMGammaDev_cv)-cellfun(@mean, ModelAmpGLMGammaDev_cv))./ cellfun(@mean, ModelFloorGLMGammaDev_cv);
+
+figure(27);clf
+subplot(1,3,1);scatter(cellfun(@mean, ModelCeilGLMGammaDev_cv(GLMGammaRun)), cellfun(@mean, ModelFloorGLMGammaDev_cv(GLMGammaRun)), 'filled'); xlabel('Ceiling Deviance Gamma'); ylabel('Floor Deviance Gamma')
+MaxAxis = max([get(gca,('XLim')) get(gca,('YLim'))]);
+hold on; plot([0 MaxAxis], [0 MaxAxis], 'k--')
+subplot(1,3,2);cubehelix_niceplot(cellfun(@mean, ModelAmpGLMGammaDev_cv(GLMGammaRun)), cellfun(@mean, ModelFloorGLMGammaDev_cv(GLMGammaRun)), DevianceGammaR2(GLMGammaRun),3,'Deviance R2'); xlabel('Amp Deviance Gamma'); ylabel('Floor Deviance Gamma')
+MaxAxis = max([get(gca,('XLim')) get(gca,('YLim'))]);
+hold on; plot([0 MaxAxis], [0 MaxAxis], 'k--')
+subplot(1,3,3);scatter(cellfun(@mean, ModelCeilGLMGammaDev_cv(GLMGammaRun)), cellfun(@mean, ModelAmpGLMGammaDev_cv(GLMGammaRun)), 'filled'); xlabel('Ceiling Deviance Gamma'); ylabel('Amp Deviance Gamma')
+MaxAxis = max([get(gca,('XLim')) get(gca,('YLim'))]);
+hold on; plot([0 MaxAxis], [0 MaxAxis], 'k--')
+suplabel('Gamma label', 't')
 %% Gamma model for all cells
-% now we have a better estimate of the shape for the Gamma noise
-        % (shape obtained with the GLM fit)
-        % Let's use that shape to get a better estimate for the time
-        % varying spike rate (let's say that we fix the CV of the estimate
-        % of the ISI across time (CVe = SE/mean = 0.1 or 0.5?), then given
-        % the shape of the gamma distribution of the noise, how many spikes
-        % do we need in nearest neighbour spike rate estimate to get the
-        % bet estimate of the rate. Because the mean of the distribution of
-        % ISI is the same as the mean of your estimates of the mean, and
-        % mean = shape * scale at any time point and var = shape * scale^2,
-        % then SE = (var/n)^0.5 = scale * (shape/n)^0.5 = mean / (shape *
-        % n)^0.5 -> n = (mean/SE)^2 * 1/shape = 1/(shape * CVe^2)
-        CVe = 0.2; % This is the coeffcient of variation of the estimate of the mean interspike interval, we constrain the system by deciding to fix it at 0.2 (that's the noise on the calculatoin of the mean) 
-        NumNearNeighSpike = round(GamModel.Dispersion/(CVe.^2));
-        [YPerStim, YPerStimt, YPatterns, SATPerStim, ISIPerStim] = get_y_4GammaFit(Cell.SpikesArrivalTimes_Behav(IndVoc), Cell.Duration(IndVoc),TLim,TR, NumNearNeighSpike);
-        
-        % Now that we have a better estimate of the time varying rate, we
-        % need to generate spike patterns with gamma noise that follow that
-        % rate for each vocalization
+NBoots = 100;
+nc=560;
 
+cc=GoodInfo(nc);
+%     cc=574;
+fprintf(1,'Cell %d/%d\n',nc,NCells)
+% load data
+Cell = load(fullfile(MC.CellsPath(cc).folder,MC.CellsPath(cc).name));
+if MC.Info(cc)~=Cell.MotorCoherenceOperant.Info
+    keyboard
+end
+
+% Number of vocalizations in the dataset
+if ~isfield(Cell, 'What')
+    fprintf(1,'*** . Problem with Cell %d, no what field!! ****\n', cc)
+    keyboard
+    %         continue
+else
+    
+    if Self % Select vocalizations from the requested session, emitted by self and that have the right delay before and after
+        IndVoc = find(contains(Cell.What, 'Voc') .* contains(Cell.ExpType, Session(1)) .* contains(Cell.Who, 'self') .* (Cell.DelayBefore>=Delay) .* (Cell.DelayAfter>=Delay));
+    else % Select vocalizations from the requested session, emitted by...
+        % Others with no overlap with other vocalizations and that have
+        % the right delay before and after, % ensure as well that there is
+        % no noise on the microphone track (manual annotation) if we are
+        % in free session, no check for operant
+        IndVoc = find(contains(Cell.What, 'Voc') .* contains(Cell.ExpType, Session(1)) .*(~contains(Cell.Who, 'self')) .* (Cell.VocOverlap==0));
+        if strcmp(Session(1), 'F')
+            IndVoc = intersect(IndVoc, find(Cell.AudioQuality==1));
+        end
+    end
+    NStims = length(IndVoc);
+    StimDura = nan(NStims,1);
+    for ss=1:NStims
+        StimDura(ss) = round(length(Cell.BioSound{IndVoc(ss),2}.sound) ./(Cell.BioSound{IndVoc(ss),2}.samprate)*10^3);
+    end
+    if any(abs(StimDura - round(Cell.Duration(IndVoc)))>1)
+        fprintf(1,'*** . Problem with Cell %d, duration inconcistency!! ****\n', cc)
+        keyboard
+        %             continue
+    end
+end
+
+% now we have a better estimate of the shape for the Gamma noise
+% (shape obtained with the GLM fit)
+% Let's use that shape to get a better estimate for the time
+% varying spike rate (let's say that we fix the CV of the estimate
+% of the ISI across time (CVe = SE/mean = 0.1 or 0.5?), then given
+% the shape of the gamma distribution of the noise, how many spikes
+% do we need in nearest neighbour spike rate estimate to get the
+% bet estimate of the rate. Because the mean of the distribution of
+% ISI is the same as the mean of your estimates of the mean, and
+% mean = shape * scale at any time point and var = shape * scale^2,
+% then SE = (var/n)^0.5 = scale * (shape/n)^0.5 = mean / (shape *
+% n)^0.5 -> n = (mean/SE)^2 * 1/shape = 1/(shape * CVe^2)
+CVe = 0.5; % This is the coeffcient of variation of the estimate of the mean interspike interval, we constrain the system by deciding to fix it at 0.5 (that's the noise on the calculatoin of the mean)
+NumNearNeighSpike = round(GammaAmpDispersion(nc)/(CVe.^2));
+[YPerStim, YPerStimt, YPatterns, SATPerStim, ISIPerStim] = get_y_4GammaFit(Cell.SpikesArrivalTimes_Behav(IndVoc), Cell.Duration(IndVoc),TLim,TR, NumNearNeighSpike);
+
+% Now that we have a better estimate of the time varying rate, we
+% need to generate spike patterns with gamma noise that follow that
+% rate for each vocalization
+Spiketrain=make_spikes3(YPerStim, ISIPerStim,SATPerStim, GammaA_GLM(nc), NBoots, TR, NumNearNeighSpike);
 
 %% Explore Cell by cell the profile of coherence and scatter plots of cell tuning for Good Cells
 %% Then for all cells
@@ -1646,7 +2267,6 @@ for nc=560:NCells
 %     cc=574;
     fprintf(1,'Cell %d/%d\n',nc,NCells)
     
-    % Plot the scatter tuning curves
     % load data
     Cell = load(fullfile(MC.CellsPath(cc).folder,MC.CellsPath(cc).name));
     if MC.Info(cc)~=Cell.MotorCoherenceOperant.Info
@@ -1695,48 +2315,8 @@ for nc=560:NCells
     % neural response is a vector that compile all spike counts starting
     % at 200ms (-Delay(1)) before stim onset and stop at 200ms (Delay(2)) after
     % stim offset
+       [TLim, BestShift(nc)]= find_bestShift(MC.CoherencyT_DelayAtzero(cc), Cell, NBins, TR);
         
-        if isnan(MC.CoherencyT_DelayAtzero(cc)) % Let's try to figure out a value for this
-            figure(6);clf; plot(Cell.MotorCoherenceOperant.CoherencyT_xTimeDelay, Cell.MotorCoherenceOperant.CoherencyT_filt, 'LineWidth',2);xlabel('Time Delay');ylabel('Coherency')
-            [P,Locs] = findpeaks(-Cell.MotorCoherenceOperant.CoherencyT_filt);
-            
-            if ~isempty(Locs)
-                [P,IndM] = max(P);
-                Locs = Locs(IndM);
-                CoherencyT_DelayAtzero = Cell.MotorCoherenceOperant.CoherencyT_xTimeDelay(Locs);
-                CrossZero1 = Cell.MotorCoherenceOperant.CoherencyT_xTimeDelay(find(Cell.MotorCoherenceOperant.CoherencyT_filt(1:Locs)<=mean(Cell.MotorCoherenceOperant.CoherencyT_filt), 1, 'last')+1);
-                CrossZero2 = Cell.MotorCoherenceOperant.CoherencyT_xTimeDelay(Locs + find(Cell.MotorCoherenceOperant.CoherencyT_filt(Locs+1:end)<=mean(Cell.MotorCoherenceOperant.CoherencyT_filt), 1, 'first')-1);
-                if isempty(CrossZero2)
-                    CrossZero2 = Cell.MotorCoherenceOperant.CoherencyT_xTimeDelay(Locs + find(Cell.MotorCoherenceOperant.CoherencyT_filt(Locs+1:end)==min(Cell.MotorCoherenceOperant.CoherencyT_filt(Locs+1:end)), 1, 'first')-1);
-                end
-                CoherencyT_WidthAtMaxPeak = CrossZero2 - CrossZero1;
-                
-                warning('No delay was originally found for that cell: hyp: inverse coherency curve?')
-
-            else
-                warning('No delay was originally found for that cell: hyp: Very Large frequency?')
-                CoherencyT_DelayAtzero=Cell.MotorCoherenceOperant.CoherencyT_xTimeDelay(Cell.MotorCoherenceOperant.CoherencyT_filt == max(Cell.MotorCoherenceOperant.CoherencyT_filt));
-                keyboard
-%                 continue
-            end
-            if abs(CoherencyT_DelayAtzero)<=200
-                TLim = [CoherencyT_DelayAtzero-200+NBins*TR CoherencyT_DelayAtzero+200-NBins*TR];
-                BestShift(cc) = CoherencyT_DelayAtzero;
-%               TLim = [-MC.CoherencyT_DelayAtzero(cc) MC.CoherencyT_DelayAtzero(cc)];
-            else % this is an abherent delay because there is only 200ms before and after each vocaliztaion when calculating the coherence so center the filter at 0
-                TLim = [NBins*TR-200 200-NBins*TR];
-                BestShift(cc) = 0;
-            end
-        else
-            if abs(MC.CoherencyT_DelayAtzero(cc))<=200
-                TLim = [MC.CoherencyT_DelayAtzero(cc)-200+NBins*TR MC.CoherencyT_DelayAtzero(cc)+200-NBins*TR];
-%               TLim = [-MC.CoherencyT_DelayAtzero(cc) MC.CoherencyT_DelayAtzero(cc)];
-                BestShift(cc) = MC.CoherencyT_DelayAtzero(cc);
-            else % this is an abherent delay because there is only 200ms before and after each vocaliztaion when calculating the coherence so center the filter at 0
-                TLim = [NBins*TR-200 200-NBins*TR];
-                BestShift(cc) = 0;
-            end
-        end
         [YPerStim, YPerStimt, YPatterns,YCountPerStim] = get_y_4Coherence(Cell.SpikesArrivalTimes_Behav(IndVoc), Cell.Duration(IndVoc),TLim,TR);
         Y = [YPerStim{:}]';
         YCount = [YCountPerStim{:}]';
@@ -1763,14 +2343,14 @@ for nc=560:NCells
         XAmp = nan(length(Y), 2*NBins+1);
         Bins = -NBins:NBins;
         for bb = 1:(2*NBins+1)
-            if ((Bins(bb))*TR - BestShift(cc))<0
-                fprintf(1, 'Calculating the Regressor Amplitude %d/%d that anticipates neural response by %d ms\n', bb, (2*NBins+1),(Bins(bb))*TR- BestShift(cc));
-            elseif ((Bins(bb))*TR - BestShift(cc))>0
-                fprintf(1, 'Calculating the Regressor Amplitude %d/%d that follows neural response by %d ms\n', bb, (2*NBins+1), (Bins(bb))*TR- BestShift(cc));
-            elseif ((Bins(bb))*TR - BestShift(cc))==0
+            if ((Bins(bb))*TR - BestShift(nc))<0
+                fprintf(1, 'Calculating the Regressor Amplitude %d/%d that anticipates neural response by %d ms\n', bb, (2*NBins+1),(Bins(bb))*TR- BestShift(nc));
+            elseif ((Bins(bb))*TR - BestShift(nc))>0
+                fprintf(1, 'Calculating the Regressor Amplitude %d/%d that follows neural response by %d ms\n', bb, (2*NBins+1), (Bins(bb))*TR- BestShift(nc));
+            elseif ((Bins(bb))*TR - BestShift(nc))==0
                 fprintf(1, 'Calculating the Regressor Amplitude %d/%d that is just alligned at stimulus onset with neural response\n', bb, (2*NBins+1));
             end
-            Range = TLim - BestShift(cc) + (Bins(bb))*TR;
+            Range = TLim - BestShift(nc) + (Bins(bb))*TR;
             [XAmpPerStim,XAmpPerStimt]  = get_x_4coherence(Cell.BioSound(IndVoc,2), Cell.Duration(IndVoc), Range,TR,DefaultVal,'amp');
             XAmp(:,bb) = [XAmpPerStim{:}]';
             if InputFig
@@ -1826,7 +2406,7 @@ for nc=560:NCells
         ModelwoAmp = fitlm(TableFull, 'Rate ~ Saliency + SpectralMean + CallType + Saliency:SpectralMean + Saliency:CallType + SpectralMean:CallType' , 'CategoricalVars', 4);
         
         
-        % Run a leave one out vocalization cross validation to get the goodness of fit
+        %% Run a leave one out vocalization cross validation to get the goodness of fit
         ModelAmpR2_cv{nc} = nan(size(YPerStim));
         ModelGLMAmpDev_cv{nc} = nan(size(YPerStim));
         FirstIndStim = [1 cumsum(cellfun(@length,YPerStim))+1]; FirstIndStim(end) = [];
@@ -1846,13 +2426,13 @@ for nc=560:NCells
             YCount_cv(FirstIndStim(Stim):LastIndStim(Stim)) = [];
             XAmpScore_cv = AmpScore(:,1:NPC);
             XAmpScore_cv(FirstIndStim(Stim):LastIndStim(Stim),:) = [];
-            [ModelGLMAmp_cvB,~] = glmfit(XAmpScore_cv, YCount_cv, 'Poisson');
+            [ModelGLMAmp_cvB,ModelGLMAmp_cvDev,ModelGLMAmp_cvStat] = glmfit(XAmpScore_cv, YCount_cv, 'Poisson');
             YCount_pred = glmval(ModelGLMAmp_cvB, AmpScore(FirstIndStim(Stim):LastIndStim(Stim),1:NPC), 'log');
-            LL_Saturated = LL_Calculus(YCount(FirstIndStim(Stim):LastIndStim(Stim)),YCount(FirstIndStim(Stim):LastIndStim(Stim)));
-            LL_amp = LL_Calculus(YCount(FirstIndStim(Stim):LastIndStim(Stim)), YCount_pred);
+            LL_Saturated = LL_Calculus2(YCount(FirstIndStim(Stim):LastIndStim(Stim)),YCount(FirstIndStim(Stim):LastIndStim(Stim)), TR*2);
+            LL_amp = LL_Calculus2(YCount(FirstIndStim(Stim):LastIndStim(Stim)), YCount_pred, TR*2);
             ModelGLMAmpDev_cv{nc}(Stim) = -2*(LL_amp - LL_Saturated);
             % Get the Floor model for the GLM approach
-            LL_Floor = LL_Calculus(YCount(FirstIndStim(Stim):LastIndStim(Stim)), round(mean(YCount_cv)));
+            LL_Floor = LL_Calculus2(YCount(FirstIndStim(Stim):LastIndStim(Stim)), mean(YCount_cv), TR*2);
             ModelGLMFloorDev_cv{nc}(Stim) = -2*(LL_Floor - LL_Saturated);
             % Get the ceiling model value for both approach
             [~, Spike_arrival] = poisson_spiketrain_gen(YPerStim(Stim), YPerStimt(Stim),TLim, TR, Response_samprate, NBoots);
@@ -1862,11 +2442,11 @@ for nc=560:NCells
             DevianceFloor_local = nan(NBoots,1);
             for tt=1:size(Spike_arrival,2)
                 [YPerStimbb, YPerStimtbb,~,YCountPerStimbb] = get_y_4Coherence(Spike_arrival(1,tt), Cell.Duration(IndVoc(Stim)),TLim,TR);
-                Y_bb = ([YPerStimbb{:}]' - Y_Mu)/Y_Sigma;
-                SSECeil_local = sum((Y_ZS(FirstIndStim(Stim):LastIndStim(Stim)) - Y_bb).^2);
+                Y_bb_ZS = ([YPerStimbb{:}]' - Y_Mu)/Y_Sigma;
+                SSECeil_local = sum((Y_ZS(FirstIndStim(Stim):LastIndStim(Stim)) - Y_bb_ZS).^2);
                 R2Ceil_local(tt) = 1-SSECeil_local/SSE0_local;
-                YCountbb = [YCountPerStimbb{:}]';
-                LL_Ceilbb = LL_Calculus(YCount(FirstIndStim(Stim):LastIndStim(Stim)), YCountbb);
+                Y_bb = [YPerStimbb{:}]';
+                LL_Ceilbb = LL_Calculus2(YCount(FirstIndStim(Stim):LastIndStim(Stim)), Y_bb*TR, TR*2);
                 DevianceCeil_local(tt) = -2*(LL_Ceilbb - LL_Saturated);
                 if InputFig
                     figure(16);
@@ -1900,7 +2480,7 @@ for nc=560:NCells
         hold on;STELine2=vline(mean(ModelAmpR2_cv{nc})+2*std(ModelAmpR2_cv{nc})/NStims^0.5);STELine2.LineWidth=2;
         subplot(2,2,4);histogram(ModelGLMAmpDev_cv{nc}, 'FaceColor', 'k', 'EdgeColor', 'k'); ylabel('# CV folds'); xlabel('Cross validated Deviance for GLM (leave one vocalization out)');
         hold on; MeanLine = vline(mean(ModelGLMAmpDev_cv{nc})); MeanLine.LineWidth=2; MeanLine.LineStyle = '-';
-        hold on;STELine1=vline(mean(ModelGLMAmpDev_cv{nc})-2*std(ModelGLMAmpDev_cv{nc})/NStims^0.5); STELine1.LineWidth=2;
+        hold on;STELine1=vline(mean(ModelGLMAmpDev_cv{nc})-2*std(ModelGLMAmpDev_cv{nc})/NStims^0.5, ':r', sprintf('%.1f',mean(ModelGLMAmpDev_cv{nc}))); STELine1.LineWidth=2;
         hold on;STELine2=vline(mean(ModelGLMAmpDev_cv{nc})+2*std(ModelGLMAmpDev_cv{nc})/NStims^0.5);STELine2.LineWidth=2;
         
         figure(6)
@@ -1909,36 +2489,53 @@ for nc=560:NCells
         hold on;STELine1=vline(mean(ModelCeilR2_cv{nc})-2*std(ModelCeilR2_cv{nc})/NStims^0.5); STELine1.LineWidth=2; STELine1.Color = 'k';
         hold on;STELine2=vline(mean(ModelCeilR2_cv{nc})+2*std(ModelCeilR2_cv{nc})/NStims^0.5);STELine2.LineWidth=2;STELine2.Color = 'k';
         subplot(2,2,4);hold on; histogram(ModelGLMCeilDev_cv{nc}, 'FaceColor', [0 0.447 0.741], 'EdgeColor', [0 0.447 0.741]); 
-        hold on; MeanLine = vline(mean(ModelGLMCeilDev_cv{nc})); MeanLine.LineWidth=2; MeanLine.LineStyle = '-';MeanLine.Color = 'k';
-        hold on;STELine1=vline(mean(ModelGLMCeilDev_cv{nc})-2*std(ModelGLMCeilDev_cv{nc})/NStims^0.5); STELine1.LineWidth=2; STELine1.Color = 'k';
-        hold on;STELine2=vline(mean(ModelGLMCeilDev_cv{nc})+2*std(ModelGLMCeilDev_cv{nc})/NStims^0.5);STELine2.LineWidth=2;STELine2.Color = 'k';
+        hold on; MeanLine = vline(mean(ModelGLMCeilDev_cv{nc}), 'b'); MeanLine.LineWidth=2; MeanLine.LineStyle = '-';
+        hold on;STELine1=vline(mean(ModelGLMCeilDev_cv{nc})-2*std(ModelGLMCeilDev_cv{nc})/NStims^0.5, ':b', sprintf('%.1f',mean(ModelGLMCeilDev_cv{nc}))); STELine1.LineWidth=2; 
+        hold on;STELine2=vline(mean(ModelGLMCeilDev_cv{nc})+2*std(ModelGLMCeilDev_cv{nc})/NStims^0.5, ':b');STELine2.LineWidth=2;
         
         subplot(2,2,4);hold on; histogram(ModelGLMFloorDev_cv{nc}, 'FaceColor', [0.494 0.184 0.556], 'EdgeColor', [0.494 0.184 0.556]); 
+        hold on; MeanLine = vline(mean(ModelGLMFloorDev_cv{nc})); MeanLine.LineWidth=2; MeanLine.LineStyle = '-';MeanLine.Color = 'm';
+        hold on;STELine1=vline(mean(ModelGLMFloorDev_cv{nc})-2*std(ModelGLMFloorDev_cv{nc})/NStims^0.5, ':m', sprintf('%.1f',mean(ModelGLMFloorDev_cv{nc}))); STELine1.LineWidth=2;
+        hold on;STELine2=vline(mean(ModelGLMFloorDev_cv{nc})+2*std(ModelGLMFloorDev_cv{nc})/NStims^0.5);STELine2.LineWidth=2;STELine2.Color = 'm';
+          
+        figure(7)
+        subplot(1,3,1); histogram(ModelGLMCeilDev_cv{nc}, 'FaceColor', [0 0.447 0.741], 'EdgeColor', [0 0.447 0.741]);
+        hold on; MeanLine = vline(mean(ModelGLMCeilDev_cv{nc})); MeanLine.LineWidth=2; MeanLine.LineStyle = '-';MeanLine.Color = 'b';
+        hold on;STELine1=vline(mean(ModelGLMCeilDev_cv{nc})-2*std(ModelGLMCeilDev_cv{nc})/NStims^0.5); STELine1.LineWidth=2; STELine1.Color = 'b';
+        hold on;STELine2=vline(mean(ModelGLMCeilDev_cv{nc})+2*std(ModelGLMCeilDev_cv{nc})/NStims^0.5);STELine2.LineWidth=2;STELine2.Color = 'b';
+        subplot(1,3,2); histogram(ModelGLMAmpDev_cv{nc}, 'FaceColor', 'k', 'EdgeColor', 'k'); ylabel('# CV folds'); xlabel('Cross validated Deviance for GLM (leave one vocalization out)');
+        hold on; MeanLine = vline(mean(ModelGLMAmpDev_cv{nc})); MeanLine.LineWidth=2; MeanLine.LineStyle = '--';MeanLine.Color = 'r';
+        hold on;STELine1=vline(mean(ModelGLMAmpDev_cv{nc})-2*std(ModelGLMAmpDev_cv{nc})/NStims^0.5); STELine1.LineWidth=2;STELine1.Color = 'r';
+        hold on;STELine2=vline(mean(ModelGLMAmpDev_cv{nc})+2*std(ModelGLMAmpDev_cv{nc})/NStims^0.5);STELine2.LineWidth=2;STELine1.Color = 'r';
+        subplot(1,3,3); histogram(ModelGLMFloorDev_cv{nc}, 'FaceColor', [0.494 0.184 0.556], 'EdgeColor', [0.494 0.184 0.556]); 
         hold on; MeanLine = vline(mean(ModelGLMFloorDev_cv{nc})); MeanLine.LineWidth=2; MeanLine.LineStyle = '-';MeanLine.Color = 'k';
         hold on;STELine1=vline(mean(ModelGLMFloorDev_cv{nc})-2*std(ModelGLMFloorDev_cv{nc})/NStims^0.5); STELine1.LineWidth=2; STELine1.Color = 'k';
         hold on;STELine2=vline(mean(ModelGLMFloorDev_cv{nc})+2*std(ModelGLMFloorDev_cv{nc})/NStims^0.5);STELine2.LineWidth=2;STELine2.Color = 'k';
-          
+        
+        
         ModelGLMAmpGoodnessOfFit(nc,1) = mean((ModelGLMFloorDev_cv{nc} - ModelGLMAmpDev_cv{nc}) ./ (ModelGLMFloorDev_cv{nc} - ModelGLMCeilDev_cv{nc}));
         ModelGLMAmpGoodnessOfFit(nc,2) = std((ModelGLMFloorDev_cv{nc} - ModelGLMAmpDev_cv{nc}) ./ (ModelGLMFloorDev_cv{nc} - ModelGLMCeilDev_cv{nc}))/(length(ModelGLMCeilDev_cv{nc}))^0.5;
         
-        % Full model to get the optimal filter
+        %% Full model to get the optimal filter
         ModelAmp = fitlm(AmpScore(:,1:NPC), Y_ZS );
-        [ModelGLMAmpB, ModelGLMAmpDev, ModelGLMAmpStats] = glmfit(AmpScore(:,1:NPC), Y, 'Poisson');
+        [ModelGLMAmpB, ModelGLMAmpDev, ModelGLMAmpStats] = glmfit(AmpScore(:,1:NPC), YCount, 'Poisson');
         if ModelAmp.Rsquared.Adjusted>0
-            ModelAmpLM_Coeff{nc,2} =  [ModelAmp.Coefficients.Estimate(1)' [ModelAmp.Coefficients.Estimate(2:(NPC+1))' zeros(1,size(XAmp,2)-NPC)]* AmpPC];
-            ModelAmpLM_Coeff{nc,1} = -(Bins*TR - BestShift(cc));
+%             ModelAmpLM_Coeff{nc,2} =  [ModelAmp.Coefficients.Estimate(1)' [ModelAmp.Coefficients.Estimate(2:(NPC+1))' zeros(1,size(XAmp,2)-NPC)]* AmpPC];
+            ModelAmpLM_Coeff{nc,2} = [ModelAmp.Coefficients.Estimate(1); AmpPC * [ModelAmp.Coefficients.Estimate(2:(NPC+1)); zeros(size(XAmp,2)-NPC,1)]];
+            ModelAmpLM_Coeff{nc,1} = -(Bins*TR - BestShift(nc));
         end
-        ModelAmpGLM_Coeff{nc,2} =  [ModelGLMAmpB(1)' [ModelGLMAmpB(2:(NPC+1))' zeros(1,size(XAmp,2)-NPC)]* AmpPC];
-        ModelAmpGLM_Coeff{nc,1} = -(Bins*TR - BestShift(cc));
+%         ModelAmpGLM_Coeff{nc,2} =  [ModelGLMAmpB(1)' [ModelGLMAmpB(2:(NPC+1))' zeros(1,size(XAmp,2)-NPC)]* AmpPC];
+        ModelAmpGLM_Coeff{nc,2} =  [ModelGLMAmpB(1); AmpPC * [ModelGLMAmpB(2:(NPC+1)); zeros(size(XAmp,2)-NPC,1)]];
+        ModelAmpGLM_Coeff{nc,1} = -(Bins*TR - BestShift(nc));
         ModelAmpR2(nc,3) = ModelAmp.Rsquared.Adjusted;
         AnovaAmp = anova(ModelAmp, 'summary');
         ModelAmpR2(nc,1) = AnovaAmp.F(contains(AnovaAmp.Properties.RowNames, 'Model'));
         ModelAmpR2(nc,2) = AnovaAmp.pValue(contains(AnovaAmp.Properties.RowNames, 'Model'));
         figure(6);subplot(2,2,1); plot(Cell.MotorCoherenceOperant.CoherencyT_xTimeDelay, Cell.MotorCoherenceOperant.CoherencyT_filt, 'LineWidth',2);xlabel('Time Delay (ms)');ylabel('Coherency')
-        Xlim = get(gca, 'XLim');
+        set(gca, 'XLim', [-FilterSize FilterSize]);
         subplot(2,2,2); plot(ModelAmpLM_Coeff{nc,1}, ModelAmpLM_Coeff{nc,2}(2:end), 'LineWidth',2); xlabel('Time Delay (X-Y) (ms)'); ylabel('Amplitude Linear Model coefficients (Y~Xamp)');
         hold on; yyaxis right;plot(ModelAmpGLM_Coeff{nc,1},ModelAmpGLM_Coeff{nc,2}(2:end), 'LineWidth',2);ylabel('Amplitude Poisson Generalized Linear Model coefficients (Y~Xamp)');
-        set(gca, 'XLim', Xlim)
+        set(gca, 'XLim',  [-FilterSize FilterSize])
         subplot(2,2,3)
         title(sprintf('Adjusted R2 = %.3f CVR2 = %.3f pVal of F test vs constant model= %.2f', ModelAmp.Rsquared.Adjusted,mean(ModelAmpR2_cv{nc}), AnovaAmp.pValue(contains(AnovaAmp.Properties.RowNames, 'Model'))));
         subplot(2,2,4)
@@ -1983,8 +2580,8 @@ for nc=560:NCells
                      pause
                  end
              end    
-             Y_bb = ([YPerStimbb{:}]' - Y_Mu)/Y_Sigma;
-             SSECeil(nc,tt) = sum((Y_ZS - Y_bb).^2);
+             Y_bb_ZS = ([YPerStimbb{:}]' - Y_Mu)/Y_Sigma;
+             SSECeil(nc,tt) = sum((Y_ZS - Y_bb_ZS).^2);
              R2CeilBoot(nc,tt) = 1-SSECeil(nc,tt)/SSE0;
              YCountbb = [YCountPerStimbb{:}]';
              LL_Ceilbb = LL_Calculus(YCount, YCountbb);
@@ -4863,7 +5460,10 @@ end
 
 
 
-function [YPerStim, YPerStimt,SpikePattern, SATPerStim, ISIPerStim] = get_y_4GammaFit(SAT, Duration,Delay,TR, ONNK)
+function [YPerStim, YPerStimt,SpikePattern, SATPerStim, ISIPerStim] = get_y_4GammaFit(SAT, Duration,Delay,TR, ONNK, Resample)
+if nargin<6
+    Resample = 0; % no resampling by default; sampling rate of 1000Hz. If set to 1, then resampling at the rate of 1/TR
+end
 if nargin<5
     ONNK = 4;
 end
@@ -4929,7 +5529,7 @@ for stim=1:length(Duration)
         elseif (SpikeInd(isp) + ONNK)<=length(SAT_local)  % There are accessible spikes outside of the vocalization zone only in future
             Tau = abs(SATPerStim{stim}(isp)- SAT_local(SpikeInd(isp) + ONNK));
         elseif length(SAT_local)<(2*ONNK+1) % this is expected take a default value...
-            Tau = max(Tau,TR/2);
+            Tau = TR/2;
         else
             warning('ISSUE CANNOT FIND THE %dth nearest spike!!', ONNK);
             keyboard
@@ -4945,6 +5545,10 @@ for stim=1:length(Duration)
             warning('Cannot find a previous spike cancelling that spike')
             GoodSpikes(isp) = 0;
         end
+        if ISIPerStim{stim}(isp)==0
+            warning('Exact same spike detected cancelling that extra spike')
+            GoodSpikes(isp) = 0;
+        end
         % construct the Gaussian
         T_pts = (0:2*nStd*Tau) - nStd*Tau; % centered tpoints around the mean = 0 and take data into account up to nstd away on each side
         Expwav = exp(-0.5*(T_pts).^2./Tau^2)/(Tau*(2*pi)^0.5);
@@ -4954,7 +5558,10 @@ for stim=1:length(Duration)
     ISIPerStim{stim} = ISIPerStim{stim}(logical(GoodSpikes));
     SATPerStim{stim} = SATPerStim{stim}(logical(GoodSpikes));
     NNKE = NNKE(logical(GoodSpikes),:);
-    YPerStim{stim} = sum(NNKE,1);
+    if sum(GoodSpikes)==0 % No good spike for that stim
+        continue
+    end
+    YPerStim{stim} = sum(NNKE,1)/sum(sum(NNKE))*sum(SpikePattern{stim});
     if length(YPerStim{stim})~= length(TimeBinsY)
         warning('Unexpected length')
         keyboard
@@ -4967,14 +5574,167 @@ for stim=1:length(Duration)
         pause(1)
     end
     
+    
+    if Resample
+        YPerStim_local = YPerStim{stim};
+        if sum(YPerStim_local)>0
+            YPerStim_local = YPerStim_local/sum(YPerStim_local)*sum(SpikePattern{stim}); % Make sure we keep the right number of sipkes after convolution!
+        end
+        
+        % resampling function is really doing weird things at edges...
+        % doing my own resampling
+        TimeBinsYOnsetInd = round(1 :round(TR): (Delay(2) - Delay(1) + Duration(stim))); % These are slightly different than in get_Y_4GLM, because the times slot are used as indices in the vector and not as actuel time values!
+        TimeBinsYOffsetInd = TimeBinsYOnsetInd + TR -1;
+        TimeBinsYOnsetInd = TimeBinsYOnsetInd(TimeBinsYOffsetInd<=(Delay(2) - Delay(1) + Duration(stim))); % Only keep windows that are within the call
+        TimeBinsYOffsetInd = TimeBinsYOffsetInd(TimeBinsYOffsetInd<=(Delay(2) - Delay(1) + Duration(stim))); % Only keep windows that are within the call
+        
+        
+        TimeBinsYOnset = Delay(1) :round(TR): (Delay(2) + Duration(stim));
+        TimeBinsYOffset = TimeBinsYOnset + TR;
+        TimeBinsYOnset = TimeBinsYOnset(TimeBinsYOffset<=(Delay(2) + Duration(stim))); % Only keep windows that are within the call
+        TimeBinsYOffset = TimeBinsYOffset(TimeBinsYOffset<=(Delay(2) + Duration(stim))); % Only keep windows that are within the call
+        YPerStimt{stim} = TimeBinsYOnset + (TimeBinsYOffset - TimeBinsYOnset)/2; 
+        
+        YPerStim_resamp = nan(TR, length(TimeBinsYOnsetInd));
+        for tt=1:length(TimeBinsYOnsetInd)
+            YPerStim_resamp(:,tt) = YPerStim_local(TimeBinsYOnsetInd(tt): TimeBinsYOffsetInd(tt))';
+        end
+        YPerStim{stim} = mean(YPerStim_resamp);
+        
+        
+        
+        if DebugFig
+            figure(200)
+            clf
+            plot((Delay(1)+0.5):(Duration(stim)+Delay(2)),YPerStim_local, 'LineWidth',2)
+            xlabel('Time ms')
+            ylabel('Spike Rate mHz (/ms)')
+            title(sprintf('Stim %d/%d',stim,length(Duration)));
+            %         RemainTime = length(XPerStim_temp) - (length(XPerStim{stim})-1)*(1/Fs*10^3);
+            %         XPerStimt{stim} = RemainTime/2+(1/Fs*10^3)*(0:(length(XPerStim{stim})-1));
+            hold on
+            plot(YPerStimt{stim},YPerStim{stim}, 'LineWidth',2)
+            legend({'original' 'resampled'}, 'AutoUpdate','off')
+            hold on
+            SpikeTimes = TimeBinsY(logical(SpikePattern{stim}));
+            for ss = 1:length(SpikeTimes)
+                V=vline(SpikeTimes(ss), 'k-');
+                V.LineWidth = 2;
+                hold on
+            end
+            pause(1)
+        end
+        
+    end
+    
+    
 end
 
 end
 
 
 
+function InstantISIPerStim = get_instantISI(YPerStim, YPerStimt,SATPerStim,ISIPerStim)
+% This function computes the local interspike interval at times indicated
+% in SATPerStim for each stim from the time varying spike rate given in
+% YPerStim for each stim. The local ISI is calculated as the mean time
+% integral of the inverse rate between each spike arrival time t and
+% previous spike at t-1. All variables are expected to be cell arrays of
+% the same size as the number of stimuli. YPerStim and YPerStimt can be
+% vectors. In that case the same time varying rate will be used for every
+% stimulus in SATPerStim and ISIPerStim. ISIPerStim is the true interspike
+% interval for every spike arrival time in SATPerStim. This ISI has
+% calculated as the interval between spike sp and the prevous spike sp-1
+DebugFig = 0; %set to 1 to see debug figure at each stimulus
+if ~iscell(SATPerStim)
+    error('The spike arrival times SATPerStim should be a cell array where each cell contains the SAT of a stim\n')
+end
+NS = size(SATPerStim,2);
+InstantISIPerStim = cell(1,NS);
+for st=1:NS
+    NSP = length(SATPerStim{st});
+    InstantISIPerStim{st} = nan(1,NSP);
+    for sp=1:NSP
+        SATt1 = SATPerStim{st}(sp);
+        if sp==1 % For the first spike we recover the previous spike arrival time from the ISI
+            SATt0 = SATPerStim{st}(sp) - ISIPerStim{st}(sp);
+        else
+            ii=1;
+            SATt0 = SATPerStim{st}(sp-ii);
+            while round(SATt0) == round(SATt1) %spikes arrived in the same time bin of 1ms, take the previous spike to estimate ISI
+                ii = ii+1;
+                if ii>=sp
+                    SATt0 = SATPerStim{st}(sp) - sum(ISIPerStim{st}((sp-(ii-sp)) : sp));
+                else
+                    SATt0 = SATPerStim{st}(sp-ii);
+                end
+            end
+        end
+        if iscell(YPerStim)
+            Indt = (YPerStimt{st}<=round(SATt1)) .* (YPerStimt{st}>=round(SATt0));
+            InstantISIPerStim{st}(sp) = sum(1./YPerStim{st}(logical(Indt)))/(SATt1-SATt0);
+            if InstantISIPerStim{st}(sp) == 0
+                if isempty(YPerStim{st})
+                    InstantISIPerStim{st}(sp) = nan;
+                else
+                    keyboard
+                end
+            end
+        
+        else
+            Indt = (YPerStimt<=round(SATt1)) .* (YPerStimt>=round(SATt0));
+            InstantISIPerStim{st}(sp) = sum(1./YPerStim(logical(Indt)))/(SATt1-SATt0);
+            if InstantISIPerStim{st}(sp) == 0
+                if isempty(YPerStim)
+                    InstantISIPerStim{st}(sp) = nan;
+                else
+                    keyboard
+                end
+            end
+        end
+        
+    end
+    
+    if DebugFig
+        figure(30)
+        clf
+        if ~iscell(YPerStim)
+            YPerStimLocal = YPerStim;
+            YPerStimtLocal = YPerStimt;
+        else
+            YPerStimLocal = YPerStim{st};
+            YPerStimtLocal = YPerStimt{st};
+        end
+        subplot(2,1,1)
+        yyaxis left
+        bar((YPerStimtLocal(1):YPerStimtLocal(end-1))+0.5, histcounts(SATPerStim{st}, YPerStimtLocal(1:end)))
+        hold on
+        yyaxis right
+        plot(YPerStimtLocal, YPerStimLocal, 'r-', 'LineWidth',2)
+        ylabel('Spike /ms')
+        xlabel('Time ms')
+        XLim = get(gca, 'Xlim');
+        title(sprintf('Stim %d/%d', st, NS))
+        subplot(2,1,2)
+        yyaxis left
+        plot(SATPerStim{st}, ISIPerStim{st}, 'k*')
+        hold on
+        plot(SATPerStim{st}, InstantISIPerStim{st}, 'bo', 'MarkerFaceColor', 'b')
+        ylabel('ISI (ms)')
+        yyaxis right
+        hold on
+        plot(YPerStimtLocal, YPerStimLocal, 'r-', 'LineWidth',2)
+        ylabel('Spike /ms')
+        xlabel('Time ms')
+        set(gca, 'Xlim',XLim)
+        legend('Original ISI', 'Rate derived ISI', 'Spike rate')
+        
+        
+    end
+    
 
-
+end
+end
 
 
 function [YPerStim] = get_y_4GLM(SAT, Duration,Delay,TR,Overlap)
@@ -5231,7 +5991,7 @@ Spike_arrival = cell(NStims,NBoots); % contains all spike arrival times from all
 
 
 for Stim=1:NStims
-    Win = YPerStimt{Stim} + TR - TLim(1);% we want the end for each time bin and the time should be in reference to the onset of the Y estimation (-TLim)
+    Win = ceil(YPerStimt{Stim} + TR/2 - TLim(1));% we want the end for each time bin and the time should be in reference to the onset of the Y estimation (-TLim)
     NSpikeslocal = nan(NBoots,1);
     Nb_Win = length(Win);
     
@@ -5300,5 +6060,51 @@ for Stim=1:NStims
         end
     end
     
+end
+end
+
+function [TLim, BestShift]= find_bestShift(CoherencyT_DelayAtzero, Cell, NBins, TR)
+if isnan(CoherencyT_DelayAtzero) % Let's try to figure out a value for this
+    FIG = figure();clf; plot(Cell.MotorCoherenceOperant.CoherencyT_xTimeDelay, Cell.MotorCoherenceOperant.CoherencyT_filt, 'LineWidth',2);xlabel('Time Delay');ylabel('Coherency')
+    [P,Locs] = findpeaks(-Cell.MotorCoherenceOperant.CoherencyT_filt);
+    
+    if ~isempty(Locs)
+        [P,IndM] = max(P);
+        Locs = Locs(IndM);
+        CoherencyT_DelayAtzero = Cell.MotorCoherenceOperant.CoherencyT_xTimeDelay(Locs);
+        CrossZero1 = Cell.MotorCoherenceOperant.CoherencyT_xTimeDelay(find(Cell.MotorCoherenceOperant.CoherencyT_filt(1:Locs)<=mean(Cell.MotorCoherenceOperant.CoherencyT_filt), 1, 'last')+1);
+        CrossZero2 = Cell.MotorCoherenceOperant.CoherencyT_xTimeDelay(Locs + find(Cell.MotorCoherenceOperant.CoherencyT_filt(Locs+1:end)<=mean(Cell.MotorCoherenceOperant.CoherencyT_filt), 1, 'first')-1);
+        if isempty(CrossZero2)
+            CrossZero2 = Cell.MotorCoherenceOperant.CoherencyT_xTimeDelay(Locs + find(Cell.MotorCoherenceOperant.CoherencyT_filt(Locs+1:end)==min(Cell.MotorCoherenceOperant.CoherencyT_filt(Locs+1:end)), 1, 'first')-1);
+        end
+        CoherencyT_WidthAtMaxPeak = CrossZero2 - CrossZero1;
+        
+        warning('No delay was originally found for that cell: hyp: inverse coherency curve?')
+        
+    else
+        warning('No delay was originally found for that cell: hyp: Very Large frequency?')
+        CoherencyT_DelayAtzero=Cell.MotorCoherenceOperant.CoherencyT_xTimeDelay(Cell.MotorCoherenceOperant.CoherencyT_filt == max(Cell.MotorCoherenceOperant.CoherencyT_filt));
+        keyboard
+        %                 continue
+    end
+    if abs(CoherencyT_DelayAtzero)<=200
+        TLim = [CoherencyT_DelayAtzero-200+NBins*TR CoherencyT_DelayAtzero+200-NBins*TR];
+        BestShift = CoherencyT_DelayAtzero;
+        %               TLim = [-MC.CoherencyT_DelayAtzero(cc) MC.CoherencyT_DelayAtzero(cc)];
+    else % this is an abherent delay because there is only 200ms before and after each vocaliztaion when calculating the coherence so center the filter at 0
+        TLim = [NBins*TR-200 200-NBins*TR];
+        BestShift = 0;
+    end
+    pause(1)
+    close(FIG)
+else
+    if abs(CoherencyT_DelayAtzero)<=200
+        TLim = [CoherencyT_DelayAtzero-200+NBins*TR CoherencyT_DelayAtzero+200-NBins*TR];
+        %               TLim = [-CoherencyT_DelayAtzero CoherencyT_DelayAtzero];
+        BestShift = CoherencyT_DelayAtzero;
+    else % this is an abherent delay because there is only 200ms before and after each vocaliztaion when calculating the coherence so center the filter at 0
+        TLim = [NBins*TR-200 200-NBins*TR];
+        BestShift = 0;
+    end
 end
 end

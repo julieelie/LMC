@@ -1,4 +1,7 @@
-function plot_av_spikerate_perfile(InputDataFile, OutputPath)
+function plot_av_spikerate_perfile(InputDataFile, OutputPath, Fun)
+if nargin<3
+    Fun = @(x)x;
+end
 %%
 [~, DataFile]=fileparts(InputDataFile);
 % Input
@@ -24,63 +27,67 @@ load(FullDataSetFile, 'SpikeRate');
 %% Plot the figure
 ScatterMarkerSz = 30;
 MeanMarkerSize = 14;
-Fig=figure();
+ColorBR = [0 0.4470 0.7410];
+ColorSelf = 'k';
+ColorOthers = [0.9290 0.6940 0.1250];
+Fig=figure(); 
 Nevents = zeros(8,1);
 % Plot the spike rate in Hz of self calls Operant
 Ind = contains(SpikeRate.SelfCall_exptype, 'O');
 Nevents(1:2) = sum(Ind).*ones(2,1);
-scatter(ones(sum(Ind),1) + rand([sum(Ind),1]).*0.4-0.2,SpikeRate.SelfCall_rate(Ind,1),ScatterMarkerSz,'k','o','filled')
+swarmchart(ones(sum(Ind),1),Fun(SpikeRate.SelfCall_rate(Ind,1)),ScatterMarkerSz,ColorSelf,'o','filled','MarkerFaceAlpha',0.5,'MarkerEdgeAlpha',0.5)
 hold on
-errorbar(1,mean(SpikeRate.SelfCall_rate(Ind,1)),std(SpikeRate.SelfCall_rate(Ind,1))/sum(Ind)^0.5, 'dr','MarkerSize',MeanMarkerSize,'MarkerFaceColor','r')
+errorbar(1,mean(Fun(SpikeRate.SelfCall_rate(Ind,1))),std(Fun(SpikeRate.SelfCall_rate(Ind,1)))/sum(Ind)^0.5, 'dr','MarkerSize',MeanMarkerSize,'MarkerFaceColor','r')
 hold on
-scatter(2.*ones(sum(Ind),1)+ rand([sum(Ind),1]).*0.4-0.2,SpikeRate.SelfCall_rate(Ind,2),ScatterMarkerSz,'k','o','filled')
+swarmchart(2.*ones(sum(Ind),1),Fun(SpikeRate.SelfCall_rate(Ind,2)),ScatterMarkerSz,ColorBR,'o','filled','MarkerFaceAlpha',0.5,'MarkerEdgeAlpha',0.5)
 hold on
-errorbar(2,mean(SpikeRate.SelfCall_rate(Ind,2)),std(SpikeRate.SelfCall_rate(Ind,2))/sum(Ind)^0.5, 'dc','MarkerSize',MeanMarkerSize,'MarkerFaceColor','c')
+errorbar(2,mean(Fun(SpikeRate.SelfCall_rate(Ind,2))),std(Fun(SpikeRate.SelfCall_rate(Ind,2)))/sum(Ind)^0.5, 'dc','MarkerSize',MeanMarkerSize,'MarkerFaceColor','c')
 hold on
 
 
 % Plot the spike rate in Hz of self calls Free session
 Ind = contains(SpikeRate.SelfCall_exptype, 'F');
 Nevents(3:4) = sum(Ind).*ones(2,1);
-scatter(3.*ones(sum(Ind),1)+rand([sum(Ind),1]).*0.4-0.2,SpikeRate.SelfCall_rate(Ind,1),ScatterMarkerSz,'k','o','filled')
+swarmchart(3.*ones(sum(Ind),1),Fun(SpikeRate.SelfCall_rate(Ind,1)),ScatterMarkerSz,ColorSelf,'o','filled','MarkerFaceAlpha',0.5,'MarkerEdgeAlpha',0.5)
 hold on
-errorbar(3,mean(SpikeRate.SelfCall_rate(Ind,1)),std(SpikeRate.SelfCall_rate(Ind,1))/sum(Ind)^0.5, 'dr','MarkerSize',MeanMarkerSize,'MarkerFaceColor','r')
+errorbar(3,mean(Fun(SpikeRate.SelfCall_rate(Ind,1))),std(Fun(SpikeRate.SelfCall_rate(Ind,1)))/sum(Ind)^0.5, 'dr','MarkerSize',MeanMarkerSize,'MarkerFaceColor','r')
 hold on
-scatter(4.*ones(sum(Ind),1)+rand([sum(Ind),1]).*0.4-0.2,SpikeRate.SelfCall_rate(Ind,2),ScatterMarkerSz,'k','o','filled')
+swarmchart(4.*ones(sum(Ind),1),Fun(SpikeRate.SelfCall_rate(Ind,2)),ScatterMarkerSz,ColorBR,'o','filled','MarkerFaceAlpha',0.5,'MarkerEdgeAlpha',0.5)
 hold on
-errorbar(4,mean(SpikeRate.SelfCall_rate(Ind,2)),std(SpikeRate.SelfCall_rate(Ind,2))/sum(Ind)^0.5, 'dc','MarkerSize',MeanMarkerSize,'MarkerFaceColor','c')
+errorbar(4,nanmean(Fun(SpikeRate.SelfCall_rate(Ind,2))),nanstd(Fun(SpikeRate.SelfCall_rate(Ind,2)))/sum(Ind)^0.5, 'dc','MarkerSize',MeanMarkerSize,'MarkerFaceColor','c')
 hold on
 
 
 % Plot the spike rate in Hz of others calls Operant
 if ~isempty(SpikeRate.OthersCall_exptype)
-    Ind = contains(SpikeRate.OthersCall_exptype, 'O');
-    Nevents(5:6) = sum(Ind).*ones(2,1);
-    scatter(5.*ones(sum(Ind),1)+rand([sum(Ind),1]).*0.4-0.2,SpikeRate.OthersCall_rate(Ind,1),ScatterMarkerSz,'k','o','filled')
-    hold on
-    errorbar(5,mean(SpikeRate.OthersCall_rate(Ind,1)),std(SpikeRate.OthersCall_rate(Ind,1))/sum(Ind)^0.5, 'sr','MarkerSize',MeanMarkerSize,'MarkerFaceColor','r')
-    hold on
-    scatter(6.*ones(sum(Ind),1)+rand([sum(Ind),1]).*0.4-0.2,SpikeRate.OthersCall_rate(Ind,2),ScatterMarkerSz,'k','o','filled')
-    hold on
-    errorbar(6,mean(SpikeRate.OthersCall_rate(Ind,2)),std(SpikeRate.OthersCall_rate(Ind,2))/sum(Ind)^0.5, 'sc','MarkerSize',MeanMarkerSize,'MarkerFaceColor','c')
-    hold on
+    % This is useless as the companion at rarely vocalize
+%     Ind = contains(SpikeRate.OthersCall_exptype, 'O');
+%     Nevents(5:6) = sum(Ind).*ones(2,1);
+%     scatter(5.*ones(sum(Ind),1)+rand([sum(Ind),1]).*0.4-0.2,SpikeRate.OthersCall_rate(Ind,1),ScatterMarkerSz,'k','o','filled')
+%     hold on
+%     errorbar(5,mean(SpikeRate.OthersCall_rate(Ind,1)),std(SpikeRate.OthersCall_rate(Ind,1))/sum(Ind)^0.5, 'sr','MarkerSize',MeanMarkerSize,'MarkerFaceColor','r')
+%     hold on
+%     scatter(6.*ones(sum(Ind),1)+rand([sum(Ind),1]).*0.4-0.2,SpikeRate.OthersCall_rate(Ind,2),ScatterMarkerSz,'k','o','filled')
+%     hold on
+%     errorbar(6,mean(SpikeRate.OthersCall_rate(Ind,2)),std(SpikeRate.OthersCall_rate(Ind,2))/sum(Ind)^0.5, 'sc','MarkerSize',MeanMarkerSize,'MarkerFaceColor','c')
+%     hold on
     
     
     
     % Plot the spike rate in Hz of others calls Free session
     Ind = contains(SpikeRate.OthersCall_exptype, 'F');
-    Nevents(7:8) = sum(Ind).*ones(2,1);
-    scatter(7.*ones(sum(Ind),1)+rand([sum(Ind),1]).*0.4-0.2,SpikeRate.OthersCall_rate(Ind,1),ScatterMarkerSz,'k','o','filled')
+    Nevents(5:6) = sum(Ind).*ones(2,1);
+    swarmchart(5.*ones(sum(Ind),1),Fun(SpikeRate.OthersCall_rate(Ind,1)),ScatterMarkerSz,ColorOthers,'o','filled','MarkerFaceAlpha',0.5,'MarkerEdgeAlpha',0.5)
     hold on
-    errorbar(7,mean(SpikeRate.OthersCall_rate(Ind,1)),std(SpikeRate.OthersCall_rate(Ind,1))/sum(Ind)^0.5, 'sr','MarkerSize',MeanMarkerSize,'MarkerFaceColor','r')
+    errorbar(5,mean(Fun(SpikeRate.OthersCall_rate(Ind,1))),std(Fun(SpikeRate.OthersCall_rate(Ind,1)))/sum(Ind)^0.5, 'sr','MarkerSize',MeanMarkerSize,'MarkerFaceColor','r')
     hold on
-    scatter(8.*ones(sum(Ind),1)+rand([sum(Ind),1]).*0.4-0.2,SpikeRate.OthersCall_rate(Ind,2),ScatterMarkerSz,'k','o','filled')
+    swarmchart(6.*ones(sum(Ind),1),Fun(SpikeRate.OthersCall_rate(Ind,2)),ScatterMarkerSz,ColorBR,'o','filled','MarkerFaceAlpha',0.5,'MarkerEdgeAlpha',0.5)
     hold on
-    errorbar(8,mean(SpikeRate.OthersCall_rate(Ind,2)),std(SpikeRate.OthersCall_rate(Ind,2))/sum(Ind)^0.5, 'sc','MarkerSize',MeanMarkerSize,'MarkerFaceColor','c')
+    errorbar(6,nanmean(Fun(SpikeRate.OthersCall_rate(Ind,2))),nanstd(Fun(SpikeRate.OthersCall_rate(Ind,2)))/sum(Ind)^0.5, 'sc','MarkerSize',MeanMarkerSize,'MarkerFaceColor','c')
     hold on
     
 end
-LegendVoc = {'Self-Voc-Operant' 'bSelf-Voc-Operant' 'Self-Voc-Free' 'bSelf-Voc-Free' 'Others-Voc-Operant' 'bOthers-Voc-Operant' 'Others-Voc-Free' 'bOthers-Voc-Free'};
+LegendVoc = {'Self-Voc-Operant' 'bSelf-Voc-Operant' 'Self-Voc-Free' 'bSelf-Voc-Free' 'Others-Voc-Free' 'bOthers-Voc-Free'};
 % Indicate the number of events
 text(1,-0.5,sprintf('%d',Nevents(1)))
 text(2,-0.5,sprintf('%d',Nevents(2)))
@@ -88,20 +95,21 @@ text(3,-0.5,sprintf('%d',Nevents(3)))
 text(4,-0.5,sprintf('%d',Nevents(4)))
 text(5,-0.5,sprintf('%d',Nevents(5)))
 text(6,-0.5,sprintf('%d',Nevents(6)))
-text(7,-0.5,sprintf('%d',Nevents(7)))
-text(8,-0.5,sprintf('%d',Nevents(8)))
+% text(7,-0.5,sprintf('%d',Nevents(7)))
+% text(8,-0.5,sprintf('%d',Nevents(8)))
 
 if length(SpikeRate.BehavType)==0
     keyboard
 end
 
+% Plot Self non vocal behavior (Free session)
 LegendSNVB = cell(1,length(SpikeRate.BehavType));
 for bb=1:length(SpikeRate.BehavType)
     if ~isnan(SpikeRate.SelfNVBehav_rate{bb})
-        Jitter_local = rand([size(SpikeRate.SelfNVBehav_rate{bb},1),1]).*0.4-0.2;
-        scatter((bb+8).*ones(size(SpikeRate.SelfNVBehav_rate{bb},1),1)+Jitter_local,SpikeRate.SelfNVBehav_rate{bb},ScatterMarkerSz,'k','o','filled')
+%         Jitter_local = rand([size(SpikeRate.SelfNVBehav_rate{bb},1),1]).*0.4-0.2;
+        swarmchart((bb+6).*ones(size(SpikeRate.SelfNVBehav_rate{bb},1),1),Fun(SpikeRate.SelfNVBehav_rate{bb}),ScatterMarkerSz,ColorSelf,'o','filled','MarkerFaceAlpha',0.5,'MarkerEdgeAlpha',0.5)
         hold on
-        errorbar(bb+8,mean(SpikeRate.SelfNVBehav_rate{bb}),std(SpikeRate.SelfNVBehav_rate{bb})/size(SpikeRate.SelfNVBehav_rate{bb},1)^0.5, 'dr','MarkerSize',MeanMarkerSize,'MarkerFaceColor','r')
+        errorbar(bb+6,mean(Fun(SpikeRate.SelfNVBehav_rate{bb})),std(Fun(SpikeRate.SelfNVBehav_rate{bb}))/size(SpikeRate.SelfNVBehav_rate{bb},1)^0.5, 'dr','MarkerSize',MeanMarkerSize,'MarkerFaceColor','r')
         hold on
         
         if contains(SpikeRate.BehavType{bb}, 'teeth')
@@ -109,24 +117,25 @@ for bb=1:length(SpikeRate.BehavType)
         else
             LegendSNVB{bb} = sprintf('Self-%s',SpikeRate.BehavType{bb});
         end
-        text(bb+8,-0.5,sprintf('%d',size(SpikeRate.SelfNVBehav_rate{bb},1)))
+        text(bb+6,-0.5,sprintf('%d',size(SpikeRate.SelfNVBehav_rate{bb},1)))
     else
         if contains(SpikeRate.BehavType{bb}, 'teeth')
             LegendSNVB{bb} = sprintf('Self-%s','nailbiting');
         else
             LegendSNVB{bb} = sprintf('Self-%s',SpikeRate.BehavType{bb});
         end
-        text(bb+8,-0.5,'0')
+        text(bb+6,-0.5,'0')
     end
 end
 
+% Plot Others non vocal behavior (Free session)
 LegendONVB = cell(1,length(SpikeRate.BehavType));
 for bb=1:length(SpikeRate.BehavType)
     if ~isnan(SpikeRate.OthersNVBehav_rate{bb})
-        Jitter_local = rand([size(SpikeRate.OthersNVBehav_rate{bb},1),1]).*0.4-0.2;
-        scatter((bb+8+length(SpikeRate.BehavType)).*ones(size(SpikeRate.OthersNVBehav_rate{bb},1),1)+ Jitter_local,SpikeRate.OthersNVBehav_rate{bb},ScatterMarkerSz,'k','o','filled')
+%         Jitter_local = rand([size(SpikeRate.OthersNVBehav_rate{bb},1),1]).*0.4-0.2;
+        swarmchart((bb+6+length(SpikeRate.BehavType)).*ones(size(SpikeRate.OthersNVBehav_rate{bb},1),1),Fun(SpikeRate.OthersNVBehav_rate{bb}),ScatterMarkerSz,ColorOthers,'o','filled','MarkerFaceAlpha',0.5,'MarkerEdgeAlpha',0.5)
         hold on
-        errorbar(bb+8+length(SpikeRate.BehavType),mean(SpikeRate.OthersNVBehav_rate{bb}),std(SpikeRate.SelfNVBehav_rate{bb})/size(SpikeRate.SelfNVBehav_rate{bb},1)^0.5, 'sr','MarkerSize',MeanMarkerSize,'MarkerFaceColor','r')
+        errorbar(bb+6+length(SpikeRate.BehavType),mean(Fun(SpikeRate.OthersNVBehav_rate{bb})),std(Fun(SpikeRate.SelfNVBehav_rate{bb}))/size(SpikeRate.SelfNVBehav_rate{bb},1)^0.5, 'sr','MarkerSize',MeanMarkerSize,'MarkerFaceColor','r')
         hold on
         
         if contains(SpikeRate.BehavType{bb}, 'teeth')
@@ -134,14 +143,14 @@ for bb=1:length(SpikeRate.BehavType)
         else
             LegendONVB{bb} = sprintf('Others-%s',SpikeRate.BehavType{bb});
         end
-        text(bb+8+length(SpikeRate.BehavType),-0.5,sprintf('%d',size(SpikeRate.OthersNVBehav_rate{bb},1)))
+        text(bb+6+length(SpikeRate.BehavType),-0.5,sprintf('%d',size(SpikeRate.OthersNVBehav_rate{bb},1)))
     else
         if contains(SpikeRate.BehavType{bb}, 'teeth')
             LegendONVB{bb} = sprintf('Others-%s','nailbiting');
         else
             LegendONVB{bb} = sprintf('Others-%s',SpikeRate.BehavType{bb});
         end
-        text(bb+8+length(SpikeRate.BehavType),-0.5,'0')
+        text(bb+6+length(SpikeRate.BehavType),-0.5,'0')
     end
         
 end
@@ -150,14 +159,14 @@ ylabel('Spike rate (Hz)')
 FullLegend = [LegendVoc LegendSNVB LegendONVB];
 set(gca,'XTick', 1:length(FullLegend),'XTickLabel',FullLegend)
 title(sprintf('Mean rate\n%s on %s Tetrode %s SS%s %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{3},NeuralInputID{2}))
-xlim(gca,[0 8+2*length(SpikeRate.BehavType)+1])
+xlim(gca,[0 6+2*length(SpikeRate.BehavType)+1])
 
 orient(Fig,'landscape')
 Fig.PaperPositionMode = 'auto';
 set(Fig,'PaperOrientation','landscape');
 Fig.Units = 'inches';
 Fig.Children.YLim(1)=-1;
-Fig.Children.YLim(2) = max(1,Fig.Children.YLim(2));
+Fig.Children.YLim(2) = min(100, max(1,Fig.Children.YLim(2)));
 FigPosition = Fig.Position;
 Fig.Position = [FigPosition(1:2) 10 4];
 xtickangle(20)

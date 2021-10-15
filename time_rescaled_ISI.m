@@ -1,5 +1,5 @@
 function [ISIvecnew, ISIvecold, Rescaled_spikes]=time_rescaled_ISI(Spiketrains, RateVecs)
-% this function gets time rescaled ISIs according to time varying rate RateVecs and original ISIs ISI = InetrSpike intervals
+% this function gets time rescaled ISIs according to time varying rate RateVecs and original ISIs ISI = InterSpike intervals
 % SpikeTrains is a cell array of spike patterns sample at 1000Hz with one
 % cell per stimulus/vocalization/event
 % RateVecs is the estimated time varying rate (FS = 1000Hz) for each of
@@ -15,7 +15,7 @@ if NEvents==1 && ~iscell(RateVecs)
 end
 for ee=1:NEvents
     Meanrate=mean(RateVecs{ee});
-    if Meanrate==0
+    if isnan(Meanrate) || Meanrate==0
         fprintf(1,'no spikes in mean for Event %d\n', ee);
         Rescaled_spikes{ee}=Spiketrains{ee};
         continue

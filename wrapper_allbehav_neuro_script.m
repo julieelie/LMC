@@ -141,6 +141,8 @@ end
 GoodCellIndices = find(contains(SSQ_Files2Run, 'SS'));
 fprintf(' DONE \n')
 save('GoodCellIndicesHo.mat','GoodCellIndices')
+
+
 %% Extract the neural data corresponding to the bouts of vocalizations identified
 % by voc_localize and voc_localize_operant (run by result_operant_bat.m) for each cell
 fprintf(' EXTRACTING NEURAL DATA CORRESPONDING TO VOCALIZATIONS.... \n')
@@ -154,6 +156,8 @@ for ss=83:length(GoodCellIndices)
 end
 fprintf(' DONE \n')
 % Data for each unit and each experimental session are saved as sprintf('%s_%s_%s_SS%s_%s-%s.mat', SubjectID, Date, ExpStartTime,SSQ,TetrodeID,SSID)
+
+
 %% Extract the neural data corresponding to the behaviors identified during the free session
 % by get_logger_data_behav (run by result_reconly_bat.m) for each cell
 fprintf(' EXTRACTING NEURAL DATA CORRESPONDING TO OTHER BEHAVIORS.... ')
@@ -165,6 +169,8 @@ for ss=1:length(GoodCellIndices)
 end
 fprintf(' DONE \n')
 % Data for each unit and each experimental session are saved as or apppended to sprintf('%s_%s_%s_SS%s_%s-%s.mat', SubjectID, Date, ExpStartTime,SSQ, TetrodeID,SSID)
+
+
 %% Organizing the data as a single file for all behaviors
 fprintf(' COMPILING NEURAL DATA .... ')
 % turn off warnings for python saving issues
@@ -179,6 +185,8 @@ end
 warning('on',id)
 fprintf(' DONE \n')
 % Data for each unit and all experimental session are appended to: sprintf('%s_%s_SS%s_%s-%s.mat', SubjectID, Date,SSQ,TetrodeID,SSID) 
+
+
 %% Calculating the average spike rate during various types of behaviors including vocalizations
 fprintf(' CALCULATING SPIKE RATE CORRESPONDING TO ALL BEHAVIORS.... ')
 
@@ -188,6 +196,8 @@ for ss=1:length(GoodCellIndices)
 end
 fprintf(' DONE \n')
 % Data for each unit and all experimental session are appended to: sprintf('%s_%s_SS%s_%s-%s.mat', SubjectID, Date,SSQ,TetrodeID,SSID) 
+
+
 %% calculate the KDE SPIKE RATE of vocalizations
 fprintf(1,' CALCULATING KDE OF THE TIME-VARYING SPIKE RATE CORRESPONDING TO VOCALIZATIONS\n');
 Delay = [5000 5000];
@@ -196,6 +206,8 @@ for ss=1:length(GoodCellIndices)
     cal_kderatevoc_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath,Delay)
 end
 fprintf(' DONE \n')
+
+
 %% Plot the average spike rate during various types of behaviors including vocalizations
 fprintf(' PLOTING NEURAL DATA (Av RATE) CORRESPONDING TO ALL BEHAVIORS.... ')
 
