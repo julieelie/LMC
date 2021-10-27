@@ -11,21 +11,21 @@ BasePath = '/Volumes/JulieE8T';
 ListOfPaths = gather_operant_datapath(BasePath);
 
 
-Path2Run = find(contains(ListOfPaths, 'HoHa'));
-Path2Run(contains(ListOfPaths(Path2Run), '20190207'))=[]; % No Neural Data in Hodor
-Path2Run(contains(ListOfPaths(Path2Run), '20190213'))=[]; % No Neural Data in Hodor
-Path2Run(contains(ListOfPaths(Path2Run), '20190214'))=[]; % No Neural Data in Hodor
+% Path2Run = find(contains(ListOfPaths, 'HoHa'));
+% Path2Run(contains(ListOfPaths(Path2Run), '20190207'))=[]; % No Neural Data in Hodor
+% Path2Run(contains(ListOfPaths(Path2Run), '20190213'))=[]; % No Neural Data in Hodor
+% Path2Run(contains(ListOfPaths(Path2Run), '20190214'))=[]; % No Neural Data in Hodor
 
-%  Path2Run = find(contains(ListOfPaths, 'CoEd'));
-%  Path2Run(contains(ListOfPaths(Path2Run), '20190703'))=[];
-%  Path2Run(contains(ListOfPaths(Path2Run), '20190709'))=[];
-%  Path2Run(contains(ListOfPaths(Path2Run), '190701_0951'))=[];
-%  Path2Run(contains(ListOfPaths(Path2Run), '2020'))=[];
-%  Path2Run(contains(ListOfPaths(Path2Run), '201905'))=[];% No neural data
-%  Path2Run(contains(ListOfPaths(Path2Run), '190605_1406'))=[]; % No vocalization
-%  Path2Run(contains(ListOfPaths(Path2Run), '190603_1039'))=[]; % No vocalization
-%  Path2Run(contains(ListOfPaths(Path2Run), '190606_1540'))=[]; % This is not operant but free session, error in choosing the right expe
-%  Path2Run(contains(ListOfPaths(Path2Run), '20190712'))=[]; % No neural data
+ Path2Run = find(contains(ListOfPaths, 'CoEd'));
+ Path2Run(contains(ListOfPaths(Path2Run), '20190703'))=[];
+ Path2Run(contains(ListOfPaths(Path2Run), '20190709'))=[];
+ Path2Run(contains(ListOfPaths(Path2Run), '190701_0951'))=[];
+ Path2Run(contains(ListOfPaths(Path2Run), '2020'))=[];
+ Path2Run(contains(ListOfPaths(Path2Run), '201905'))=[];% No neural data
+ Path2Run(contains(ListOfPaths(Path2Run), '190605_1406'))=[]; % No vocalization
+ Path2Run(contains(ListOfPaths(Path2Run), '190603_1039'))=[]; % No vocalization
+ Path2Run(contains(ListOfPaths(Path2Run), '190606_1540'))=[]; % This is not operant but free session, error in choosing the right expe
+ Path2Run(contains(ListOfPaths(Path2Run), '20190712'))=[]; % No neural data
 %%
 fprintf(1, 'Running result operant bat on %d sessions', length(Path2Run))
 for pp=20:length(Path2Run)
@@ -69,17 +69,17 @@ end
 %% RUN audio data and other behavior extraction for the reconly sessions
 List2RecOnlyPath = gather_reconly_datapath(BasePath);
 %%
-% Path2RunRecOnly = find(contains(List2RecOnlyPath, 'CoEd'));
-% Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '201905'))=[];% No neural data
-% Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '190605_1553'))=[]; % Clock jump, no data to extract
-% Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190703'))=[];% No TTL Pulses
-% Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190709'))=[];% No TTL Pulses
-% Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190619'))=[];% Issue of clock drift for logger 49 and 12
+Path2RunRecOnly = find(contains(List2RecOnlyPath, 'CoEd'));
+Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '201905'))=[];% No neural data
+Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '190605_1553'))=[]; % Clock jump, no data to extract
+Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190703'))=[];% No TTL Pulses
+Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190709'))=[];% No TTL Pulses
+Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190619'))=[];% Issue of clock drift for logger 49 and 12
 
-Path2RunRecOnly = find(contains(List2RecOnlyPath, 'HoHa'));
-Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190131'))=[];% Allignment issue as of now no neural data extracted
-Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190202_1400'))=[];% No logger data
-Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190207'))=[]; % No Neural Data in Hodor
+% Path2RunRecOnly = find(contains(List2RecOnlyPath, 'HoHa'));
+% Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190131'))=[];% Allignment issue as of now no neural data extracted
+% Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190202_1400'))=[];% No logger data
+% Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190207'))=[]; % No Neural Data in Hodor
 %%
 for pp= 1:length(Path2RunRecOnly) 
 
@@ -94,10 +94,11 @@ end
 %OutputPath = '/Users/elie/Documents/LMCResults';
 OutputPath = '/Volumes/JulieE8T/LMCResults';
 [ListSSU] = gather_neural_datapath(BasePath);
+save(fullfile(OutputPath,'ListSSU.mat'), 'ListSSU')
 % Define the path were the data will be saved
 % OutputPath = fullfile(BasePath, 'ResultsFiles');
-% Files2Run = find(contains(ListSSU,'LMC_CoEd') .* ~contains(ListSSU, '20200109'));
-Files2Run = find(contains(ListSSU,'LMC_HoHa'));
+Files2Run = find(contains(ListSSU,'LMC_CoEd') .* ~contains(ListSSU, '20200109'));
+% Files2Run = find(contains(ListSSU,'LMC_HoHa'));
 %% Sanitary check of neurons
 % ( calculate the average spike rate over the...
 % whole experiment, measure stability, quality...
@@ -150,7 +151,7 @@ NeuralBuffer = 5000; %duration of the time buffer in
 %       ms that should be added before and after the onset and offset time
 %       of vocalizations for extracting neural data.
 
-for ss=83:length(GoodCellIndices)
+for ss=475:length(GoodCellIndices)
     fprintf(1,'Cell %d/%d: %s \n',ss,length(GoodCellIndices),ListSSU{Files2Run(GoodCellIndices(ss))})
     cut_neuralData_voc_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath,NeuralBuffer)
 end
@@ -163,7 +164,7 @@ fprintf(' DONE \n')
 fprintf(' EXTRACTING NEURAL DATA CORRESPONDING TO OTHER BEHAVIORS.... ')
 
 
-for ss=1:length(GoodCellIndices)
+for ss=475:length(GoodCellIndices)
     fprintf(1,'Cell %d/%d\n',ss,length(GoodCellIndices))
     cut_neuralData_behav_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath)
 end
@@ -178,7 +179,7 @@ id = 'MATLAB:Python:UnsupportedLoad';
 warning('off',id)
 
 
-for ss=93:length(GoodCellIndices)
+for ss=475:length(GoodCellIndices)
     fprintf(1,'Cell %d/%d  %s\n',ss,length(GoodCellIndices), ListSSU{Files2Run(GoodCellIndices(ss))})
     neuralData_compile_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath, NeuralBuffer)
 end
@@ -190,7 +191,7 @@ fprintf(' DONE \n')
 %% Calculating the average spike rate during various types of behaviors including vocalizations
 fprintf(' CALCULATING SPIKE RATE CORRESPONDING TO ALL BEHAVIORS.... ')
 
-for ss=1:length(GoodCellIndices)
+for ss=475:length(GoodCellIndices)
     fprintf(1,'Cell %d/%d\n',ss,length(GoodCellIndices))
     cal_spikerate_perfile(ListSSU{Files2Run(GoodCellIndices(ss))},OutputPath)
 end
@@ -201,7 +202,7 @@ fprintf(' DONE \n')
 %% calculate the KDE SPIKE RATE of vocalizations
 fprintf(1,' CALCULATING KDE OF THE TIME-VARYING SPIKE RATE CORRESPONDING TO VOCALIZATIONS\n');
 Delay = [5000 5000];
-for ss=1:length(GoodCellIndices)
+for ss=475:length(GoodCellIndices)
     fprintf(1,'Cell %d/%d\n',ss,length(GoodCellIndices))
     cal_kderatevoc_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath,Delay)
 end
@@ -211,7 +212,7 @@ fprintf(' DONE \n')
 %% Plot the average spike rate during various types of behaviors including vocalizations
 fprintf(' PLOTING NEURAL DATA (Av RATE) CORRESPONDING TO ALL BEHAVIORS.... ')
 
-for ss=138:384 %length(GoodCellIndices)
+for ss=475:length(GoodCellIndices)
     fprintf(1,'Cell %d/%d\n',ss,length(GoodCellIndices))
     plot_av_spikerate_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath)
 end
@@ -219,10 +220,10 @@ fprintf(' DONE \n')
 % The plot is saved under OutputPath as sprintf('%s_%s_%s_SS%s_%s-%s_MeanRateScatter.pdf', SubjectID, SSQ,TetrodeID,SSID))
 %% Plot rasters for vocalizations
 fprintf(1,' RASTER PLOTS (AND KDE) of NEURAL DATA CORRESPONDING TO VOCALIZATIONS\n');
-Delay = [1000 1000];
+Delay = [500 500];
 PlotDyn = 0; %Set to 1 to plot dnamic plots
-DurOrd = 1; % set to 1 to order neural responses by increasing vocalization duration
-for ss=1:length(GoodCellIndices)
+DurOrd = 0; % set to 1 to order neural responses by increasing vocalization duration
+for ss=475:length(GoodCellIndices)
     fprintf(1,'Cell %d/%d\n',ss,length(GoodCellIndices))
     plot_rastervoc_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath, Delay, PlotDyn, DurOrd)
     close all
@@ -232,7 +233,7 @@ fprintf(' DONE \n')
 %% Plot the time varying rate of vocalizations
 fprintf(1,' PLOTING KDE OF THE TIME-VARYING SPIKE RATE CORRESPONDING TO VOCALIZATIONS\n');
 
-for ss=1:length(GoodCellIndices)
+for ss=475:length(GoodCellIndices)
     fprintf(1,'Cell %d/%d\n',ss,length(GoodCellIndices))
     plot_kderatevoc_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath, Delay)
 end
