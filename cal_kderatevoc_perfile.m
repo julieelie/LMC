@@ -103,7 +103,7 @@ if ~isempty(IndVocHDO) && length(IndVocHDO)>MinNumCall
         [KDE_offset.OthersTrOp] = kderate_offset(Data.SpikesArrivalTimes_Behav(IndTrHDO),Data.Duration(IndTrHDO),Delay,Bin_ms);
     end
     IndBaHDO = intersect(IndBa, IndVocHDO);
-    if length(IndBaPDO)>MinNumCall
+    if length(IndBaHDO)>MinNumCall
         [KDE_onset.OthersBaOp] = kderate_onset(Data.SpikesArrivalTimes_Behav(IndBaHDO),Data.Duration(IndBaHDO),Delay,Bin_ms);
         [KDE_offset.OthersBaOp] = kderate_offset(Data.SpikesArrivalTimes_Behav(IndBaHDO),Data.Duration(IndBaHDO),Delay,Bin_ms);
     end
@@ -135,7 +135,7 @@ if ~isempty(IndVocHDF) && length(IndVocHDF)>MinNumCall
         [KDE_offset.OthersTrFr] = kderate_offset(Data.SpikesArrivalTimes_Behav(IndTrHDF),Data.Duration(IndTrHDF),Delay,Bin_ms);
     end
     IndBaHDF = intersect(IndBa, IndVocHDF);
-    if length(IndBaPDO)>MinNumCall
+    if length(IndBaHDF)>MinNumCall
         [KDE_onset.OthersBaFr] = kderate_onset(Data.SpikesArrivalTimes_Behav(IndBaHDF),Data.Duration(IndBaHDF),Delay,Bin_ms);
         [KDE_offset.OthersBaFr] = kderate_offset(Data.SpikesArrivalTimes_Behav(IndBaHDF),Data.Duration(IndBaHDF),Delay,Bin_ms);
     end

@@ -97,7 +97,8 @@ OutputPath = '/Volumes/JulieE8T/LMCResults';
 save(fullfile(OutputPath,'ListSSU.mat'), 'ListSSU')
 % Define the path were the data will be saved
 % OutputPath = fullfile(BasePath, 'ResultsFiles');
-Files2Run = find(contains(ListSSU,'LMC_CoEd') .* ~contains(ListSSU, '20200109'));
+% Files2Run = find(contains(ListSSU,'LMC_CoEd') .* ~contains(ListSSU, '20200109'));
+% Files2Run = find(contains(ListSSU,'65701') .* ~contains(ListSSU, '20200109'));
 % Files2Run = find(contains(ListSSU,'LMC_HoHa'));
 %% Sanitary check of neurons
 % ( calculate the average spike rate over the...
@@ -107,8 +108,8 @@ fprintf('NEURONS SANITARY CHECK.... ')
 % Files2Run = 1:length(ListSSU);
 % Files2Run = [1:29 87:108];
 %  Files2Run=1:488 cells for Co; 123 cells for Ho
-for ss=1:length(Files2Run)
-    fprintf(1,'File %d/%d\n',ss,length(Files2Run))
+for ss=241:length(Files2Run)
+    fprintf(1,'File %d/%d: %s\n',ss,length(Files2Run),ListSSU{Files2Run(ss)})
     sanitary_check_perSSfile(ListSSU{Files2Run(ss)}, OutputPath)
 end
 fprintf(' DONE \n')
@@ -141,7 +142,7 @@ for ss=1:length(Files2Run)
 end
 GoodCellIndices = find(contains(SSQ_Files2Run, 'SS'));
 fprintf(' DONE \n')
-save('GoodCellIndicesHo.mat','GoodCellIndices')
+save('GoodCellIndicesEd.mat','GoodCellIndices')
 
 
 %% Extract the neural data corresponding to the bouts of vocalizations identified
@@ -151,7 +152,7 @@ NeuralBuffer = 5000; %duration of the time buffer in
 %       ms that should be added before and after the onset and offset time
 %       of vocalizations for extracting neural data.
 
-for ss=475:length(GoodCellIndices)
+for ss=31:length(GoodCellIndices)
     fprintf(1,'Cell %d/%d: %s \n',ss,length(GoodCellIndices),ListSSU{Files2Run(GoodCellIndices(ss))})
     cut_neuralData_voc_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath,NeuralBuffer)
 end
@@ -164,7 +165,7 @@ fprintf(' DONE \n')
 fprintf(' EXTRACTING NEURAL DATA CORRESPONDING TO OTHER BEHAVIORS.... ')
 
 
-for ss=475:length(GoodCellIndices)
+for ss=1:length(GoodCellIndices)
     fprintf(1,'Cell %d/%d\n',ss,length(GoodCellIndices))
     cut_neuralData_behav_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath)
 end
@@ -179,7 +180,7 @@ id = 'MATLAB:Python:UnsupportedLoad';
 warning('off',id)
 
 
-for ss=475:length(GoodCellIndices)
+for ss=1:length(GoodCellIndices)
     fprintf(1,'Cell %d/%d  %s\n',ss,length(GoodCellIndices), ListSSU{Files2Run(GoodCellIndices(ss))})
     neuralData_compile_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath, NeuralBuffer)
 end
@@ -191,7 +192,7 @@ fprintf(' DONE \n')
 %% Calculating the average spike rate during various types of behaviors including vocalizations
 fprintf(' CALCULATING SPIKE RATE CORRESPONDING TO ALL BEHAVIORS.... ')
 
-for ss=475:length(GoodCellIndices)
+for ss=1:length(GoodCellIndices)
     fprintf(1,'Cell %d/%d\n',ss,length(GoodCellIndices))
     cal_spikerate_perfile(ListSSU{Files2Run(GoodCellIndices(ss))},OutputPath)
 end
@@ -202,7 +203,7 @@ fprintf(' DONE \n')
 %% calculate the KDE SPIKE RATE of vocalizations
 fprintf(1,' CALCULATING KDE OF THE TIME-VARYING SPIKE RATE CORRESPONDING TO VOCALIZATIONS\n');
 Delay = [5000 5000];
-for ss=475:length(GoodCellIndices)
+for ss=1:length(GoodCellIndices)
     fprintf(1,'Cell %d/%d\n',ss,length(GoodCellIndices))
     cal_kderatevoc_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath,Delay)
 end
@@ -212,7 +213,7 @@ fprintf(' DONE \n')
 %% Plot the average spike rate during various types of behaviors including vocalizations
 fprintf(' PLOTING NEURAL DATA (Av RATE) CORRESPONDING TO ALL BEHAVIORS.... ')
 
-for ss=475:length(GoodCellIndices)
+for ss=1:length(GoodCellIndices)
     fprintf(1,'Cell %d/%d\n',ss,length(GoodCellIndices))
     plot_av_spikerate_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath)
 end
@@ -223,7 +224,7 @@ fprintf(1,' RASTER PLOTS (AND KDE) of NEURAL DATA CORRESPONDING TO VOCALIZATIONS
 Delay = [500 500];
 PlotDyn = 0; %Set to 1 to plot dnamic plots
 DurOrd = 0; % set to 1 to order neural responses by increasing vocalization duration
-for ss=475:length(GoodCellIndices)
+for ss=1:length(GoodCellIndices)
     fprintf(1,'Cell %d/%d\n',ss,length(GoodCellIndices))
     plot_rastervoc_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath, Delay, PlotDyn, DurOrd)
     close all

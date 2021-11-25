@@ -246,7 +246,7 @@ for ff=1:length(DataDir)
                     keyboard
                 end
                 load(fullfile(DataFileWho(nf).folder, DataFileWho(nf).name), 'IndVocStartRaw_merged','IndVocStopRaw_merged', 'IndVocStartPiezo_merged', 'IndVocStopPiezo_merged','BioSoundCalls','AudioGood','BioSoundFilenames');
-                if (length(AudioGood) == sum(isnan(AudioGood))) && ~isempty(AudioGood)
+                if strcmp(SessionType_local, 'F') && ((length(AudioGood) == sum(isnan(AudioGood))) && ~isempty(AudioGood))
                     warning('AudioQuatlity was probably not assessed')
                     keyboard
                 end

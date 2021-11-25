@@ -3,7 +3,9 @@ function Coherence = coherence4LMC(Cell, Self, Session, FeatureName, Trill, Nvoc
 % Session = 'Operant' or 'Free'
 % FeatureName = 'amp' or 'SpectralMean' or 'sal' The feature on which the
 % coherece should be calculated
-% Trill=0; % Set to 1 to only do calculations on Trill calls, set to 0 to do calculations on all calls
+% Trill=0; % Set to 1 to only do calculations on Trill calls, set to 0 to
+% do calculations on all calls, set to 2 to only do calculations on
+% non-Trill
 % here we calculate the coherency between the neural response and the
 % acoustic features
 if nargin<4
@@ -65,15 +67,17 @@ else
             IndVoc = intersect(IndVoc, find(Cell.AudioQuality==1));
         end
     end
-    if Trill % Only select Trill vocalizations
+    if Trill==1 % Only select Trill vocalizations
         IndVoc = intersect(IndVoc, find(contains(Cell.What, 'Tr')));
+    elseif Trill==2
+        IndVoc = intersect(IndVoc, find(contains(Cell.What, 'Ba')));
     end
     if Nvoc % We want to caclulate coherence on a fix number of vocalizations, randomly select these
         RandIndVoc = IndVoc(randperm(length(IndVoc)));
         IndVoc = RandIndVoc(1:Nvoc);
     end
     NStims = length(IndVoc);
-    if NStims<10
+    if NStims<20
         fprintf(1, '*** Problem with Cell: Not enough vocalizations only %d\n', NStims)
         Coherence.Error = sprintf('Not enough vocalizations only %d\n', NStims);
         fprintf(1, '------------------Done with Calculations %s %s Self=%d in %ds-------------------\n',  FeatureName, Session, Self,toc(CellTimer));

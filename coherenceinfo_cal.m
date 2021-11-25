@@ -192,7 +192,7 @@ if PlotCoherenceFig
     
     if ~isempty(FirstNonSigCoherenceFreq)
         if ~isempty(CoherencePeaksF)
-            maxFreqInd = max(find(Freqs == max(CoherencePeaksF)), find(FirstNonSigCoherenceFreq==Freqs)) +2;
+            maxFreqInd = min(max(find(Freqs == max(CoherencePeaksF)), find(FirstNonSigCoherenceFreq==Freqs)) +2, length(Freqs));
         else
             maxFreqInd = find(FirstNonSigCoherenceFreq==Freqs) +2;
         end

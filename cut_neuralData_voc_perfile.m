@@ -429,7 +429,7 @@ end
                     OutData.ReTime(vv) = Re_transc_time(vv) - Voc_transc_time(ii,1);
                 else
                     warning('Discrepancy between the guessed reward time given the vocalization onset times and the order in which they are in Re_transc_time\n')
-                    keyboard
+%                     keyboard
                     GuessVV = Re_transc_time(vv) - Voc_transc_time(ii,1);
                     GuessVVTC = Re_transc_time(vv_timecheck) - Voc_transc_time(ii,1);
                     if isnan(GuessVV) && isempty(GuessVVTC) || (GuessVV)<0 && isempty(GuessVVTC)
