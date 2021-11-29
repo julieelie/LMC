@@ -40,7 +40,7 @@ for df=1:length(DataFiles) %1
         continue
         
     elseif exist('AudioGood', 'var') && isnan(AudioGood(end))
-        GoAudioGood = input('It looks like we should start from here because the last vocalization is labelled as NaN in AudioGood\n There is however %d Nan\n Resume audioGood:1 skip and check the next file:0\n');
+        GoAudioGood = input(sprintf('It looks like we should start from here because the last vocalization is labelled as NaN in AudioGood\n There is however %d Nan\n Resume audioGood:1 skip and check the next file:0\n', sum(isnan(AudioGood))));
         if GoAudioGood
             Rangevv = find(isnan(AudioGood));
             load(fullfile(DataFile.folder, DataFile.name), 'BioSoundCalls', 'RMS', 'Duration','CorrPiezoRaw')

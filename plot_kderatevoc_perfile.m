@@ -34,12 +34,12 @@ load(FullDataSetFile, 'KDE_onset','KDE_offset');
 %     print(Fig1,fullfile(OutputPath,sprintf('%s_KDEVoc_AllSession_%d_%d.pdf', FileNameBase, Delay(1),Delay(2))),'-dpdf','-fillpage')    
 % end
 
-%% KDE Trill vs Ba in Operant vs Free from self
+%% KDE Trill vs Ba in Operant vs Free, from self
 ColOp = [0.8500, 0.3250, 0.0980];
 ColFr = [0.6350, 0.0780, 0.1840];
 if isfield(KDE_onset, 'SelfTrFr') && isfield(KDE_onset,'SelfBaFr') && isfield(KDE_onset, 'SelfTrOp') && isfield(KDE_onset,'SelfBaOp')
     Fig1 = kdeplot2v2(KDE_onset.SelfTrOp,KDE_onset.SelfBaOp,KDE_onset.SelfTrFr,KDE_onset.SelfBaFr,ColOp,ColFr,'Trill Operant','non-Trill Operant', 'Trill Free', 'non-Trill Free');
-    suplabel('Self vocalizations all sessions','t');
+    suplabel('Self vocalizations both sessions','t');
     orient(Fig1,'landscape')
     print(Fig1,fullfile(OutputPath,sprintf('%s_KDESelfVoc_OpFre_%d_%d.pdf', FileNameBase, Delay(1),Delay(2))),'-dpdf','-fillpage')
 end
@@ -78,8 +78,8 @@ end
 ColOp = [0.8500, 0.3250, 0.0980];
 ColFr = [0.6350, 0.0780, 0.1840];
 if isfield(KDE_onset, 'SelfVocOp') && isfield(KDE_onset,'SelfVocFr')
-    Fig1 = kdeplot1v1_on(KDE_onset.SelfVocOp,KDE_onset.SelfVocFr,KDE_offset.SelfVocOp,KDE_offset.SelfVocFr,ColOp,ColFr,'Operant','Free session');
-    suplabel('Self vocalizations all sessions','t');
+    Fig1 = kdeplot1v1_on(KDE_onset.SelfVocOp,KDE_onset.SelfVocFr,ColOp,ColFr,'Operant','Free');
+    suplabel('Self vocalizations both sessions','t');
     orient(Fig1,'landscape')
     print(Fig1,fullfile(OutputPath,sprintf('%s_KDESelfVoc_OpvsFr_%d_%d.pdf', FileNameBase, Delay(1),Delay(2))),'-dpdf','-fillpage')
 end
@@ -197,23 +197,24 @@ close all
         title('Vocalization Onset')
         
         subplot(1,2,2)
-        Xt1
-        plot(Dat1(2,:),Dat1(1,:),'-','Color',Col1,'LineWidth',2)
+        Xt1 = logical((Dat1(2,:)>=-Delay(1)/10) .* (Dat1(2,:)<=2*Delay(1)/10));
+        plot(Dat1(2,Xt1),Dat1(1,Xt1),'-','Color',Col1,'LineWidth',2)
         hold on
-        plot(Dat2(2,:),Dat2(1,:),'-','Color',Col2,'LineWidth',2)
+        Xt2 = logical((Dat2(2,:)>=-Delay(1)/10) .* (Dat2(2,:)<=2*Delay(1)/10));
+        plot(Dat2(2,Xt2),Dat2(1,Xt2),'-','Color',Col2,'LineWidth',2)
         legend(Legend1,Legend2,'AutoUpdate','off')
         hold on
-        shadedErrorBar(Dat1(2,:),Dat1(1,:),Dat1(3:4,:),{'-','Color',Col1, 'LineWidth',2})
+        shadedErrorBar(Dat1(2,Xt1),Dat1(1,Xt1),Dat1(3:4,Xt1),{'-','Color',Col1, 'LineWidth',2})
         hold on
-        shadedErrorBar(Dat2(2,:),Dat2(1,:),Dat2(3:4,:),{'-','Color',Col2, 'LineWidth',2})
+        shadedErrorBar(Dat2(2,Xt2),Dat2(1,Xt2),Dat2(3:4,Xt2),{'-','Color',Col2, 'LineWidth',2})
         hold on
         VL = vline(0,':k');
         VL.LineWidth = 2;
         hold off
-        xlim([-Delay(1) Delay(2)])
+        xlim([-Delay(1)/10 2*Delay(2)/10])
         xlabel('Time (ms)')
         ylabel('Rate (Hz)')
-        title('Vocalization Offset')
+        title('Vocalization Onset')
     end
 
     function [FigHand] = kdeplot2v2(Dat1,Dat2,Dat3,Dat4,Col1,Col2,Legend1,Legend2, Legend3, Legend4)
@@ -245,16 +246,16 @@ close all
         title('Vocalization Onset')
         
         subplot(1,2,2)
-        Xt1 = logical((Dat1(2,:)>=-Delay(1)/10) .* (Dat1(2,:)<=Delay(1)/10));
+        Xt1 = logical((Dat1(2,:)>=-Delay(1)/10) .* (Dat1(2,:)<=2*Delay(1)/10));
         plot(Dat1(2,Xt1),Dat1(1,Xt1),'-','Color',Col1,'LineWidth',2)
         hold on
-        Xt2 = logical((Dat2(2,:)>=-Delay(1)/10) .* (Dat2(2,:)<=Delay(1)/10));
+        Xt2 = logical((Dat2(2,:)>=-Delay(1)/10) .* (Dat2(2,:)<=2*Delay(1)/10));
         plot(Dat2(2,Xt2),Dat2(1,Xt2),'--','Color',Col1,'LineWidth',2)
         hold on
-        Xt3 = logical((Dat3(2,:)>=-Delay(1)/10) .* (Dat3(2,:)<=Delay(1)/10));
+        Xt3 = logical((Dat3(2,:)>=-Delay(1)/10) .* (Dat3(2,:)<=2*Delay(1)/10));
         plot(Dat3(2,Xt3),Dat3(1,Xt3),'-','Color',Col2,'LineWidth',2)
         hold on
-        Xt4 = logical((Dat4(2,:)>=-Delay(1)/10) .* (Dat4(2,:)<=Delay(1)/10));
+        Xt4 = logical((Dat4(2,:)>=-Delay(1)/10) .* (Dat4(2,:)<=2*Delay(1)/10));
         plot(Dat4(2,Xt4),Dat4(1,Xt4),'--','Color',Col2,'LineWidth',2)
         legend(Legend1,Legend2,Legend3, Legend4,'AutoUpdate','off')
         hold on
@@ -269,7 +270,7 @@ close all
         VL = vline(0,':k');
         VL.LineWidth = 2;
         hold off
-        xlim([-Delay(1)/10 Delay(2)/10])
+        xlim([-Delay(1)/10 2*Delay(2)/10])
         xlabel('Time (ms)')
         ylabel('Rate (Hz)')
         title('Vocalization Onset')
