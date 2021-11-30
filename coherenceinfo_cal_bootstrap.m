@@ -23,9 +23,9 @@ Coherence_low = (CSR_low.^2) .* closgn; %Coherence_low{cc} can be negative, mult
 CoherenceLow4Info = Coherence_low;
 
 %% restrict frequencies analyzed to the requested cutoff and minimum frequency given the window size
-freqCutoff = Nyquist; % keep all frequencies up to Nyquist as of now
-if freqCutoff ~= -1
-    eindx = find(Freqs4Info < freqCutoff,1,'last');
+freqCutoff1 = Nyquist; % keep all frequencies up to Nyquist as of now
+if freqCutoff1 ~= -1
+    eindx = find(Freqs4Info < freqCutoff1,1,'last');
     indx = 1:eindx;
     
     Freqs4Info = Freqs4Info(indx);
@@ -48,12 +48,21 @@ end
 
 %% if the clower goes below zero set all values to zero and keep track fo that first value of frequency for which the coherence is non significant
 cutoffIndex = find(CoherenceLow4Info < 0, 1, 'first');
-if (isempty(cutoffIndex))
+if (isempty(cutoffIndex)) % all frequecnises are significant
     cutoffIndex = length(CoherenceLow4Info);
+    freqCutoff = Freqs4Info(cutoffIndex);
 elseif cutoffIndex==1 % The first frequency is not significant, try to find the next non significant that follows the significant ones
-    cutoffIndex = find(find(CoherenceLow4Info < 0)> find(CoherenceLow4Info > 0,1,'first'),1,'first');
+    if any(CoherenceLow4Info > 0) % If there is any significant value of coherence accross all frequencies
+        NegCoherenceIndices = find(CoherenceLow4Info < 0);
+        cutoffIndex = NegCoherenceIndices(find(NegCoherenceIndices> find(CoherenceLow4Info > 0,1,'first'),1,'first'));
+        freqCutoff = Freqs4Info(cutoffIndex);
+    else
+        freqCutoff = 0;
+    end
+else % keep the value, everything is ok
+    freqCutoff = Freqs4Info(cutoffIndex);
 end
-freqCutoff = Freqs4Info(cutoffIndex);
+
 FirstNonSigCoherenceFreq = freqCutoff;
 
 %% Calculate the coherence weighted significant frequencies

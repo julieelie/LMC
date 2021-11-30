@@ -23,9 +23,9 @@ Coherence_low = (CSR_low.^2) .* closgn; %Coherence_low{cc} can be negative, mult
 CoherenceLow4Info = Coherence_low;
 
 %% restrict frequencies analyzed to the requested cutoff and minimum frequency given the window size
-freqCutoff = Nyquist; % keep all frequencies up to Nyquist as of now
-if freqCutoff ~= -1
-    eindx = find(Freqs4Info < freqCutoff,1,'last');
+freqCutoff1 = Nyquist; % keep all frequencies up to Nyquist as of now
+if freqCutoff1 ~= -1
+    eindx = find(Freqs4Info < freqCutoff1,1,'last');
     Freqs4Info = Freqs4Info(1:eindx);
     Coherence4Info = Coherence4Info(1:eindx);
     CoherenceUp4Info = CoherenceUp4Info(1:eindx);
@@ -46,12 +46,21 @@ end
 
 %% keep track fo the first value of frequency for which the coherence is non significant
 cutoffIndex = find(CoherenceLow4Info < 0, 1, 'first');
-if (isempty(cutoffIndex))
+if (isempty(cutoffIndex)) % all frequecnises are significant
     cutoffIndex = length(CoherenceLow4Info);
+    freqCutoff = Freqs4Info(cutoffIndex);
 elseif cutoffIndex==1 % The first frequency is not significant, try to find the next non significant that follows the significant ones
-    cutoffIndex = find(find(CoherenceLow4Info < 0)> find(CoherenceLow4Info > 0,1,'first'),1,'first');
+    if any(CoherenceLow4Info > 0) % If there is any significant value of coherence accross all frequencies
+        NegCoherenceIndices = find(CoherenceLow4Info < 0);
+        cutoffIndex = NegCoherenceIndices(find(NegCoherenceIndices> find(CoherenceLow4Info > 0,1,'first'),1,'first'));
+        freqCutoff = Freqs4Info(cutoffIndex);
+    else
+        freqCutoff = 0;
+    end
+else % keep the value, everything is ok
+    freqCutoff = Freqs4Info(cutoffIndex);
 end
-freqCutoff = Freqs4Info(cutoffIndex);
+
 FirstNonSigCoherenceFreq = freqCutoff;
 %% keep track fo the last significant frequency value
 MaxOnIndex = find(CoherenceLow4Info > 0, 1, 'last');
@@ -80,18 +89,34 @@ Info_low = -df*sum(log2(1 - CoherenceLow4Info(CoherenceLow4Info>0)));
 sos_low = zp2sos(z,p,k);
 CoherencyT_filt=filtfilt(sos_low,1,CoherencyT);
 CoherencyT_xTimeDelay = -(((nFFT/2)/Fs)*10^3):TR:(((nFFT/2-1))/Fs)*10^3; % Corresponding values in ms of the Delay for each value of CoherencyT
-[P,Locs] = findpeaks(CoherencyT_filt);
+[PosP,PosLocs,~,PosProminence] = findpeaks(CoherencyT_filt); % Positive peaks
+[NegP,NegLocs, ~, NegProminence] = findpeaks(-CoherencyT_filt); % Negative peaks
 
-if ~isempty(Locs)
-    [P,IndM] = max(P);
-    Locs = Locs(IndM);
-    CoherencyT_DelayAtzero = CoherencyT_xTimeDelay(Locs);
-    CrossZero1 = CoherencyT_xTimeDelay(find(CoherencyT_filt(1:Locs)<=mean(CoherencyT_filt), 1, 'last')+1);
-    CrossZero2 = CoherencyT_xTimeDelay(Locs + find(CoherencyT_filt(Locs+1:end)<=mean(CoherencyT_filt), 1, 'first')-1);
-    if isempty(CrossZero2)
-        CrossZero2 = CoherencyT_xTimeDelay(Locs + find(CoherencyT_filt(Locs+1:end)==min(CoherencyT_filt(Locs+1:end)), 1, 'first')-1);
+if ~isempty([PosLocs; NegLocs])
+    [Pp,IndMp] = max(PosP);
+    [Pn,IndMn] = max(NegP);
+    if Pp>=Pn % The positive peak is the highest
+        P = PosP(IndMp);
+        Locs = PosLocs(IndMp);
+        CoherencyT_DelayAtzero = CoherencyT_xTimeDelay(Locs);
+        CrossZero1 = CoherencyT_xTimeDelay(find(CoherencyT_filt(1:Locs)<=mean(CoherencyT_filt), 1, 'last')+1);
+        CrossZero2 = CoherencyT_xTimeDelay(Locs + find(CoherencyT_filt(Locs+1:end)<=mean(CoherencyT_filt), 1, 'first')-1);
+        if isempty(CrossZero2)
+            CrossZero2 = CoherencyT_xTimeDelay(Locs + find(CoherencyT_filt(Locs+1:end)==min(CoherencyT_filt(Locs+1:end)), 1, 'first')-1);
+        end
+        CoherencyT_WidthAtMaxPeak = CrossZero2 - CrossZero1;
+    else
+        P = -NegP(IndMn);
+        Locs = NegLocs(IndMn);
+        CoherencyT_DelayAtzero = CoherencyT_xTimeDelay(Locs);
+        CrossZero1 = CoherencyT_xTimeDelay(find(-CoherencyT_filt(1:Locs)<=mean(-CoherencyT_filt), 1, 'last')+1);
+        CrossZero2 = CoherencyT_xTimeDelay(Locs + find(-CoherencyT_filt(Locs+1:end)<=mean(-CoherencyT_filt), 1, 'first')-1);
+        if isempty(CrossZero2)
+            CrossZero2 = CoherencyT_xTimeDelay(Locs + find(-CoherencyT_filt(Locs+1:end)==min(-CoherencyT_filt(Locs+1:end)), 1, 'first')-1);
+        end
+        CoherencyT_WidthAtMaxPeak = CrossZero2 - CrossZero1;
     end
-    CoherencyT_WidthAtMaxPeak = CrossZero2 - CrossZero1;
+    
 else
     CoherencyT_DelayAtzero = nan;
     CoherencyT_WidthAtMaxPeak = nan;

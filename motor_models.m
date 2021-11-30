@@ -151,7 +151,7 @@ NCells = length(CellsPath);
 %Delay = nFFT/(2*Fs)*10^3;
 Delay=200; % The segment of data taken into account is -Delay ms before the vocalization onset and +200ms after the vocalization offset
 NBoot = 500; % number of voc ID permutation bootstraps for the significance of Info on coherence for each cell
-Trill=2; % 0: all calls; 1: Trills only; 2: non Trills only
+Trill=0; % 0: all calls; 1: Trills only; 2: non Trills only
 % BootstrapType=1;% 0:No Bootstrap; 1: bootstrap calculation based on Voc ID shuffling, keeping onsets; 2, shuffling in time of Y(neural response) within each voc keeping voc ID intact; 3, shuffling in time accross all neural vector used for coherence; 4:permutation of spikes accross all vocalizations
 Average = 0; % 0: use feature variations for X; 1: use average feature variations accross vocalizations for X
 NumVoc = 0;% 0: keep all vocalizations; any value: randomly choose NumVoc vocalizations to calculate Coherence
@@ -159,7 +159,7 @@ NumVoc = 0;% 0: keep all vocalizations; any value: randomly choose NumVoc vocali
 % Freqs = (0:ceil(length(Lags)/2)).* (2*Nyquist/length(Lags)); % Lags is a uneven number so F(i) = i*2*Nyquist/length(Lags)
 %%
 
-for cc=330:NCells
+for cc=1:NCells
     
     CellTimer = tic();
     %% load data
@@ -337,6 +337,8 @@ Files2run = zeros(length(AllFiles),1);
 FeatureName = 'amp';% {'amp' 'SpectralMean' 'sal'};
 if Trill==1
     CT = 'Trill';
+elseif Trill==2
+    CT = 'Bark';
 else
     CT = '';
 end
@@ -386,7 +388,7 @@ MotorCoherenceFreeAll = AuditoryCoherenceFreeAll;
 MotorCoherenceOperantAll = AuditoryCoherenceFreeAll;
 
 
-%%
+
 for cc=1:NCells
     CellPath = fullfile(CellsPath(cc).folder,CellsPath(cc).name);
     fprintf(1, '*** Cell %s %d/%d %s ***\n', CellPath, cc, NCells, FeatureName)
@@ -519,7 +521,7 @@ if ~Trill
     [~,MotorCoherenceOperantAll.GoodInfo] = sort(MotorCoherenceOperantAll.Info,'descend');
     save(fullfile(HDPath,sprintf('MotorCoherence_%s_%s.mat', FeatureName, 'Operant')),'-struct','MotorCoherenceOperantAll');
     save(fullfile(ServerPath,sprintf('MotorCoherence_%s_%s.mat', FeatureName, 'Operant')),'-struct','MotorCoherenceOperantAll');
-elseif Trill
+elseif Trill==1
     [~,AuditoryCoherenceFreeAll.GoodInfo] = sort(AuditoryCoherenceFreeAll.Info,'descend');
     save(fullfile(HDPath,sprintf('AuditoryCoherence_%s_%s_Trill.mat', FeatureName, 'Free')),'-struct','AuditoryCoherenceFreeAll');
     save(fullfile(ServerPath,sprintf('AuditoryCoherence_%s_%s_Trill.mat', FeatureName, 'Free')),'-struct','AuditoryCoherenceFreeAll');
@@ -535,9 +537,22 @@ elseif Trill
     [~,MotorCoherenceOperantAll.GoodInfo] = sort(MotorCoherenceOperantAll.Info,'descend');
     save(fullfile(HDPath,sprintf('MotorCoherence_%s_%s_Trill.mat', FeatureName, 'Operant')),'-struct','MotorCoherenceOperantAll');
     save(fullfile(ServerPath,sprintf('MotorCoherence_%s_%s_Trill.mat', FeatureName, 'Operant')),'-struct','MotorCoherenceOperantAll');
-else
-    warning('Code not written for these conditions!')
-    keyboard
+elseif Trill==2
+    [~,AuditoryCoherenceFreeAll.GoodInfo] = sort(AuditoryCoherenceFreeAll.Info,'descend');
+    save(fullfile(HDPath,sprintf('AuditoryCoherence_%s_%s_Bark.mat', FeatureName, 'Free')),'-struct','AuditoryCoherenceFreeAll');
+    save(fullfile(ServerPath,sprintf('AuditoryCoherence_%s_%s_Bark.mat', FeatureName, 'Free')),'-struct','AuditoryCoherenceFreeAll');
+
+    [~,MotorCoherenceFreeAll.GoodInfo] = sort(MotorCoherenceFreeAll.Info,'descend');
+    save(fullfile(HDPath,sprintf('MotorCoherence_%s_%s_Bark.mat', FeatureName, 'Free')),'-struct','MotorCoherenceFreeAll');
+    save(fullfile(ServerPath,sprintf('MotorCoherence_%s_%s_Bark.mat', FeatureName, 'Free')),'-struct','MotorCoherenceFreeAll');
+
+    [~,AuditoryCoherenceOperantAll.GoodInfo] = sort(AuditoryCoherenceOperantAll.Info,'descend');
+    save(fullfile(HDPath,sprintf('AuditoryCoherence_%s_%s_Bark.mat', FeatureName, 'Operant')),'-struct','AuditoryCoherenceOperantAll');
+    save(fullfile(ServerPath,sprintf('AuditoryCoherence_%s_%s_Bark.mat', FeatureName, 'Operant')),'-struct','AuditoryCoherenceOperantAll');
+    
+    [~,MotorCoherenceOperantAll.GoodInfo] = sort(MotorCoherenceOperantAll.Info,'descend');
+    save(fullfile(HDPath,sprintf('MotorCoherence_%s_%s_Bark.mat', FeatureName, 'Operant')),'-struct','MotorCoherenceOperantAll');
+    save(fullfile(ServerPath,sprintf('MotorCoherence_%s_%s_Bark.mat', FeatureName, 'Operant')),'-struct','MotorCoherenceOperantAll');
 end
 
 %% Plots results of coherence calculations for the population
@@ -1202,12 +1217,14 @@ end
 %% Compare Information on Coherence between Auditory and Motor in Free session
 FeatureName = {'amp' 'SpectralMean' 'sal'};
 
-Trill=1; % Selecting the calls
-Sig = 0; % Working only with spike permutation significative cells
+Trill=2; % Selecting the calls
+Sig = 1; % Working only with spike permutation significative cells
 if Trill==1
     CT = '_Trill';
 elseif Trill==0
     CT = '';
+elseif Trill==2
+    CT = '_Bark';
 end
 SessionChoice = 'Free';
 Auditory = load(fullfile(HDPath,sprintf('AuditoryCoherence_amp_%s%s.mat', SessionChoice,CT)));
@@ -1308,12 +1325,14 @@ title(sprintf('D-prime Information change in Free session mean = %.2f +/- %.2f N
 %% Comparing auditory and motor information in Operant session between bats vocalizing and bats hearing
     
     % for fn = 1:length(FeatureName)
-    Trill=0; % Selecting the calls
+    Trill=2; % Selecting the calls
     Sig = 1; % Working only with spike permutatio significative cells
     if Trill==1
         CT = '_Trill';
     elseif Trill==0
         CT = '';
+    elseif Trill==2
+        CT = '_Bark';
     end
     SessionChoice = 'Operant';
     Auditory = load(fullfile(HDPath,sprintf('AuditoryCoherence_amp_%s%s.mat', SessionChoice,CT)));
@@ -1343,6 +1362,8 @@ title(sprintf('D-prime Information change in Free session mean = %.2f +/- %.2f N
         title(sprintf('Vocalizing (n=%d in 2 bats) vs hearing (n= %d in 1 bat) Trills in %s (LME Info~AorM+(1|Subject) p=%.3f)', sum(logical((Row59834 + Row11689).*SigM)), sum(logical(Row65701.*SigA)), SessionChoice, TestLME.pValue(2)))
     elseif Trill==0
         title(sprintf('Vocalizing (n=%d in 2 bats) vs hearing (n= %d in 1 bat) any call in %s (LME Info~AorM+(1|Subject) p=%.3f)', sum(logical((Row59834 + Row11689).*SigM)), sum(logical(Row65701.*SigA)), SessionChoice, TestLME.pValue(2)))
+    elseif Trill==2
+        title(sprintf('Vocalizing (n=%d in 2 bats) vs hearing (n= %d in 1 bat) non-Trill in %s (LME Info~AorM+(1|Subject) p=%.3f)', sum(logical((Row59834 + Row11689).*SigM)), sum(logical(Row65701.*SigA)), SessionChoice, TestLME.pValue(2)))
     end
     legend({'Perception'; 'Production'})
     
