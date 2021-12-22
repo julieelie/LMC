@@ -1,4 +1,4 @@
-function [CoherencyT, fo, Coherence, Coherence_up, Coherence_low, stP] = multitapercoherence_JN_fast(x,nFFT,Fs,WinLength,nOverlap,NW,Detrend,nTapers)
+function [CoherencyT, fo, Coherence, Coherence_up, Coherence_low, stP, H] = multitapercoherence_JN_fast(x,nFFT,Fs,WinLength,nOverlap,NW,Detrend,nTapers)
 % used to be function [y, fo, meanP, Pupper, Plower, stP] =
 % df_mtchd_JN(varargin) from STRFLab Theunissen Lab
 %function [yo, fo, yJ, yupJ, ylowerJ, stJ]=mtcsg(x,nFFT,Fs,WinLength,nOverlap,NW,Detrend,nTapers);
@@ -141,6 +141,9 @@ for Ch1 = 1:nChannels
 	for Ch2 = (Ch1+1):nChannels % don't compute cross-spectra twice
 		y(Ch2, Ch1,:) = y(Ch1,Ch2,:);
         Py(Ch1, Ch2, :) = atanh(abs(y(Ch1,Ch2,:)./sqrt(abs(y(Ch1,Ch1,:)).*abs(y(Ch2,Ch2,:)))));
+        if (Ch1 == 1) && (Ch2==2)
+            H = y(Ch1, Ch2,:)./y(Ch1,Ch1,:);
+        end
 	end
 end
 

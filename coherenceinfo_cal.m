@@ -118,6 +118,7 @@ if ~isempty([PosLocs; NegLocs])
     end
     
 else
+    P=[];
     CoherencyT_DelayAtzero = nan;
     CoherencyT_WidthAtMaxPeak = nan;
     warning('There is no peak in Coherency T \n')
