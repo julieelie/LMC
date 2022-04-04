@@ -522,9 +522,15 @@ if TranscExtract
     % Save the ID of the bat for each logger
         % Save the ID of the bat for each logger
     try
-        save(fullfile(Logger_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, 200)), 'BatID','LoggerName','-append')
+        CheckData = load(fullfile(Logger_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, 200)), 'BatID','LoggerName');
+        if ~isfield(CheckData, 'BatID')
+            save(fullfile(Logger_dir, sprintf('%s_%s_VocExtractData_%d.mat', Date, ExpStartTime, 200)), 'BatID','LoggerName','-append')
+        end
     catch
-        save(fullfile(Logger_dir, sprintf('%s_%s_VocExtractData1_%d.mat', Date, ExpStartTime, 200)), 'BatID','LoggerName','-append')
+        CheckData = load(fullfile(Logger_dir, sprintf('%s_%s_VocExtractData1_%d.mat', Date, ExpStartTime, 200)), 'BatID','LoggerName');
+        if ~isfield(CheckData, 'BatID')
+            save(fullfile(Logger_dir, sprintf('%s_%s_VocExtractData1_%d.mat', Date, ExpStartTime, 200)), 'BatID','LoggerName','-append')
+        end
     end
           %% Explore what is said
     fprintf('\n*** Identify what is said ***\n')
@@ -537,8 +543,16 @@ if TranscExtract
     
     %% Check the audio quality of what was saved under what calls by simply calculating a correlation between microphone and logger
     fprintf('\n*** Identify Audio quality ***\n')
-    audioQuality_calls(Logger_dir,Date, ExpStartTime);
-    fprintf('\n*** DONE: Identify Audio quality ***\n')
+    DataFiles = dir(fullfile(Logger_dir, sprintf('%s_%s_VocExtractDat*_*.mat', Date, ExpStartTime)));
+    DataFile = DataFiles(1);
+    CheckData = load(fullfile(DataFile.folder, DataFile.name), 'AudioGood');
+    if ~isfield(CheckData, 'AudioGood')
+        audioQuality_calls(Logger_dir,Date, ExpStartTime);
+        fprintf('\n*** DONE: Identify Audio quality ***\n')
+    else
+        fprintf('\n*** ALREADY DONE: Identify Audio quality ***\n')
+    end
+    
     
 % elseif isempty(VocExt_dir) || ForceVocExt1
 %     fprintf(1,'*** Localizing and extracting vocalizations that triggered the sound detection ***\n');
@@ -547,6 +561,11 @@ if TranscExtract
 % else
 %     fprintf(1,'*** ALREADY DONE: Localizing and extracting vocalizations that triggered the sound detection ***\n');
 % end
+
+%% Check the type of call manually
+fprintf('\n****  Identify call type  *******\n')
+manualType_calls(Logger_dir, Date, ExpStartTime)
+fprintf('\n*** DONE: Identify call type ***\n')
 
 
 

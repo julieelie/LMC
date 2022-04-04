@@ -11,27 +11,27 @@ BasePath = '/Volumes/JulieE8T';
 ListOfPaths = gather_operant_datapath(BasePath);
 
 
-% Path2Run = find(contains(ListOfPaths, 'HoHa'));
+Path2Run = find(contains(ListOfPaths, 'HoHa'));
 % Path2Run(contains(ListOfPaths(Path2Run), '20190207'))=[]; % No Neural Data in Hodor
 % Path2Run(contains(ListOfPaths(Path2Run), '20190213'))=[]; % No Neural Data in Hodor
 % Path2Run(contains(ListOfPaths(Path2Run), '20190214'))=[]; % No Neural Data in Hodor
 
- Path2Run = find(contains(ListOfPaths, 'CoEd'));
- Path2Run(contains(ListOfPaths(Path2Run), '20190703'))=[];
- Path2Run(contains(ListOfPaths(Path2Run), '20190709'))=[];
- Path2Run(contains(ListOfPaths(Path2Run), '190701_0951'))=[];
- Path2Run(contains(ListOfPaths(Path2Run), '2020'))=[];
- Path2Run(contains(ListOfPaths(Path2Run), '201905'))=[];% No neural data
- Path2Run(contains(ListOfPaths(Path2Run), '190605_1406'))=[]; % No vocalization
- Path2Run(contains(ListOfPaths(Path2Run), '190603_1039'))=[]; % No vocalization
- Path2Run(contains(ListOfPaths(Path2Run), '190606_1540'))=[]; % This is not operant but free session, error in choosing the right expe
- Path2Run(contains(ListOfPaths(Path2Run), '20190712'))=[]; % No neural data
+%  Path2Run = find(contains(ListOfPaths, 'CoEd'));
+%  Path2Run(contains(ListOfPaths(Path2Run), '20190703'))=[];
+%  Path2Run(contains(ListOfPaths(Path2Run), '20190709'))=[];
+%  Path2Run(contains(ListOfPaths(Path2Run), '190701_0951'))=[];
+%  Path2Run(contains(ListOfPaths(Path2Run), '2020'))=[];
+%  Path2Run(contains(ListOfPaths(Path2Run), '201905'))=[];% No neural data
+%  Path2Run(contains(ListOfPaths(Path2Run), '190605_1406'))=[]; % No vocalization
+%  Path2Run(contains(ListOfPaths(Path2Run), '190603_1039'))=[]; % No vocalization
+%  Path2Run(contains(ListOfPaths(Path2Run), '190606_1540'))=[]; % This is not operant but free session, error in choosing the right expe
+%  Path2Run(contains(ListOfPaths(Path2Run), '20190712'))=[]; % No neural data
 %%
 fprintf(1, 'Running result operant bat on %d sessions', length(Path2Run))
-for pp=20:length(Path2Run)
+for pp=1:length(Path2Run)
     
     Path2ParamFile = ListOfPaths{Path2Run(pp)};
-    fprintf(1,'\n\n\n\nRunning result_operant_bat on %s\n\n', Path2ParamFile)
+    fprintf(1,'\n\n\n\nRunning result_operant_bat on %d/%d %s\n\n', pp, length(Path2Run),Path2ParamFile)
     
     % Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190202/HoHa_190202_1046_VocTrigger_param.txt';
     % Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190131/HoHa_190131_1108_VocTrigger_param.txt';
@@ -69,22 +69,22 @@ end
 %% RUN audio data and other behavior extraction for the reconly sessions
 List2RecOnlyPath = gather_reconly_datapath(BasePath);
 %%
-Path2RunRecOnly = find(contains(List2RecOnlyPath, 'CoEd'));
-Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '201905'))=[];% No neural data
-Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '190605_1553'))=[]; % Clock jump, no data to extract
-Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190703'))=[];% No TTL Pulses
-Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190709'))=[];% No TTL Pulses
-Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190619'))=[];% Issue of clock drift for logger 49 and 12
+% Path2RunRecOnly = find(contains(List2RecOnlyPath, 'CoEd'));
+% Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '201905'))=[];% No neural data
+% Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '190605_1553'))=[]; % Clock jump, no data to extract
+% Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190703'))=[];% No TTL Pulses
+% Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190709'))=[];% No TTL Pulses
+% Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190619'))=[];% Issue of clock drift for logger 49 and 12
 
-% Path2RunRecOnly = find(contains(List2RecOnlyPath, 'HoHa'));
-% Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190131'))=[];% Allignment issue as of now no neural data extracted
-% Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190202_1400'))=[];% No logger data
-% Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190207'))=[]; % No Neural Data in Hodor
+Path2RunRecOnly = find(contains(List2RecOnlyPath, 'HoHa'));
+Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190131'))=[];% Allignment issue as of now no neural data extracted
+Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190202_1400'))=[];% No logger data
+
 %%
 for pp= 1:length(Path2RunRecOnly) 
 
     Path2ParamFile = List2RecOnlyPath{Path2RunRecOnly(pp)};
-    fprintf(1,'\n\n\n\nRunning result_reconly_bat on %s\n\n', Path2ParamFile)
+    fprintf(1,'\n\n\n\nRunning result_reconly_bat on %d/%d %s\n\n',pp, length(Path2RunRecOnly), Path2ParamFile)
     result_reconly_bat(Path2ParamFile)
 end
 
@@ -100,15 +100,16 @@ save(fullfile(OutputPath,'ListSSU.mat'), 'ListSSU')
 % Files2Run = find(contains(ListSSU,'LMC_CoEd') .* ~contains(ListSSU, '20200109'));
 % Files2Run = find(contains(ListSSU,'65701') .* ~contains(ListSSU, '20200109'));
 % Files2Run = find(contains(ListSSU,'LMC_HoHa'));
+% Files2Run = find(contains(ListSSU,'59882')
 %% Sanitary check of neurons
 % ( calculate the average spike rate over the...
 % whole experiment, measure stability, quality...
 % of spike sorting.
 fprintf('NEURONS SANITARY CHECK.... ')
-% Files2Run = 1:length(ListSSU);
+Files2Run = 1:length(ListSSU);
 % Files2Run = [1:29 87:108];
 %  Files2Run=1:488 cells for Co; 123 cells for Ho
-for ss=241:length(Files2Run)
+for ss=1:length(Files2Run)
     fprintf(1,'File %d/%d: %s\n',ss,length(Files2Run),ListSSU{Files2Run(ss)})
     sanitary_check_perSSfile(ListSSU{Files2Run(ss)}, OutputPath)
 end
@@ -142,7 +143,7 @@ for ss=1:length(Files2Run)
 end
 GoodCellIndices = find(contains(SSQ_Files2Run, 'SS'));
 fprintf(' DONE \n')
-save('GoodCellIndicesEd.mat','GoodCellIndices')
+save('GoodCellIndicesAll.mat','GoodCellIndices')
 
 
 %% Extract the neural data corresponding to the bouts of vocalizations identified

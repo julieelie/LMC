@@ -43,7 +43,7 @@ for df=1:length(DataFiles) %1
         GoAudioGood = input(sprintf('It looks like we should start from here because the last vocalization is labelled as NaN in AudioGood\n There is however %d Nan\n Resume audioGood:1 skip and check the next file:0\n', sum(isnan(AudioGood))));
         if GoAudioGood
             Rangevv = find(isnan(AudioGood));
-            load(fullfile(DataFile.folder, DataFile.name), 'BioSoundCalls', 'RMS', 'Duration','CorrPiezoRaw')
+            load(fullfile(DataFile.folder, DataFile.name), 'BioSoundCalls', 'RMS', 'Duration','CorrPiezoRaw','ManualCallType')
             NVoc = size(BioSoundCalls,1);
         else
             clear AudioGood
@@ -56,14 +56,16 @@ for df=1:length(DataFiles) %1
             BioSoundCalls = [];
             AudioGood = [];
             Duration = [];
-            save(fullfile(DataFile.folder, DataFile.name), 'Duration', 'AudioGood','BioSoundCalls', '-append')
-            clear AudioGood BioSoundCalls
+            ManualCallType = [];
+            save(fullfile(DataFile.folder, DataFile.name), 'Duration', 'AudioGood','BioSoundCalls','ManualCallType', '-append')
+            clear AudioGood BioSoundCalls ManualCallType
             continue
         end
         NVoc = size(BioSoundCalls,1);
         CorrPiezoRaw = nan(NVoc,1);
         if ManualPause
             AudioGood = nan(NVoc,1);
+            ManualCallType = cell(NVoc,1);
         end
         Duration = nan(NVoc,1);
         RMS = nan(NVoc,1);
@@ -132,7 +134,7 @@ for df=1:length(DataFiles) %1
         % (15ms) above the median amplitude here
         Consecutive_bins = 15;
         Fs_env = 1000; %Hz
-        Vocp_logger = BioSoundCalls{vv,2}.amp>median(BioSoundCalls{vv,1}.amp);
+        Vocp_logger = BioSoundCalls{vv,2}.amp>median(BioSoundCalls{vv,2}.amp);
         IndVocStart = strfind(Vocp_logger, ones(1,Consecutive_bins));
         if isempty(IndVocStart)
             keyboard
@@ -197,28 +199,54 @@ for df=1:length(DataFiles) %1
         if ManualPause
             figure(1)
             sgtitle(sprintf('set %d/%d Voc %d/%d rho = %.2f',df,length(DataFiles), vv,NVoc,CorrPiezoRaw(vv)))
-            AP=audioplayer(BioSoundCalls{vv,1}.sound./(max(abs(BioSoundCalls{vv,1}.sound))),BioSoundCalls{vv,1}.samprate);
-            play(AP)
-            pause(1)
+            APM=audioplayer(BioSoundCalls{vv,1}.sound./(max(abs(BioSoundCalls{vv,1}.sound))),BioSoundCalls{vv,1}.samprate);
+            APP=audioplayer(BioSoundCalls{vv,2}.sound./(max(abs(BioSoundCalls{vv,2}.sound))),BioSoundCalls{vv,2}.samprate);
+            
+            
 %             AP2=audioplayer(BioSoundCalls{vv,2}.sound./(max(abs(BioSoundCalls{vv,2}.sound))),BioSoundCalls{vv,2}.samprate);
 %             play(AP2)
+            % Rate the audio quality at the microphone
             INPUT=[];
             while isempty(INPUT)
+                play(APM)
                 INPUT = input('Good 4 Audio? 1 yes, 0 No');
                 if isempty(INPUT) || ((INPUT~=1) && (INPUT~=0))
                     INPUT=[];
                 end
             end
             AudioGood(vv) = INPUT;
+            
+            % Annotate the type of call
+            INPUT=[];
+            while isempty(INPUT)
+                play(APM)
+                pause(1)
+                play(APP)
+                INPUT = input('Trill (1), Bark(2), pitchy call(3), low buzz(4) or Unknown (0)');
+                if isempty(INPUT) || ((INPUT~=0) &&(INPUT~=1) && (INPUT~=2) && (INPUT~=3)&& (INPUT~=4))
+                    INPUT=[];
+                end
+            end
+            if INPUT==1
+                ManualCallType{vv} = 'Tr';
+            elseif INPUT==2
+                ManualCallType{vv} = 'Ba';
+            elseif INPUT==3
+                ManualCallType{vv} = 'Pi';
+            elseif INPUT==4
+                ManualCallType{vv} = 'Bu';
+            elseif INPUT==0
+                ManualCallType{vv} = 'Un';
+            end
 %             keyboard
             clf(F1)
         end
     end
     if ManualPause
-        save(fullfile(DataFile.folder, DataFile.name), 'CorrPiezoRaw','Duration', 'RMS', 'AudioGood', '-append')
+        save(fullfile(DataFile.folder, DataFile.name), 'CorrPiezoRaw','Duration', 'RMS', 'AudioGood','ManualCallType', '-append')
     else
         save(fullfile(DataFile.folder, DataFile.name), 'CorrPiezoRaw','Duration', 'RMS', '-append')
     end
-    clear BioSoundCalls CorrPiezoRaw Duration RMS AudioGood
+    clear BioSoundCalls CorrPiezoRaw Duration RMS AudioGood ManualCallType
 end
 end

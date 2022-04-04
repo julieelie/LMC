@@ -1141,7 +1141,7 @@ function [List2ParamPath,SessionType] = gather_audio_datapath(BasePath)
 fprintf(1,'*** Gathering paths to audio reconly data ***')
 List2ParamPath = cell(10^3,1); % initialize the list to 1000
 SessionType = cell(10^3,1); % initialize the list to 1000
-ExpFolders = dir(fullfile(BasePath,'LMC*'));
+ExpFolders = dir(fullfile(BasePath,'LMC_*'));
 %ExpFolders = BasePath;
 NF = 0; % counter for single files
 for ee=1:length(ExpFolders)
@@ -1149,7 +1149,7 @@ for ee=1:length(ExpFolders)
     DateFolders = dir(fullfile(ExpFolders(ee).folder,ExpFolders(ee).name, 'logger','20*'));
     for dd=1:length(DateFolders)
         fprintf(1, '   %s\n', DateFolders(dd).name);
-        if str2double(DateFolders(dd).name)<20190604
+        if (strcmp(ExpFolders(ee).name, 'LMC_CoEd') && (str2double(DateFolders(dd).name)<20190604)) || (strcmp(ExpFolders(ee).name, 'LMC_HoHa') && (str2double(DateFolders(dd).name)<20190116))
             fprintf(1, 'skipping, we only focus on recordings with implants\n')
             continue
         end
@@ -1160,6 +1160,12 @@ for ee=1:length(ExpFolders)
             List2ParamPath{NF} = fullfile(AudioDataFiles(ll).folder, AudioDataFiles(ll).name);
             % finding session type
             ParamFile = dir(fullfile(ExpFolders(ee).folder,ExpFolders(ee).name,'audio',DateFolders(dd).name, sprintf('%s_%s*param.txt',ExpFolders(ee).name(5:8) , AudioDataFiles(ll).name(1:11))));
+            if isempty(ParamFile)
+                warning('Unexpected filename %s\n', fullfile(AudioDataFiles(ll).folder, AudioDataFiles(ll).name))
+                NF=NF-1;
+                continue
+            end
+                
             if contains(ParamFile.name, 'VocTrigger')
                 SessionType{NF} = 'O';
             elseif contains(ParamFile.name, 'RecOnly')

@@ -245,7 +245,7 @@ for ff=1:length(DataDir)
                     warning('Issue with files ordering before and after manual curation of the vocalizations (before/after who_calls')
                     keyboard
                 end
-                load(fullfile(DataFileWho(nf).folder, DataFileWho(nf).name), 'IndVocStartRaw_merged','IndVocStopRaw_merged', 'IndVocStartPiezo_merged', 'IndVocStopPiezo_merged','BioSoundCalls','AudioGood','BioSoundFilenames');
+                load(fullfile(DataFileWho(nf).folder, DataFileWho(nf).name), 'IndVocStartRaw_merged','IndVocStopRaw_merged', 'IndVocStartPiezo_merged', 'IndVocStopPiezo_merged','BioSoundCalls','AudioGood','BioSoundFilenames', 'ManualCallType');
                 if strcmp(SessionType_local, 'F') && ((length(AudioGood) == sum(isnan(AudioGood))) && ~isempty(AudioGood))
                     warning('AudioQuatlity was probably not assessed')
                     keyboard
@@ -453,7 +453,11 @@ for ff=1:length(DataDir)
                                 % Identify the type of call VocTr for a Trill,
                                 % VocBa for a bark and VocUn for undefined Voc
                                 if ~isempty(BioSoundCalls{VocCall(nf),1})
-                                    What{NExpe}{sum(VocCall)} = ['Voc' BioSoundCalls{VocCall(nf),1}.type];
+                                    if strcmp(ExpType{NExpe}{sum(VocCall)}, 'O')
+                                        What{NExpe}{sum(VocCall)} = ['Voc' ManualCallType{VocCall(nf)}];
+                                    else
+                                        What{NExpe}{sum(VocCall)} = ['Voc' BioSoundCalls{VocCall(nf),1}.type];
+                                    end
                                 else
                                     What{NExpe}{sum(VocCall)} = 'VoNan'; % Biosound could not be calculated on this extract probably because it was too short...
                                 end

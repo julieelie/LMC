@@ -17,7 +17,7 @@ ForceAllign = 0; % In case the TTL pulses allignment was already done but you wa
 ForceVocExt1 = 0; % In case the localization on raw files of vocalizations that were manually extracted was already done but you want to do it again set to 1
 ForceVocExt2 = 0; % In case the localization on Loggers of vocalizations that were manually extracted was already done but you want to do it again set to 1
 ReAllignment = 0; % Incase we don't have a logger on all animals, it's better not to reallign the vocal data by cross correlation between the Microphone and the loggers
-ForceWhoID = 0; % In case the identification of bats was already done but you want to re-do it again
+ForceWhoID = 1; % In case the identification of bats was already done but you want to re-do it again
 ForceWhat = 0; % In case running biosound was already done but you want to re-do it
 CorrectMic = 0;
 ForceBehav = 0;% Force extracting onset/offset time of other behaviors
@@ -300,8 +300,21 @@ end
 
 %% Check the audio quality of what was saved under what calls by simply calculating a correlation between microphone and logger
 fprintf('\n*** Identify Audio quality ***\n')
-audioQuality_calls(Logger_dir,Date, ExpStartTime);
+DataFiles = dir(fullfile(Logger_dir, sprintf('%s_%s_VocExtractDat*_*.mat', Date, ExpStartTime)));
+DataFile = DataFiles(1);
+CheckData = load(fullfile(DataFile.folder, DataFile.name), 'AudioGood');
+if ~isfield(CheckData, 'AudioGood')
+    audioQuality_calls(Logger_dir,Date, ExpStartTime);
+    fprintf('\n*** DONE: Identify Audio quality ***\n')
+else
+    fprintf('\n*** ALREADY DONE: Identify Audio quality ***\n')
+end
 fprintf('\n*** DONE Identify Audio quality ***\n')
+
+%% Check the type of call manually % only done for 6/15 sessions from HoHa, not really reliable...
+% fprintf('\n****  Identify call type  *******\n')
+% manualType_calls(Logger_dir, Date, ExpStartTime)
+% fprintf('\n*** DONE: Identify call type ***\n')
 
 
 end

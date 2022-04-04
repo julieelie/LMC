@@ -34,6 +34,16 @@ NeuralInputID{3} = DataFile(strfind(DataFile, '_SS')+3);
 % Get the subject ID
 SubjectID = DataFile(1:5);
 
+% check that the calculations have not already been run:
+OutputFile = fullfile(OutputPath, sprintf('%s_%s_SS%s_%s-%s.mat', SubjectID, Date,NeuralInputID{3},NeuralInputID{1},NeuralInputID{2}));
+if exist(OutputFile, 'file')
+    load(OutputFile, 'QualitySSU')
+    if exist('QualitySSU', 'var')
+        fprintf(1, 'Already calculated!\n')
+        return
+    end
+end
+
 % Get the corresponding tetrode file
 TetrodeFile = dir(fullfile(Path2Data, sprintf('%s_%s_TT%s*Sorted*.mat',SubjectID,Date,NeuralInputID{1})));
 if isempty(TetrodeFile)
