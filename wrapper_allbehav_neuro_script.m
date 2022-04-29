@@ -69,19 +69,20 @@ end
 %% RUN audio data and other behavior extraction for the reconly sessions
 List2RecOnlyPath = gather_reconly_datapath(BasePath);
 %%
+Path2RunRecOnly = 1:length(List2RecOnlyPath);
 % Path2RunRecOnly = find(contains(List2RecOnlyPath, 'CoEd'));
-% Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '201905'))=[];% No neural data
-% Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '190605_1553'))=[]; % Clock jump, no data to extract
-% Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190703'))=[];% No TTL Pulses
-% Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190709'))=[];% No TTL Pulses
-% Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190619'))=[];% Issue of clock drift for logger 49 and 12
+Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '201905'))=[];% No neural data
+Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '190605_1553'))=[]; % Clock jump, no data to extract
+Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190703'))=[];% No TTL Pulses
+Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190709'))=[];% No TTL Pulses
+Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190619'))=[];% Issue of clock drift for logger 49 and 12
 
-Path2RunRecOnly = find(contains(List2RecOnlyPath, 'HoHa'));
+% Path2RunRecOnly = find(contains(List2RecOnlyPath, 'HoHa'));
 Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190131'))=[];% Allignment issue as of now no neural data extracted
 Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190202_1400'))=[];% No logger data
 
 %%
-for pp= 1:length(Path2RunRecOnly) 
+for pp= 32:length(Path2RunRecOnly) 
 
     Path2ParamFile = List2RecOnlyPath{Path2RunRecOnly(pp)};
     fprintf(1,'\n\n\n\nRunning result_reconly_bat on %d/%d %s\n\n',pp, length(Path2RunRecOnly), Path2ParamFile)

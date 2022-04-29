@@ -83,6 +83,12 @@ fclose(ParamF);
 IndLine = find(contains(ParamData{1}, 'Task starts at '));
 IndChar = length('Task starts at ')+1;
 FirstFile = ParamData{1}{IndLine}(IndChar:end); %#ok<FNDSB>
+F1St = datevec(FirstFile, FormatIn);
+IndLine = find(contains(ParamData{1}, 'Task stops at '));
+IndChar = length('Task stops at ');
+EndTime = ParamData{1}{IndLine}(IndChar+(1:18)); %#ok<FNDSB>
+LSt = datevec(EndTime, FormatIn);
+
 
 % get the file changes time
 EventFile = dir(fullfile(Audio_dir, sprintf('*%s_%s*RecOnly_events.txt', Date, ExpStartTime)));
@@ -119,38 +125,47 @@ TTL = load(fullfile(TTL_dir.folder, TTL_dir.name));
  Event_TranscTime = nan(NE,1); % Time in ms of each behavioral event
  for ee=1:NE
      LocalStamp = datevec(Stamp{ee}, FormatIn);
-     for fc=1:length(ChangeFileStamp)
-         FSt = datevec(ChangeFileStamp{fc}, FormatIn);
-         Elapsed=etime(LocalStamp, FSt);
-         if Elapsed<0
-             Event_AudioFileID(ee) = fc;
-             if fc==1 % This event happened during the first file
-                 FSt = datevec(FirstFile, FormatIn);
-             else
-                FSt = datevec(ChangeFileStamp{fc-1}, FormatIn);
-             end
-             Elapsed=etime(LocalStamp, FSt);
-             Event_AudioStamp(ee) = round(Elapsed*FS);
-             break
-         end
-     end
-     if (fc==length(ChangeFileStamp)) && isnan(Event_AudioFileID(ee))
-         Event_AudioFileID(ee) = fc+1;
-         FSt = datevec(ChangeFileStamp{fc}, FormatIn);
-         Elapsed=etime(LocalStamp, FSt);
-         Event_AudioStamp(ee) = round(Elapsed*FS);
-     end
-     
-     % Extract the transceiver time
-     % zscore the sample stamps
-     TTL_idx = find(unique(TTL.File_number) == Event_AudioFileID(ee));
-     if isempty(TTL_idx)
-         warning('No TTL info, no allignment possible for behavioral event %d/%d\n',ee,NE)
+     if ~((etime(LocalStamp, F1St)>0) && (etime(LocalStamp, LSt)<0)) % This event does not belong to the corresponding experiment
          continue
+     else
+        for fc=1:length(ChangeFileStamp)
+             FSt = datevec(ChangeFileStamp{fc}, FormatIn);
+             Elapsed=etime(LocalStamp, FSt);
+             if Elapsed<0
+                 Event_AudioFileID(ee) = fc;
+                 if fc==1 % This event happened during the first file
+                     FSt = F1St;
+                 else
+                    FSt = datevec(ChangeFileStamp{fc-1}, FormatIn);
+                 end
+                 Elapsed=etime(LocalStamp, FSt);
+                 Event_AudioStamp(ee) = round(Elapsed*FS);
+                 break
+             end
+         end
+        if isempty(ChangeFileStamp) % There was only one file recorded the event happened during that first file
+            Event_AudioFileID(ee) = 1;
+            Elapsed=etime(LocalStamp, F1St);
+            Event_AudioStamp(ee) = round(Elapsed*FS);
+        
+        elseif (fc==length(ChangeFileStamp)) && isnan(Event_AudioFileID(ee))
+            Event_AudioFileID(ee) = fc+1;
+            FSt = datevec(ChangeFileStamp{fc}, FormatIn);
+            Elapsed=etime(LocalStamp, FSt);
+            Event_AudioStamp(ee) = round(Elapsed*FS);
+        end
+     
+         % Extract the transceiver time
+         % zscore the sample stamps
+         TTL_idx = find(unique(TTL.File_number) == Event_AudioFileID(ee));
+         if isempty(TTL_idx)
+             warning('No TTL info, no allignment possible for behavioral event %d/%d\n',ee,NE)
+             continue
+         end
+         Event_AudioStamp_zs = (Event_AudioStamp(ee) - TTL.Mean_std_Pulse_samp_audio(TTL_idx,1))/TTL.Mean_std_Pulse_samp_audio(TTL_idx,2);
+         % calculate the transceiver times
+         Event_TranscTime(ee) = TTL.Mean_std_Pulse_TimeStamp_Transc(TTL_idx,2) .* polyval(TTL.Slope_and_intercept{TTL_idx},Event_AudioStamp_zs,[], TTL.Mean_std_x{TTL_idx}) + TTL.Mean_std_Pulse_TimeStamp_Transc(TTL_idx,1);
      end
-     Event_AudioStamp_zs = (Event_AudioStamp(ee) - TTL.Mean_std_Pulse_samp_audio(TTL_idx,1))/TTL.Mean_std_Pulse_samp_audio(TTL_idx,2);
-     % calculate the transceiver times
-     Event_TranscTime(ee) = TTL.Mean_std_Pulse_TimeStamp_Transc(TTL_idx,2) .* polyval(TTL.Slope_and_intercept{TTL_idx},Event_AudioStamp_zs,[], TTL.Mean_std_x{TTL_idx}) + TTL.Mean_std_Pulse_TimeStamp_Transc(TTL_idx,1);
  end
 ValidEvents = ~isnan(Event_TranscTime);
 Event_TranscTime = Event_TranscTime(ValidEvents);
@@ -225,7 +240,8 @@ for aa=1:NAction
             IndActionStopBat = intersect(IndActionStop, find(BatID == BatID_local));
             mm = find(min(IndActionStopBat - IndActionStart(ii)));
             if (IndActionStopBat(mm) - IndActionStart(ii)) <0
-                error('Error in parsing the action, the stop happens before the start\n')
+                warning('Error in parsing the action, the stop happens before the start\n')
+                keyboard
             end
             if isempty(IndActionStopBat)  % This start misses a stop, consider the next action as
                 % being a potential stop

@@ -43,14 +43,14 @@ for df=1:length(DataFiles) %1
         GoAudioGood = input(sprintf('It looks like we should start from here because the last vocalization is labelled as NaN in AudioGood\n There is however %d Nan\n Resume audioGood:1 skip and check the next file:0\n', sum(isnan(AudioGood))));
         if GoAudioGood
             Rangevv = find(isnan(AudioGood));
-            load(fullfile(DataFile.folder, DataFile.name), 'BioSoundCalls', 'RMS', 'Duration','CorrPiezoRaw','ManualCallType')
+            load(fullfile(DataFile.folder, DataFile.name), 'BioSoundCalls','BioSoundFilenames', 'RMS', 'Duration','CorrPiezoRaw','ManualCallType')
             NVoc = size(BioSoundCalls,1);
         else
             clear AudioGood
             continue
         end
     else
-        load(fullfile(DataFile.folder, DataFile.name), 'BioSoundCalls')
+        load(fullfile(DataFile.folder, DataFile.name), 'BioSoundCalls','BioSoundFilenames')
         if ~exist('BioSoundCalls', 'var')
             fprintf(1, 'No Calls for that set\n')
             BioSoundCalls = [];
@@ -73,6 +73,8 @@ for df=1:length(DataFiles) %1
     end
     for jj=1:length(Rangevv)
         vv=Rangevv(jj);
+        % Open the Biosound calculation results for the piezo
+        open([BioSoundFilenames{vv,2}(1:end-4) '.pdf'])
         % filter the original microphone wavfile
         if ~isfield(BioSoundCalls{vv,1}, 'sound')
             continue
@@ -108,9 +110,14 @@ for df=1:length(DataFiles) %1
         % times the low pass filter value
         Resamp_Filt_Raw_wav = resample(Filt_Raw_wav, 4*BandPassFilter(2), BioSoundCalls{vv,1}.samprate);
         Resamp_Filt_Logger_wav = resample(Filt_Logger_wav, 4*BandPassFilter(2),FS_ll);
-        if length(Resamp_Filt_Raw_wav) ~= length(Resamp_Filt_Logger_wav)
-            warning('There was an isue with the extraction of microphone data, not as long as Logger data, skip vocalization')
-            continue
+        DiffLength = length(Resamp_Filt_Raw_wav) - length(Resamp_Filt_Logger_wav);
+        if DiffLength == -1
+            Resamp_Filt_Logger_wav = Resamp_Filt_Logger_wav(1:(end-1));
+        elseif DiffLength ==1
+            Resamp_Filt_Raw_wav = Resamp_Filt_Raw_wav(1:(end-1));
+        elseif abs(DiffLength)>1
+                warning('There was an isue with the extraction of microphone data, not as long as Logger data, skip vocalization')
+                continue
         end
         
         if ManualPause
@@ -206,6 +213,7 @@ for df=1:length(DataFiles) %1
 %             AP2=audioplayer(BioSoundCalls{vv,2}.sound./(max(abs(BioSoundCalls{vv,2}.sound))),BioSoundCalls{vv,2}.samprate);
 %             play(AP2)
             % Rate the audio quality at the microphone
+            commandwindow
             INPUT=[];
             while isempty(INPUT)
                 play(APM)
@@ -222,8 +230,8 @@ for df=1:length(DataFiles) %1
                 play(APM)
                 pause(1)
                 play(APP)
-                INPUT = input('Trill (1), Bark(2), pitchy call(3), low buzz(4) or Unknown (0)');
-                if isempty(INPUT) || ((INPUT~=0) &&(INPUT~=1) && (INPUT~=2) && (INPUT~=3)&& (INPUT~=4))
+                INPUT = input('Trill (1), Bark(2), pitchy call(3), low buzz(4) panting (5) Low tuck (6) Squeal (7) Rattle (8) Chuckles (9) Unknown (0)');
+                if isempty(INPUT) || ((INPUT~=0) &&(INPUT~=1) && (INPUT~=2) && (INPUT~=3)&& (INPUT~=4) && (INPUT~=5)&& (INPUT~=6)&& (INPUT~=7)&& (INPUT~=8)&& (INPUT~=9))
                     INPUT=[];
                 end
             end
@@ -235,6 +243,16 @@ for df=1:length(DataFiles) %1
                 ManualCallType{vv} = 'Pi';
             elseif INPUT==4
                 ManualCallType{vv} = 'Bu';
+            elseif INPUT==5
+                ManualCallType{vv} = 'Pa';
+            elseif INPUT==6
+                ManualCallType{vv} = 'LT';
+            elseif INPUT==7
+                ManualCallType{vv} = 'Sq';
+            elseif INPUT==8
+                ManualCallType{vv} = 'Ra';
+            elseif INPUT==9
+                ManualCallType{vv} = 'Ch';
             elseif INPUT==0
                 ManualCallType{vv} = 'Un';
             end
