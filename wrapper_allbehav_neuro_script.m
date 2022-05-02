@@ -146,7 +146,6 @@ GoodCellIndices = find(contains(SSQ_Files2Run, 'SS'));
 fprintf(' DONE \n')
 save('GoodCellIndicesAll.mat','GoodCellIndices')
 
-
 %% Extract the neural data corresponding to the bouts of vocalizations identified
 % by voc_localize and voc_localize_operant (run by result_operant_bat.m) for each cell
 fprintf(' EXTRACTING NEURAL DATA CORRESPONDING TO VOCALIZATIONS.... \n')
@@ -154,13 +153,13 @@ NeuralBuffer = 5000; %duration of the time buffer in
 %       ms that should be added before and after the onset and offset time
 %       of vocalizations for extracting neural data.
 
-for ss=31:length(GoodCellIndices)
-    fprintf(1,'Cell %d/%d: %s \n',ss,length(GoodCellIndices),ListSSU{Files2Run(GoodCellIndices(ss))})
-    cut_neuralData_voc_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath,NeuralBuffer)
+for ss=1:length(GoodCellIndices)
+    fprintf(1,'Cell %d/%d: %s \n',ss,length(GoodCellIndices),ListSSU{GoodCellIndices(ss)})
+    cut_neuralData_voc_perfile(ListSSU{GoodCellIndices(ss)}, OutputPath,NeuralBuffer)
 end
 fprintf(' DONE \n')
 % Data for each unit and each experimental session are saved as sprintf('%s_%s_%s_SS%s_%s-%s.mat', SubjectID, Date, ExpStartTime,SSQ,TetrodeID,SSID)
-
+% Last run of all dataset on April 29 2022
 
 %% Extract the neural data corresponding to the behaviors identified during the free session
 % by get_logger_data_behav (run by result_reconly_bat.m) for each cell
@@ -169,7 +168,7 @@ fprintf(' EXTRACTING NEURAL DATA CORRESPONDING TO OTHER BEHAVIORS.... ')
 
 for ss=1:length(GoodCellIndices)
     fprintf(1,'Cell %d/%d\n',ss,length(GoodCellIndices))
-    cut_neuralData_behav_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath)
+    cut_neuralData_behav_perfile(ListSSU{GoodCellIndices(ss)}, OutputPath)
 end
 fprintf(' DONE \n')
 % Data for each unit and each experimental session are saved as or apppended to sprintf('%s_%s_%s_SS%s_%s-%s.mat', SubjectID, Date, ExpStartTime,SSQ, TetrodeID,SSID)
@@ -183,20 +182,20 @@ warning('off',id)
 
 
 for ss=1:length(GoodCellIndices)
-    fprintf(1,'Cell %d/%d  %s\n',ss,length(GoodCellIndices), ListSSU{Files2Run(GoodCellIndices(ss))})
-    neuralData_compile_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath, NeuralBuffer)
+    fprintf(1,'Cell %d/%d  %s\n',ss,length(GoodCellIndices), ListSSU{GoodCellIndices(ss)})
+    neuralData_compile_perfile(ListSSU{GoodCellIndices(ss)}, OutputPath, NeuralBuffer)
 end
 warning('on',id)
 fprintf(' DONE \n')
 % Data for each unit and all experimental session are appended to: sprintf('%s_%s_SS%s_%s-%s.mat', SubjectID, Date,SSQ,TetrodeID,SSID) 
-
+% Last run 04/29/2022 for all dataset
 
 %% Calculating the average spike rate during various types of behaviors including vocalizations
 fprintf(' CALCULATING SPIKE RATE CORRESPONDING TO ALL BEHAVIORS.... ')
 
 for ss=1:length(GoodCellIndices)
     fprintf(1,'Cell %d/%d\n',ss,length(GoodCellIndices))
-    cal_spikerate_perfile(ListSSU{Files2Run(GoodCellIndices(ss))},OutputPath)
+    cal_spikerate_perfile(ListSSU{GoodCellIndices(ss)},OutputPath)
 end
 fprintf(' DONE \n')
 % Data for each unit and all experimental session are appended to: sprintf('%s_%s_SS%s_%s-%s.mat', SubjectID, Date,SSQ,TetrodeID,SSID) 
@@ -207,17 +206,28 @@ fprintf(1,' CALCULATING KDE OF THE TIME-VARYING SPIKE RATE CORRESPONDING TO VOCA
 Delay = [5000 5000];
 for ss=1:length(GoodCellIndices)
     fprintf(1,'Cell %d/%d\n',ss,length(GoodCellIndices))
-    cal_kderatevoc_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath,Delay)
+    cal_kderatevoc_perfile(ListSSU{GoodCellIndices(ss)}, OutputPath,Delay)
 end
 fprintf(' DONE \n')
 
 
 %% Plot the average spike rate during various types of behaviors including vocalizations
 fprintf(' PLOTING NEURAL DATA (Av RATE) CORRESPONDING TO ALL BEHAVIORS.... ')
+SRpValues_all = table('Size',[length(GoodCellIndices) 6], 'VariableTypes',...
+    ["double", "double","double","double", "double", "double"],...
+    'VariableNames',["Voc-Free-SelfVsBgd","Voc-Free-OthersVsBgd","Voc-Free-SelfVsOthers","Self-Free-ChewingVsQuiet","Self-Free-LickingVsQuiet","Self-Free-VocalizingVsQuiet"],...
+    'RowNames',ListSSU(GoodCellIndices));
+TestNames = SRpValues_all.Properties.VariableNames;
 
 for ss=1:length(GoodCellIndices)
     fprintf(1,'Cell %d/%d\n',ss,length(GoodCellIndices))
-    plot_av_spikerate_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath)
+    [SRStats] = plot_av_spikerate_perfile(ListSSU{GoodCellIndices(ss)}, OutputPath);
+    for pp=1:length(TestNames)
+        Row = find(strcmp(SRStats.Test, TestNames{pp}));
+        if ~isempty(Row)
+            SRpValues_all(ss,pp) = SRStats(Row,2);
+        end
+    end
 end
 fprintf(' DONE \n')
 % The plot is saved under OutputPath as sprintf('%s_%s_%s_SS%s_%s-%s_MeanRateScatter.pdf', SubjectID, SSQ,TetrodeID,SSID))

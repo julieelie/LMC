@@ -1,4 +1,4 @@
-function plot_av_spikerate_perfile(InputDataFile, OutputPath, Fun)
+function [Stats]=plot_av_spikerate_perfile(InputDataFile, OutputPath, Fun)
 if nargin<3
     Fun = @(x)x;
 end
@@ -23,7 +23,9 @@ SubjectID = DataFile(1:5);
 FullDataSetFile = fullfile(OutputPath, sprintf('%s_%s_SS%s_%s-%s.mat', SubjectID, Date,NeuralInputID{3},NeuralInputID{1},NeuralInputID{2}));
 load(FullDataSetFile, 'SpikeRate');
 
-
+% Output
+Stats = table('Size',[10 6],'VariableTypes',["string", 'double', 'double','double','int16', 'int16'],'VariableNames',{'Test', 'p-value','t-stat','DF','n1','n2'});
+TestCount = 0;
 %% Plot the figure
 ScatterMarkerSz = 30;
 MeanMarkerSize = 14;
@@ -50,6 +52,8 @@ if sum(Ind)>5
     [h,pSO,ci,stats] = ttest(SpikeRate.SelfCall_rate(Ind,1),SpikeRate.SelfCall_rate(Ind,2));
     fprintf(1,'Operant: Vocalization production vs background rate (1s 5s before call onset): p = %.4f   t=%.2f   DF = %.1f\n', pSO, stats.tstat, stats.df)
     LegendVoc = [LegendVoc{:} {'Self-Voc-Operant' 'bSelf-Voc-Operant'}];
+    TestCount = TestCount+1;
+    Stats(TestCount,:) = {'Voc-Operant-SelfVsBgd', pSO,stats.tstat, stats.df,sum(Ind),sum(Ind)};
 end
 
 
@@ -70,6 +74,8 @@ if sum(Ind)>5
     fprintf(1,'Free: Vocalization production vs background rate (1s 5s before call onset): p = %.4f   t=%.2f   DF = %.1f\n', pSF, stats.tstat, stats.df)
     IndSelf = Ind;
     LegendVoc = [LegendVoc{:} {'Self-Voc-Free' 'bSelf-Voc-Free'}];
+    TestCount = TestCount+1;
+    Stats(TestCount,:) = {'Voc-Free-SelfVsBgd', pSF,stats.tstat, stats.df,sum(Ind),sum(Ind)};
 end
 % Plot the spike rate in Hz of others calls Operant
 if ~isempty(SpikeRate.OthersCall_exptype)
@@ -101,6 +107,8 @@ if ~isempty(SpikeRate.OthersCall_exptype)
         [h,pOO,ci,stats] = ttest(SpikeRate.OthersCall_rate(Ind,1),SpikeRate.OthersCall_rate(Ind,2));
         fprintf(1,'Operant: Vocalization Others vs background rate (1s 5s before call onset): p = %.4f   t=%.2f   DF = %.1f\n', pOO, stats.tstat, stats.df)
         LegendVoc = [LegendVoc{:} {'Others-Voc-Operant' 'bOthers-Voc-Operant'}];
+        TestCount = TestCount+1;
+        Stats(TestCount,:) = {'Voc-Operant-OthersVsBgd', pOO,stats.tstat, stats.df,sum(Ind),sum(Ind)};
     end
 
 
@@ -120,9 +128,15 @@ if ~isempty(SpikeRate.OthersCall_exptype)
         hold on
         [h,pOF,ci,stats] = ttest(SpikeRate.OthersCall_rate(Ind,1),SpikeRate.OthersCall_rate(Ind,2));
         fprintf(1,'Free: Vocalization Others vs background rate (1s 5s before call onset): p = %.4f   t=%.2f   DF = %.1f\n', pOF, stats.tstat, stats.df)
-
-        [h,p3,ci,stats] = ttest2(SpikeRate.SelfCall_rate(IndSelf,1), SpikeRate.OthersCall_rate(Ind,1));
-        fprintf(1,'Free: Vocalization Self vs Others: p = %.4f   t=%.2f   DF = %.1f\n', p3, stats.tstat, stats.df)
+        TestCount = TestCount+1;
+        Stats(TestCount,:) = {'Voc-Free-OthersVsBgd', pOF,stats.tstat, stats.df,sum(Ind),sum(Ind)};
+        
+        if exist('IndSelf', 'var') % minimum of 5 calls to get into the plot and t-test
+            [h,p3,ci,stats] = ttest2(SpikeRate.SelfCall_rate(IndSelf,1), SpikeRate.OthersCall_rate(Ind,1));
+            fprintf(1,'Free: Vocalization Self vs Others: p = %.4f   t=%.2f   DF = %.1f\n', p3, stats.tstat, stats.df)
+            TestCount = TestCount+1;
+            Stats(TestCount,:) = {'Voc-Free-SelfVsOthers', p3,stats.tstat, stats.df,sum(IndSelf),sum(Ind)};
+        end
         LegendVoc = [LegendVoc{:} {'Others-Voc-Free' 'bOthers-Voc-Free'}];
     end
 
@@ -130,12 +144,15 @@ if ~isempty(SpikeRate.OthersCall_exptype)
 end
 
 % Indicate the number of events
-text(1,-0.5,sprintf('%d',Nevents(1)))
-text(2,-0.5,sprintf('%d',Nevents(2)))
-text(3,-0.5,sprintf('%d',Nevents(3)))
-text(4,-0.5,sprintf('%d',Nevents(4)))
-text(5,-0.5,sprintf('%d',Nevents(5)))
-text(6,-0.5,sprintf('%d',Nevents(6)))
+NaxisCount = NaxisInd+1;
+for ee=1:(NaxisCount)
+    text(ee,-0.5,sprintf('%d',Nevents(ee)))
+end
+%     text(2,-0.5,sprintf('%d',Nevents(2)))
+%     text(3,-0.5,sprintf('%d',Nevents(3)))
+%     text(4,-0.5,sprintf('%d',Nevents(4)))
+% text(5,-0.5,sprintf('%d',Nevents(5)))
+% text(6,-0.5,sprintf('%d',Nevents(6)))
 % text(7,-0.5,sprintf('%d',Nevents(7)))
 % text(8,-0.5,sprintf('%d',Nevents(8)))
 
@@ -237,9 +254,9 @@ else
     for bb=1:length(SpikeRate.BehavType)
         if ~isnan(SpikeRate.SelfNVBehav_rate{bb})
             %         Jitter_local = rand([size(SpikeRate.SelfNVBehav_rate{bb},1),1]).*0.4-0.2;
-            swarmchart((bb+6).*ones(size(SpikeRate.SelfNVBehav_rate{bb},1),1),Fun(SpikeRate.SelfNVBehav_rate{bb}),ScatterMarkerSz,ColorSelf,'o','filled','MarkerFaceAlpha',0.5,'MarkerEdgeAlpha',0.5)
+            swarmchart((bb+NaxisCount).*ones(size(SpikeRate.SelfNVBehav_rate{bb},1),1),Fun(SpikeRate.SelfNVBehav_rate{bb}),ScatterMarkerSz,ColorSelf,'o','filled','MarkerFaceAlpha',0.5,'MarkerEdgeAlpha',0.5)
             hold on
-            errorbar(bb+6,mean(Fun(SpikeRate.SelfNVBehav_rate{bb})),std(Fun(SpikeRate.SelfNVBehav_rate{bb}))/size(SpikeRate.SelfNVBehav_rate{bb},1)^0.5, 'dr','MarkerSize',MeanMarkerSize,'MarkerFaceColor','r')
+            errorbar(bb+NaxisCount,mean(Fun(SpikeRate.SelfNVBehav_rate{bb})),std(Fun(SpikeRate.SelfNVBehav_rate{bb}))/size(SpikeRate.SelfNVBehav_rate{bb},1)^0.5, 'dr','MarkerSize',MeanMarkerSize,'MarkerFaceColor','r')
             hold on
 
             if contains(SpikeRate.BehavType{bb}, 'teeth')
@@ -247,14 +264,14 @@ else
             else
                 LegendSNVB{bb} = sprintf('Self-%s',SpikeRate.BehavType{bb});
             end
-            text(bb+6,-0.5,sprintf('%d',size(SpikeRate.SelfNVBehav_rate{bb},1)))
+            text(bb+NaxisCount,-0.5,sprintf('%d',size(SpikeRate.SelfNVBehav_rate{bb},1)))
         else
             if contains(SpikeRate.BehavType{bb}, 'teeth')
                 LegendSNVB{bb} = sprintf('Self-%s','nailbiting');
             else
                 LegendSNVB{bb} = sprintf('Self-%s',SpikeRate.BehavType{bb});
             end
-            text(bb+6,-0.5,'0')
+            text(bb+NaxisCount,-0.5,'0')
         end
     end
 
@@ -263,9 +280,9 @@ else
     for bb=1:length(SpikeRate.BehavType)
         if ~isnan(SpikeRate.OthersNVBehav_rate{bb})
             %         Jitter_local = rand([size(SpikeRate.OthersNVBehav_rate{bb},1),1]).*0.4-0.2;
-            swarmchart((bb+6+length(SpikeRate.BehavType)).*ones(size(SpikeRate.OthersNVBehav_rate{bb},1),1),Fun(SpikeRate.OthersNVBehav_rate{bb}),ScatterMarkerSz,ColorOthers,'o','filled','MarkerFaceAlpha',0.5,'MarkerEdgeAlpha',0.5)
+            swarmchart((bb+NaxisCount+length(SpikeRate.BehavType)).*ones(size(SpikeRate.OthersNVBehav_rate{bb},1),1),Fun(SpikeRate.OthersNVBehav_rate{bb}),ScatterMarkerSz,ColorOthers,'o','filled','MarkerFaceAlpha',0.5,'MarkerEdgeAlpha',0.5)
             hold on
-            errorbar(bb+6+length(SpikeRate.BehavType),mean(Fun(SpikeRate.OthersNVBehav_rate{bb})),std(Fun(SpikeRate.SelfNVBehav_rate{bb}))/size(SpikeRate.SelfNVBehav_rate{bb},1)^0.5, 'sr','MarkerSize',MeanMarkerSize,'MarkerFaceColor','r')
+            errorbar(bb+NaxisCount+length(SpikeRate.BehavType),mean(Fun(SpikeRate.OthersNVBehav_rate{bb})),std(Fun(SpikeRate.SelfNVBehav_rate{bb}))/size(SpikeRate.SelfNVBehav_rate{bb},1)^0.5, 'sr','MarkerSize',MeanMarkerSize,'MarkerFaceColor','r')
             hold on
 
             if contains(SpikeRate.BehavType{bb}, 'teeth')
@@ -273,14 +290,14 @@ else
             else
                 LegendONVB{bb} = sprintf('Others-%s',SpikeRate.BehavType{bb});
             end
-            text(bb+6+length(SpikeRate.BehavType),-0.5,sprintf('%d',size(SpikeRate.OthersNVBehav_rate{bb},1)))
+            text(bb+NaxisCount+length(SpikeRate.BehavType),-0.5,sprintf('%d',size(SpikeRate.OthersNVBehav_rate{bb},1)))
         else
             if contains(SpikeRate.BehavType{bb}, 'teeth')
                 LegendONVB{bb} = sprintf('Others-%s','nailbiting');
             else
                 LegendONVB{bb} = sprintf('Others-%s',SpikeRate.BehavType{bb});
             end
-            text(bb+6+length(SpikeRate.BehavType),-0.5,'0')
+            text(bb+NaxisCount+length(SpikeRate.BehavType),-0.5,'0')
         end
 
     end
@@ -382,14 +399,20 @@ else
     if ~isempty(bbQuiet) && ~isempty(bbChewing)
         [~, p4, ~,stats] = ttest2(SpikeRate.SelfNVBehav_rate{bbQuiet}, SpikeRate.SelfNVBehav_rate{bbChewing});
         fprintf(1,'Free: Chewing vs Quiet: p = %.4f   t=%.2f   DF = %.1f\n', p4, stats.tstat, stats.df)
+        TestCount = TestCount+1;
+        Stats(TestCount,:) = {'Self-Free-ChewingVsQuiet', p4,stats.tstat, stats.df,length(SpikeRate.SelfNVBehav_rate{bbChewing}),length(SpikeRate.SelfNVBehav_rate{bbQuiet})};
     end
     if ~isempty(bbQuiet) && ~isempty(bbLicking)
         [~, p5, ~,stats] = ttest2(SpikeRate.SelfNVBehav_rate{bbQuiet}, SpikeRate.SelfNVBehav_rate{bbLicking});
         fprintf(1,'Free: Licking vs Quiet: p = %.4f   t=%.2f   DF = %.1f\n', p5, stats.tstat, stats.df)
+        TestCount = TestCount+1;
+        Stats(TestCount,:) = {'Self-Free-LickingVsQuiet', p5,stats.tstat, stats.df,length(SpikeRate.SelfNVBehav_rate{bbLicking}),length(SpikeRate.SelfNVBehav_rate{bbQuiet})};
     end
-    if ~isempty(bbQuiet)
+    if ~isempty(bbQuiet) && exist('IndSelf', 'var')
         [~, p6, ~,stats] = ttest2(SpikeRate.SelfNVBehav_rate{bbQuiet}, SpikeRate.SelfCall_rate(IndSelf,1));
         fprintf(1,'Free: Vocalizing vs Quiet: p = %.4f   t=%.2f   DF = %.1f\n', p6, stats.tstat, stats.df)
+        TestCount = TestCount+1;
+        Stats(TestCount,:) = {'Self-Free-VocalizingVsQuiet', p6,stats.tstat, stats.df,sum(IndSelf),length(SpikeRate.SelfNVBehav_rate{bbQuiet})};
     end
     if ~isempty(bbQuiet) && ~isempty(bbChewing)
         line(length(LegendVoc)+[bbQuiet bbChewing], Ylim(2).*ones(2,1).*0.9, 'Color','k', 'LineWidth',2)
@@ -417,7 +440,7 @@ else
             text(TextX-0.2, Ylim(2)*0.975, 'NS', 'FontSize',12)
         end
     end
-    if ~isempty(bbQuiet)
+    if ~isempty(bbQuiet) && exist('IndSelf', 'var')
         line([find(strcmp(LegendVoc, 'Self-Voc-Free')) length(LegendVoc)+bbQuiet], Ylim(2).*ones(2,1).*1,'Color', 'k', 'LineWidth',2)
         TextX = find(strcmp(LegendVoc, 'Self-Voc-Free')) + (3 + bbQuiet)/2;
         if p6<0.001
@@ -434,4 +457,7 @@ else
     print(Fig,fullfile(OutputPath,sprintf('%s_%s_SS%s_%s-%s_MeanRateScatter.pdf', SubjectID, Date,NeuralInputID{3},NeuralInputID{1},NeuralInputID{2})),'-dpdf','-fillpage')
     close all
 end
+Stats = Stats(1:TestCount,:);
+SpikeRate.Stats = Stats;
+save(FullDataSetFile, 'SpikeRate', '-append');
 end
