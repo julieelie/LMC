@@ -144,7 +144,7 @@ for ss=1:length(Files2Run)
 end
 GoodCellIndices = find(contains(SSQ_Files2Run, 'SS'));
 fprintf(' DONE \n')
-save('GoodCellIndicesAll.mat','GoodCellIndices')
+save('GoodCellIndicesAll.mat','GoodCellIndices','ListSSU','SSQ_Files2Run')
 
 %% Extract the neural data corresponding to the bouts of vocalizations identified
 % by voc_localize and voc_localize_operant (run by result_operant_bat.m) for each cell
@@ -230,6 +230,35 @@ for ss=1:length(GoodCellIndices)
     end
 end
 fprintf(' DONE \n')
+save(fullfile(OutputPath,'TimeAverageSpikeRate_pValues.mat'), 'SRpValues_all');
+
+% obtain bar plot for the population data
+plim = 0.01;
+BarGraph=nan(2,6);
+BarGraph(2,1) = sum(~isnan(SRpValues_all.("Voc-Free-SelfVsBgd")));
+BarGraph(1,1) = sum(SRpValues_all.("Voc-Free-SelfVsBgd")<plim)./BarGraph(2,1);
+BarGraph(2,2) = sum(~isnan(SRpValues_all.("Self-Free-VocalizingVsQuiet")));
+BarGraph(1,2) = sum(SRpValues_all.("Self-Free-VocalizingVsQuiet")<plim)./BarGraph(2,2);
+BarGraph(2,3) = sum(~isnan(SRpValues_all.("Voc-Free-SelfVsOthers")));
+BarGraph(1,3) = sum(SRpValues_all.("Voc-Free-SelfVsOthers")<plim)./BarGraph(2,3);
+BarGraph(2,4) = sum(~isnan(SRpValues_all.("Voc-Free-OthersVsBgd")));
+BarGraph(1,4) = sum(SRpValues_all.("Voc-Free-OthersVsBgd")<plim)./BarGraph(2,4);
+BarGraph(2,5) = sum(~isnan(SRpValues_all.("Self-Free-ChewingVsQuiet")));
+BarGraph(1,5) = sum(SRpValues_all.("Self-Free-ChewingVsQuiet")<plim)./BarGraph(2,5);
+BarGraph(2,6) = sum(~isnan(SRpValues_all.("Self-Free-LickingVsQuiet")));
+BarGraph(1,6) = sum(SRpValues_all.("Self-Free-LickingVsQuiet")<plim)./BarGraph(2,6);
+figure()
+X = categorical({'Vocalizing','Vocalizing vs Quiet','Vocalizing vs Hearing','Hearing', 'Chewing vs Quiet', 'Licking vs Quiet'});
+X = reordercats(X,{'Vocalizing','Vocalizing vs Quiet','Vocalizing vs Hearing','Hearing', 'Chewing vs Quiet', 'Licking vs Quiet'});
+B=bar(X,BarGraph(1,:), 'k','EdgeColor','k')
+ylabel(sprintf('Proportion of significant units at p<%.3f',plim))
+title('t-tests on time average spike rate')
+B.Parent.YLim = [0 1];
+for bb=1:size(BarGraph,2)
+    text(bb-.25,0.95,sprintf('n=%d',BarGraph(2,bb)))
+end
+
+
 % The plot is saved under OutputPath as sprintf('%s_%s_%s_SS%s_%s-%s_MeanRateScatter.pdf', SubjectID, SSQ,TetrodeID,SSID))
 %% Plot rasters for vocalizations
 fprintf(1,' RASTER PLOTS (AND KDE) of NEURAL DATA CORRESPONDING TO VOCALIZATIONS\n');
