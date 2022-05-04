@@ -20,6 +20,9 @@ SubjectID = DataFile(1:5);
 FullDataSetFile = fullfile(OutputPath, sprintf('%s_%s_SS%s_%s-%s.mat', SubjectID, Date,NeuralInputID{3},NeuralInputID{1},NeuralInputID{2}));
 Data=load(FullDataSetFile);
 
+% Delay
+Delay=10; %start to gather spikes a few ms before onset of action (motor!)
+
 %% Data pointers
 % Indices of vocalization renditions produced by subject ('self') or not
 IndVocS = find(contains(Data.What, 'Voc').*contains(Data.Who, 'self'));
@@ -32,16 +35,19 @@ IndNVBehav = ~contains(Data.What, 'Voc');
 BehavType = unique(Data.What(IndNVBehav));
 
 %% Calculate mean rate
-% Calculate the spike rate in Hz of self calls
+% Calculate the spike rate in Hz of self calls keep the duration (ms) over which
+% the rate is calculated
 if ~isempty(IndVocS)
-    SelfCall_rate=nan(length(IndVocS),2);
+    SelfCall_rate=nan(length(IndVocS),4);
     SelfCall_exptype=cell(length(IndVocS),1);
     for oo=1:length(IndVocS)
         SAT = Data.SpikesArrivalTimes_Behav{IndVocS(oo)};
-        NumSpikes = sum((SAT>=0).*(SAT<(Data.Duration(IndVocS(oo)))));
-        SelfCall_rate(oo,1) = NumSpikes./Data.Duration(IndVocS(oo)).*10^3;
+        NumSpikes = sum((SAT>=-Delay).*(SAT<(Data.Duration(IndVocS(oo)))));
+        SelfCall_rate(oo,1) = NumSpikes./(Delay+Data.Duration(IndVocS(oo))).*10^3;
+        SelfCall_rate(oo,3) = Delay + Data.Duration(IndVocS(oo));
         NumSpikes = length(Data.SpikesArrivalTimes_Baseline{IndVocS(oo)});
         SelfCall_rate(oo,2) = NumSpikes./Data.BSLDuration(IndVocS(oo)).*10^3;
+        SelfCall_rate(oo,4) = Data.BSLDuration(IndVocS(oo));
         SelfCall_exptype{oo} = Data.ExpType{IndVocS(oo)};
     end
 else
@@ -51,14 +57,16 @@ end
 
 % Calculate the spike rate in Hz of others' calls
 if ~isempty(IndVocO)
-    OthersCall_rate=nan(length(IndVocO),2);
+    OthersCall_rate=nan(length(IndVocO),4);
     OthersCall_exptype=cell(length(IndVocO),1);
     for oo=1:length(IndVocO)
         SAT = Data.SpikesArrivalTimes_Behav{IndVocO(oo)};
-        NumSpikes = sum((SAT>=0).*(SAT<(Data.Duration(IndVocO(oo)))));
-        OthersCall_rate(oo,1) = NumSpikes./Data.Duration(IndVocO(oo)).*10^3;
+        NumSpikes = sum((SAT>=-Delay).*(SAT<(Data.Duration(IndVocO(oo)))));
+        OthersCall_rate(oo,1) = NumSpikes./(Delay + Data.Duration(IndVocO(oo))).*10^3;
+        OthersCall_rate(oo,3) = Delay + Data.Duration(IndVocO(oo));
         NumSpikes = length(Data.SpikesArrivalTimes_Baseline{IndVocO(oo)});
         OthersCall_rate(oo,2) = NumSpikes./Data.BSLDuration(IndVocO(oo)).*10^3;
+        OthersCall_rate(oo,4) = Data.BSLDuration(IndVocO(oo));
         OthersCall_exptype{oo} = Data.ExpType{IndVocO(oo)};
     end
 else
@@ -72,8 +80,8 @@ SelfNVBehav_rate = cell(length(BehavType),1);
 for bb=1:length(BehavType)
     IndNVBehavS = find(contains(Data.What, BehavType{bb}).*contains(Data.Who, 'self'));
     if ~isempty(IndNVBehavS)
-        SelfNVBehav_rate{bb} = nan(length(IndVoc),1);
-        [DurVoc,~] = sort(Data.Duration(IndVoc),'descend');
+        SelfNVBehav_rate{bb} = nan(length(IndVoc),2);
+        [DurVoc,~] = sort(Data.Duration(IndVoc)+Delay,'descend');
         DurNVB = Data.Duration(IndNVBehavS);
         UsedTime = zeros(length(IndNVBehavS),1);
         UsedIdx = [];
@@ -82,9 +90,10 @@ for bb=1:length(BehavType)
             if ~isempty(GoodIdx)
                 SAT = Data.SpikesArrivalTimes_Behav{IndNVBehavS(GoodIdx)};
                 NumSpikes = sum((SAT>=(UsedTime(GoodIdx)-DurVoc(oo))).*(SAT<UsedTime(GoodIdx)));
-                SelfNVBehav_rate{bb}(oo) = NumSpikes./DurVoc(oo).*10^3;
+                SelfNVBehav_rate{bb}(oo,1) = NumSpikes./DurVoc(oo).*10^3;
+                SelfNVBehav_rate{bb}(oo,2) = DurVoc(oo);
             else % Could not find an extract of non-vocal behavior long enough to extract data
-                SelfNVBehav_rate{bb}(oo) = NaN;
+                SelfNVBehav_rate{bb}(oo,:) = nan(1,2);
             end
         end
         
@@ -98,8 +107,8 @@ OthersNVBehav_rate = cell(length(BehavType),1);
 for bb=1:length(BehavType)
     IndNVBehavO = find(contains(Data.What, BehavType{bb}).*~contains(Data.Who, 'self'));
     if ~isempty(IndNVBehavO)
-        OthersNVBehav_rate{bb} = nan(length(IndVoc),1);
-        [DurVoc,~] = sort(Data.Duration(IndVoc),'descend');
+        OthersNVBehav_rate{bb} = nan(length(IndVoc),2);
+        [DurVoc,~] = sort(Data.Duration(IndVoc)+Delay,'descend');
         DurNVB = Data.Duration(IndNVBehavO);
         UsedTime = zeros(length(IndNVBehavO),1);
         UsedIdx = [];
@@ -108,9 +117,10 @@ for bb=1:length(BehavType)
             if ~isempty(GoodIdx)
                 SAT = Data.SpikesArrivalTimes_Behav{IndNVBehavO(GoodIdx)};
                 NumSpikes = sum((SAT>=(UsedTime(GoodIdx)-DurVoc(oo))).*(SAT<UsedTime(GoodIdx)));
-                OthersNVBehav_rate{bb}(oo) = NumSpikes./DurVoc(oo).*10^3;
+                OthersNVBehav_rate{bb}(oo,1) = NumSpikes./DurVoc(oo).*10^3;
+                OthersNVBehav_rate{bb}(oo,2) = DurVoc(oo);
             else % Could not find an extract of non-vocal behavior long enough to extract data
-                OthersNVBehav_rate{bb}(oo) = NaN;
+                OthersNVBehav_rate{bb}(oo,:) = nan(1,2);
             end
         end
     else

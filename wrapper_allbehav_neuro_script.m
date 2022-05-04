@@ -213,51 +213,124 @@ fprintf(' DONE \n')
 
 %% Plot the average spike rate during various types of behaviors including vocalizations
 fprintf(' PLOTING NEURAL DATA (Av RATE) CORRESPONDING TO ALL BEHAVIORS.... ')
-SRpValues_all = table('Size',[length(GoodCellIndices) 6], 'VariableTypes',...
-    ["double", "double","double","double", "double", "double"],...
-    'VariableNames',["Voc-Free-SelfVsBgd","Voc-Free-OthersVsBgd","Voc-Free-SelfVsOthers","Self-Free-ChewingVsQuiet","Self-Free-LickingVsQuiet","Self-Free-VocalizingVsQuiet"],...
+UseOldData=1;
+TestNames = ["Voc-Free-SelfVsBgd","Self-Free-VocalizingVsQuiet","Voc-Free-SelfVsOthers","Voc-Free-OthersVsBgd","Self-Free-ChewingVsQuiet","Self-Free-LickingVsQuiet"];
+SRpValues_all = table('Size',[length(GoodCellIndices) 7], 'VariableTypes',...
+    ["logical","double", "double","double","double", "double", "double"],...
+    'VariableNames',["Single-Unit" TestNames],...
     'RowNames',ListSSU(GoodCellIndices));
-TestNames = SRpValues_all.Properties.VariableNames;
+SRcoeffEstimates_all = table('Size',[length(GoodCellIndices) 7], 'VariableTypes',...
+    ["logical","double", "double","double","double", "double", "double"],...
+    'VariableNames',["Single-Unit" TestNames],...
+    'RowNames',ListSSU(GoodCellIndices));
 
 for ss=1:length(GoodCellIndices)
     fprintf(1,'Cell %d/%d\n',ss,length(GoodCellIndices))
-    [SRStats] = plot_av_spikerate_perfile(ListSSU{GoodCellIndices(ss)}, OutputPath);
+    if UseOldData
+        [~, DataFile]=fileparts(ListSSU{GoodCellIndices(ss)});
+        % Input
+        % Get the date of the recording
+        Idx_ = strfind(DataFile, '_');
+        Date = DataFile((Idx_(1)+1) : (Idx_(2)-1));
+        % Get the tetrode ID
+        NeuralInputID{1} = DataFile(strfind(DataFile, 'TT')+2);
+        % Get the SS ID
+        NeuralInputID{2} = DataFile((Idx_(end)+1):end);
+        % Get the SS Quality
+        NeuralInputID{3} = DataFile(strfind(DataFile, '_SS')+3);
+        % Get the subject ID
+        SubjectID = DataFile(1:5);
+        % Input
+        FullDataSetFile = fullfile(OutputPath, sprintf('%s_%s_SS%s_%s-%s.mat', SubjectID, Date,NeuralInputID{3},NeuralInputID{1},NeuralInputID{2}));
+        load(FullDataSetFile, 'SpikeRate');
+        SRStats = SpikeRate.Stats;
+
+    else
+        [SRStats] = plot_av_spikerate_perfile(ListSSU{GoodCellIndices(ss)}, OutputPath);
+    end
+    SRpValues_all(ss,1) = {strcmp(SSQ_Files2Run{GoodCellIndices(ss)} , 'SSSU')};
+    SRcoeffEstimates_all(ss,1) = {strcmp(SSQ_Files2Run{GoodCellIndices(ss)} , 'SSSU')};
     for pp=1:length(TestNames)
         Row = find(strcmp(SRStats.Test, TestNames{pp}));
         if ~isempty(Row)
-            SRpValues_all(ss,pp) = SRStats(Row,2);
+            SRpValues_all(ss,pp+1) = SRStats(Row,3);
+            SRcoeffEstimates_all(ss,pp+1) = SRStats(Row,2);
+        else
+            SRpValues_all(ss,pp+1) = {nan};
+            SRcoeffEstimates_all(ss,pp+1) = {nan};
         end
     end
 end
 fprintf(' DONE \n')
-save(fullfile(OutputPath,'TimeAverageSpikeRate_pValues.mat'), 'SRpValues_all');
+save(fullfile(OutputPath,'TimeAverageSpikeRate_pValues.mat'), 'SRpValues_all', 'SRcoeffEstimates_all');
+%% 
 
-% obtain bar plot for the population data
-plim = 0.01;
-BarGraph=nan(2,6);
-BarGraph(2,1) = sum(~isnan(SRpValues_all.("Voc-Free-SelfVsBgd")));
-BarGraph(1,1) = sum(SRpValues_all.("Voc-Free-SelfVsBgd")<plim)./BarGraph(2,1);
-BarGraph(2,2) = sum(~isnan(SRpValues_all.("Self-Free-VocalizingVsQuiet")));
-BarGraph(1,2) = sum(SRpValues_all.("Self-Free-VocalizingVsQuiet")<plim)./BarGraph(2,2);
-BarGraph(2,3) = sum(~isnan(SRpValues_all.("Voc-Free-SelfVsOthers")));
-BarGraph(1,3) = sum(SRpValues_all.("Voc-Free-SelfVsOthers")<plim)./BarGraph(2,3);
-BarGraph(2,4) = sum(~isnan(SRpValues_all.("Voc-Free-OthersVsBgd")));
-BarGraph(1,4) = sum(SRpValues_all.("Voc-Free-OthersVsBgd")<plim)./BarGraph(2,4);
-BarGraph(2,5) = sum(~isnan(SRpValues_all.("Self-Free-ChewingVsQuiet")));
-BarGraph(1,5) = sum(SRpValues_all.("Self-Free-ChewingVsQuiet")<plim)./BarGraph(2,5);
-BarGraph(2,6) = sum(~isnan(SRpValues_all.("Self-Free-LickingVsQuiet")));
-BarGraph(1,6) = sum(SRpValues_all.("Self-Free-LickingVsQuiet")<plim)./BarGraph(2,6);
-figure()
-X = categorical({'Vocalizing','Vocalizing vs Quiet','Vocalizing vs Hearing','Hearing', 'Chewing vs Quiet', 'Licking vs Quiet'});
-X = reordercats(X,{'Vocalizing','Vocalizing vs Quiet','Vocalizing vs Hearing','Hearing', 'Chewing vs Quiet', 'Licking vs Quiet'});
-B=bar(X,BarGraph(1,:), 'k','EdgeColor','k')
-ylabel(sprintf('Proportion of significant units at p<%.3f',plim))
-title('t-tests on time average spike rate')
-B.Parent.YLim = [0 1];
-for bb=1:size(BarGraph,2)
-    text(bb-.25,0.95,sprintf('n=%d',BarGraph(2,bb)))
+% obtain scatter plot of the coefficient estimates of GLM Poisson for the population data
+plim = 0.001;
+F1=figure();
+tiledlayout(2,1)
+nexttile
+ScatterMarkerSz = 30;
+ColorMU = [0 0.4470 0.7410];
+ColorSU = [0.9290 0.6940 0.1250];
+BarGraph=nan(4,6);
+MU_logical = ~SRpValues_all.("Single-Unit");
+NiceNames = {'Vocalizing','Vocalizing vs Quiet','Vocalizing vs Hearing','Hearing', 'Chewing vs Quiet', 'Licking vs Quiet'};
+for tt=1:length(TestNames)
+    Sig_logical = SRpValues_all.(sprintf(TestNames(tt)))<=plim;
+    NSig_logical = SRpValues_all.(sprintf(TestNames(tt)))>plim; % this is to make sure nan values stays 0 indices
+    BarGraph(3,tt) = sum(MU_logical.* (~isnan(SRpValues_all.(sprintf(TestNames(tt))))));
+    BarGraph(4,tt) = sum((~MU_logical) .* (~isnan(SRpValues_all.(sprintf(TestNames(tt))))));
+    BarGraph(1,tt) = sum(MU_logical .* Sig_logical)./BarGraph(3,tt);
+    BarGraph(2,tt) = sum((~MU_logical) .* Sig_logical)./BarGraph(4,tt);
+    
+    swarmchart(tt.*ones(sum(MU_logical.*Sig_logical),1),SRcoeffEstimates_all.(sprintf(TestNames(tt)))(logical(MU_logical.*Sig_logical)),ScatterMarkerSz,ColorMU,'o','filled','MarkerFaceAlpha',0.5,'MarkerEdgeAlpha',1)
+    hold on
+    swarmchart(tt.*ones(sum(MU_logical.*(NSig_logical)),1),SRcoeffEstimates_all.(sprintf(TestNames(tt)))(logical(MU_logical.*NSig_logical)),ScatterMarkerSz,ColorMU,'o','MarkerFaceAlpha',0.5,'MarkerEdgeAlpha',1)
+    hold on
+    swarmchart(tt.*ones(sum(~MU_logical.*(Sig_logical)),1),SRcoeffEstimates_all.(sprintf(TestNames(tt)))(logical(~MU_logical.*Sig_logical)),ScatterMarkerSz,ColorSU,'o','filled','MarkerFaceAlpha',0.5,'MarkerEdgeAlpha',1)
+    hold on
+    swarmchart(tt.*ones(sum(~MU_logical.*(NSig_logical)),1),SRcoeffEstimates_all.(sprintf(TestNames(tt)))(logical(~MU_logical.*NSig_logical)),ScatterMarkerSz,ColorSU,'o','MarkerFaceAlpha',0.5,'MarkerEdgeAlpha',1)
+    text(tt-.25,10^-1.3,sprintf('%d MU',BarGraph(3,tt)), 'Color',ColorMU)
+    text(tt-.25,10^-1.5,sprintf('%d SU',BarGraph(4,tt)), 'Color',ColorSU)
+    if tt==1
+        legend(sprintf('MU p<=%.3f',plim),sprintf('MU p>%.3f',plim), sprintf('SU p<=%.3f',plim),sprintf('SU p>%.3f',plim),  'boxoff', 'Location','north', 'Orientation', 'horizontal')
+        legend('AutoUpdate','off')
+    end
 end
+legend('boxoff')
+F1.Children.Children(2).XTick = 1:length(TestNames);
+F1.Children.Children(2).XTickLabel = NiceNames;
+F1.Children.Children(2).XTickLabelRotation = 25;
+YLIM = F1.Children.Children(2).YLim;
+F1.Children.Children(2).YLim = [10^-1.7 10^2.2];
+F1.Children.Children(2).YScale = 'log';
+ylabel('Coefficient estimates for each unit')
+% title('Poisson GLM on time average spike rate')
 
+
+nexttile
+X = categorical(NiceNames);
+X = reordercats(X,NiceNames);
+B=bar(X,BarGraph(1:2,:),'EdgeColor','k')
+ylabel(sprintf('Proportion of significant units at p<=%.3f',plim))
+
+B(1).Parent.YLim = [0 1];
+B(1).FaceColor = ColorMU;
+B(2).FaceColor = ColorSU;
+for bb=1:size(BarGraph,2)
+    text(bb-.25,0.97,sprintf('%d MU',BarGraph(3,bb)), 'Color', ColorMU)
+    text(bb-.25,0.93,sprintf('%d SU',BarGraph(4,bb)), 'Color', ColorSU)
+end
+% title('Poisson GLM on time average spike rate')
+suplabel('Poisson GLM on time average spike rate', 't')
+
+% find the single unit with max estimate during vocalization
+Sig_logical = SRpValues_all.(sprintf(TestNames(1)))<=plim;
+[~,IndSUdesc] = sort(SRcoeffEstimates_all.(sprintf(TestNames(1)))(logical(~MU_logical.*Sig_logical)), 'descend');
+IndSUMax = find(SRcoeffEstimates_all.(sprintf(TestNames(1)))(logical(~MU_logical.*Sig_logical)) == max(SRcoeffEstimates_all.(sprintf(TestNames(1)))(logical(~MU_logical.*Sig_logical))));
+ListSSU_SUSig = ListSSU(GoodCellIndices(logical(~MU_logical.*Sig_logical)));
+fprintf(1,'the ID of the SU with max estimate for vocalizing vs Background is %s', ListSSU_SUSig{IndSUMax})
 
 % The plot is saved under OutputPath as sprintf('%s_%s_%s_SS%s_%s-%s_MeanRateScatter.pdf', SubjectID, SSQ,TetrodeID,SSID))
 %% Plot rasters for vocalizations
