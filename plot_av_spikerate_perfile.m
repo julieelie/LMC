@@ -5,6 +5,9 @@ end
 % fix the minimum rate for the Poisson GLM, or calculations run crazy
 % because log(0)=-Inf;
 R0 = 0.5; % observing half a spike during a 1s window
+
+% Decide of the minimum duration of an event (ms) to be included in the analysis
+MinDur = 100;
 %%
 [~, DataFile]=fileparts(InputDataFile);
 % Input
@@ -28,7 +31,7 @@ load(FullDataSetFile, 'SpikeRate');
 
 % Output
 % Stats = table('Size',[10 6],'VariableTypes',["string", 'double', 'double','double','int16', 'int16'],'VariableNames',{'Test', 'p-value','t-stat','DF','n1','n2'});
-Stats = table('Size',[10 7],'VariableTypes',["string", 'double', 'double', 'double','double','int16', 'int16'],'VariableNames',{'Test', 'Estimate', 'p-value','chi2stat','DF','n1','n2'});
+Stats = table('Size',[10 9],'VariableTypes',["string", 'double', 'double', 'double','double','int16', 'int16', 'double','double'],'VariableNames',{'Test', 'Estimate', 'p-value','chi2stat','DF','n1','n2','mean1', 'mean2'});
 TestCount = 0;
 %% Plot the figure
 ScatterMarkerSz = 30;
@@ -41,17 +44,19 @@ Nevents = zeros(8,1);
 LegendVoc = {};
 NaxisInd = -1;
 % Plot the spike rate in Hz of self calls Operant
-Ind = contains(SpikeRate.SelfCall_exptype, 'O');
+Ind = logical(contains(SpikeRate.SelfCall_exptype, 'O') .* SpikeRate.SelfCall_rate(:,3)>MinDur);
 if sum(Ind)>5
     NaxisInd = NaxisInd+2;
     Nevents(NaxisInd:NaxisInd+1) = sum(Ind).*ones(2,1);
     swarmchart(NaxisInd.*ones(sum(Ind),1),Fun(SpikeRate.SelfCall_rate(Ind,1)),ScatterMarkerSz,ColorSelf,'o','filled','MarkerFaceAlpha',0.5,'MarkerEdgeAlpha',0.5)
     hold on
-    errorbar(NaxisInd,mean(Fun(SpikeRate.SelfCall_rate(Ind,1))),std(Fun(SpikeRate.SelfCall_rate(Ind,1)))/sum(Ind)^0.5, 'dr','MarkerSize',MeanMarkerSize,'MarkerFaceColor','r')
+    Mean1 = mean(Fun(SpikeRate.SelfCall_rate(Ind,1)));
+    errorbar(NaxisInd,Mean1,std(Fun(SpikeRate.SelfCall_rate(Ind,1)))/sum(Ind)^0.5, 'dr','MarkerSize',MeanMarkerSize,'MarkerFaceColor','r')
     hold on
     swarmchart((NaxisInd+1).*ones(sum(Ind),1),Fun(SpikeRate.SelfCall_rate(Ind,2)),ScatterMarkerSz,ColorBR,'o','filled','MarkerFaceAlpha',0.5,'MarkerEdgeAlpha',0.5)
     hold on
-    errorbar((NaxisInd+1),nanmean(Fun(SpikeRate.SelfCall_rate(Ind,2))),nanstd(Fun(SpikeRate.SelfCall_rate(Ind,2)))/sum(Ind)^0.5, 'dc','MarkerSize',MeanMarkerSize,'MarkerFaceColor','c')
+    Mean2 = nanmean(Fun(SpikeRate.SelfCall_rate(Ind,2)));
+    errorbar((NaxisInd+1),Mean2,nanstd(Fun(SpikeRate.SelfCall_rate(Ind,2)))/sum(Ind)^0.5, 'dc','MarkerSize',MeanMarkerSize,'MarkerFaceColor','c')
     hold on
     yGLM = [SpikeRate.SelfCall_rate(Ind,1);SpikeRate.SelfCall_rate(Ind,2)];
     yGLM(yGLM==0) = R0;
@@ -60,7 +65,7 @@ if sum(Ind)>5
     pSO = DT.pValue(2);
     fprintf(1,'Operant: Vocalization production vs background rate (1s 5s before call onset): p = %.4f   chi2Stat=%.2f   DF = %.1f\n', pSO, DT.chi2Stat(2), -diff(DT.DFE))
     TestCount = TestCount+1;
-    Stats(TestCount,:) = {'Voc-Operant-SelfVsBgd', exp(MDL.Coefficients.Estimate(2)), pSO,DT.chi2Stat(2), -diff(DT.DFE),sum(Ind),sum(Ind)};
+    Stats(TestCount,:) = {'Voc-Operant-SelfVsBgd', exp(MDL.Coefficients.Estimate(2)), pSO,DT.chi2Stat(2), -diff(DT.DFE),sum(Ind),sum(Ind),Mean1, Mean2};
 %     [h,pSO,ci,stats] = ttest(SpikeRate.SelfCall_rate(Ind,1),SpikeRate.SelfCall_rate(Ind,2));
 %     fprintf(1,'Operant: Vocalization production vs background rate (1s 5s before call onset): p = %.4f   t=%.2f   DF = %.1f\n', pSO, stats.tstat, stats.df)
 %     TestCount = TestCount+1;
@@ -70,17 +75,19 @@ end
 
 
 % Plot the spike rate in Hz of self calls Free session
-Ind = contains(SpikeRate.SelfCall_exptype, 'F');
+Ind = logical(contains(SpikeRate.SelfCall_exptype, 'F') .* SpikeRate.SelfCall_rate(:,3)>MinDur);
 if sum(Ind)>5
     NaxisInd = NaxisInd+2;
     Nevents(NaxisInd:(NaxisInd+1)) = sum(Ind).*ones(2,1);
     swarmchart(NaxisInd.*ones(sum(Ind),1),Fun(SpikeRate.SelfCall_rate(Ind,1)),ScatterMarkerSz,ColorSelf,'o','filled','MarkerFaceAlpha',0.5,'MarkerEdgeAlpha',0.5)
     hold on
-    errorbar(NaxisInd,mean(Fun(SpikeRate.SelfCall_rate(Ind,1))),std(Fun(SpikeRate.SelfCall_rate(Ind,1)))/sum(Ind)^0.5, 'dr','MarkerSize',MeanMarkerSize,'MarkerFaceColor','r')
+    MeanS = mean(Fun(SpikeRate.SelfCall_rate(Ind,1)));
+    errorbar(NaxisInd,MeanS,std(Fun(SpikeRate.SelfCall_rate(Ind,1)))/sum(Ind)^0.5, 'dr','MarkerSize',MeanMarkerSize,'MarkerFaceColor','r')
     hold on
     swarmchart((NaxisInd+1).*ones(sum(Ind),1),Fun(SpikeRate.SelfCall_rate(Ind,2)),ScatterMarkerSz,ColorBR,'o','filled','MarkerFaceAlpha',0.5,'MarkerEdgeAlpha',0.5)
     hold on
-    errorbar((NaxisInd+1),nanmean(Fun(SpikeRate.SelfCall_rate(Ind,2))),nanstd(Fun(SpikeRate.SelfCall_rate(Ind,2)))/sum(Ind)^0.5, 'dc','MarkerSize',MeanMarkerSize,'MarkerFaceColor','c')
+    Mean2 = nanmean(Fun(SpikeRate.SelfCall_rate(Ind,2)));
+    errorbar((NaxisInd+1),Mean2,nanstd(Fun(SpikeRate.SelfCall_rate(Ind,2)))/sum(Ind)^0.5, 'dc','MarkerSize',MeanMarkerSize,'MarkerFaceColor','c')
     hold on
     yGLM = [SpikeRate.SelfCall_rate(Ind,1);SpikeRate.SelfCall_rate(Ind,2)];
     yGLM(yGLM==0) = R0;
@@ -89,7 +96,7 @@ if sum(Ind)>5
     pSF = DT.pValue(2);
     fprintf(1,'Free: Vocalization production vs background rate (1s 5s before call onset): p = %.4f   chi2Stat=%.2f   DF = %.1f\n', pSF, DT.chi2Stat(2), -diff(DT.DFE))
     TestCount = TestCount+1;
-    Stats(TestCount,:) = {'Voc-Free-SelfVsBgd', exp(MDL.Coefficients.Estimate(2)), pSF,DT.chi2Stat(2), -diff(DT.DFE),sum(Ind),sum(Ind)};
+    Stats(TestCount,:) = {'Voc-Free-SelfVsBgd', exp(MDL.Coefficients.Estimate(2)), pSF,DT.chi2Stat(2), -diff(DT.DFE),sum(Ind),sum(Ind), MeanS, Mean2};
 
 %     [h,pSF,ci,stats] = ttest(SpikeRate.SelfCall_rate(Ind,1),SpikeRate.SelfCall_rate(Ind,2));
 %     fprintf(1,'Free: Vocalization production vs background rate (1s 5s before call onset): p = %.4f   t=%.2f   DF = %.1f\n', pSF, stats.tstat, stats.df)
@@ -113,17 +120,19 @@ if ~isempty(SpikeRate.OthersCall_exptype)
     %     errorbar(6,mean(SpikeRate.OthersCall_rate(Ind,2)),std(SpikeRate.OthersCall_rate(Ind,2))/sum(Ind)^0.5, 'sc','MarkerSize',MeanMarkerSize,'MarkerFaceColor','c')
     %     hold on
 
-    Ind = contains(SpikeRate.OthersCall_exptype, 'O');
+    Ind = logical(contains(SpikeRate.OthersCall_exptype, 'O').* SpikeRate.OthersCall_rate(:,3)>MinDur);
     if sum(Ind)>5
         NaxisInd = NaxisInd+2;
         Nevents(NaxisInd:(NaxisInd+1)) = sum(Ind).*ones(2,1);
         swarmchart(NaxisInd.*ones(sum(Ind),1),Fun(SpikeRate.OthersCall_rate(Ind,1)),ScatterMarkerSz,ColorOthers,'o','filled','MarkerFaceAlpha',0.5,'MarkerEdgeAlpha',0.5)
         hold on
-        errorbar(NaxisInd,mean(Fun(SpikeRate.OthersCall_rate(Ind,1))),std(Fun(SpikeRate.OthersCall_rate(Ind,1)))/sum(Ind)^0.5, 'sr','MarkerSize',MeanMarkerSize,'MarkerFaceColor','r')
+        Mean1 = mean(Fun(SpikeRate.OthersCall_rate(Ind,1)));
+        errorbar(NaxisInd,Mean1,std(Fun(SpikeRate.OthersCall_rate(Ind,1)))/sum(Ind)^0.5, 'sr','MarkerSize',MeanMarkerSize,'MarkerFaceColor','r')
         hold on
         swarmchart((NaxisInd+1).*ones(sum(Ind),1),Fun(SpikeRate.OthersCall_rate(Ind,2)),ScatterMarkerSz,ColorBR,'o','filled','MarkerFaceAlpha',0.5,'MarkerEdgeAlpha',0.5)
         hold on
-        errorbar((NaxisInd+1),nanmean(Fun(SpikeRate.OthersCall_rate(Ind,2))),nanstd(Fun(SpikeRate.OthersCall_rate(Ind,2)))/sum(Ind)^0.5, 'sc','MarkerSize',MeanMarkerSize,'MarkerFaceColor','c')
+        Mean2 = nanmean(Fun(SpikeRate.OthersCall_rate(Ind,2)));
+        errorbar((NaxisInd+1),Mean2,nanstd(Fun(SpikeRate.OthersCall_rate(Ind,2)))/sum(Ind)^0.5, 'sc','MarkerSize',MeanMarkerSize,'MarkerFaceColor','c')
         hold on
         yGLM = [SpikeRate.OthersCall_rate(Ind,1);SpikeRate.OthersCall_rate(Ind,2)];
         yGLM(yGLM==0) = R0;
@@ -132,7 +141,7 @@ if ~isempty(SpikeRate.OthersCall_exptype)
         pOO = DT.pValue(2);
         fprintf(1,'Operant: Vocalization Others vs background rate (1s 5s before call onset): p = %.4f   chi2Stat=%.2f   DF = %.1f\n', pOO, DT.chi2Stat(2), -diff(DT.DFE))
         TestCount = TestCount+1;
-        Stats(TestCount,:) = {'Voc-Operant-OthersVsBgd', exp(MDL.Coefficients.Estimate(2)), pOO,DT.chi2Stat(2), -diff(DT.DFE),sum(Ind),sum(Ind)};
+        Stats(TestCount,:) = {'Voc-Operant-OthersVsBgd', exp(MDL.Coefficients.Estimate(2)), pOO,DT.chi2Stat(2), -diff(DT.DFE),sum(Ind),sum(Ind), Mean1, Mean2};
 %         [h,pOO,ci,stats] = ttest(SpikeRate.OthersCall_rate(Ind,1),SpikeRate.OthersCall_rate(Ind,2));
 %         fprintf(1,'Operant: Vocalization Others vs background rate (1s 5s before call onset): p = %.4f   t=%.2f   DF = %.1f\n', pOO, stats.tstat, stats.df)
 %         TestCount = TestCount+1;
@@ -143,17 +152,19 @@ if ~isempty(SpikeRate.OthersCall_exptype)
 
 
     % Plot the spike rate in Hz of others calls Free session
-    Ind = contains(SpikeRate.OthersCall_exptype, 'F');
+    Ind = logical(contains(SpikeRate.OthersCall_exptype, 'F') .* SpikeRate.OthersCall_rate(:,3)>MinDur);
     if sum(Ind)>5
         NaxisInd = NaxisInd +2;
         Nevents(NaxisInd:(NaxisInd+1)) = sum(Ind).*ones(2,1);
         swarmchart(NaxisInd.*ones(sum(Ind),1),Fun(SpikeRate.OthersCall_rate(Ind,1)),ScatterMarkerSz,ColorOthers,'o','filled','MarkerFaceAlpha',0.5,'MarkerEdgeAlpha',0.5)
         hold on
-        errorbar(NaxisInd,mean(Fun(SpikeRate.OthersCall_rate(Ind,1))),std(Fun(SpikeRate.OthersCall_rate(Ind,1)))/sum(Ind)^0.5, 'sr','MarkerSize',MeanMarkerSize,'MarkerFaceColor','r')
+        MeanO = mean(Fun(SpikeRate.OthersCall_rate(Ind,1)));
+        errorbar(NaxisInd,MeanO,std(Fun(SpikeRate.OthersCall_rate(Ind,1)))/sum(Ind)^0.5, 'sr','MarkerSize',MeanMarkerSize,'MarkerFaceColor','r')
         hold on
         swarmchart((NaxisInd+1).*ones(sum(Ind),1),Fun(SpikeRate.OthersCall_rate(Ind,2)),ScatterMarkerSz,ColorBR,'o','filled','MarkerFaceAlpha',0.5,'MarkerEdgeAlpha',0.5)
         hold on
-        errorbar((NaxisInd+1),nanmean(Fun(SpikeRate.OthersCall_rate(Ind,2))),nanstd(Fun(SpikeRate.OthersCall_rate(Ind,2)))/sum(Ind)^0.5, 'sc','MarkerSize',MeanMarkerSize,'MarkerFaceColor','c')
+        Mean2 = nanmean(Fun(SpikeRate.OthersCall_rate(Ind,2)));
+        errorbar((NaxisInd+1),Mean2,nanstd(Fun(SpikeRate.OthersCall_rate(Ind,2)))/sum(Ind)^0.5, 'sc','MarkerSize',MeanMarkerSize,'MarkerFaceColor','c')
         hold on
         yGLM = [SpikeRate.OthersCall_rate(Ind,1);SpikeRate.OthersCall_rate(Ind,2)];
         yGLM(yGLM==0) = R0;
@@ -162,7 +173,7 @@ if ~isempty(SpikeRate.OthersCall_exptype)
         pOF = DT.pValue(2);
         fprintf(1,'Free: Vocalization Others vs background rate (1s 5s before call onset): p = %.4f   chi2Stat=%.2f   DF = %.1f\n', pOF, DT.chi2Stat(2), -diff(DT.DFE))
         TestCount = TestCount+1;
-        Stats(TestCount,:) = {'Voc-Free-OthersVsBgd', exp(MDL.Coefficients.Estimate(2)), pOF,DT.chi2Stat(2), -diff(DT.DFE),sum(Ind),sum(Ind)};
+        Stats(TestCount,:) = {'Voc-Free-OthersVsBgd', exp(MDL.Coefficients.Estimate(2)), pOF,DT.chi2Stat(2), -diff(DT.DFE),sum(Ind),sum(Ind), MeanO, Mean2};
 
 %         [h,pOF,ci,stats] = ttest(SpikeRate.OthersCall_rate(Ind,1),SpikeRate.OthersCall_rate(Ind,2));
 %         fprintf(1,'Free: Vocalization Others vs background rate (1s 5s before call onset): p = %.4f   t=%.2f   DF = %.1f\n', pOF, stats.tstat, stats.df)
@@ -177,7 +188,7 @@ if ~isempty(SpikeRate.OthersCall_exptype)
             p3 = DT.pValue(2);
             fprintf(1,'Free: Vocalization Self vs Others: p = %.4f   chi2Stat=%.2f   DF = %.1f\n', p3, DT.chi2Stat(2), -diff(DT.DFE))
             TestCount = TestCount+1;
-            Stats(TestCount,:) = {'Voc-Free-SelfVsOthers', exp(MDL.Coefficients.Estimate(2)), p3,DT.chi2Stat(2), -diff(DT.DFE),sum(IndSelf),sum(Ind)};
+            Stats(TestCount,:) = {'Voc-Free-SelfVsOthers', exp(MDL.Coefficients.Estimate(2)), p3,DT.chi2Stat(2), -diff(DT.DFE),sum(IndSelf),sum(Ind), MeanS, MeanO};
 
 %             [h,p3,ci,stats] = ttest2(SpikeRate.SelfCall_rate(IndSelf,1), SpikeRate.OthersCall_rate(Ind,1));
 %             fprintf(1,'Free: Vocalization Self vs Others: p = %.4f   t=%.2f   DF = %.1f\n', p3, stats.tstat, stats.df)
@@ -206,7 +217,7 @@ end
 if length(SpikeRate.BehavType)==0
     ylabel('Spike rate (Hz)')
     set(gca,'XTick', 1:length(LegendVoc),'XTickLabel',LegendVoc)
-    title(sprintf('Mean rate\n%s on %s Tetrode %s SS%s %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{3},NeuralInputID{2}))
+    title(sprintf('Mean rate of events longer than %d ms\n%s on %s Tetrode %s SS%s %s',MinDur,SubjectID, Date, NeuralInputID{1},NeuralInputID{3},NeuralInputID{2}))
     xlim(gca,[0 length(LegendVoc)+1])
 
     orient(Fig,'landscape')
@@ -298,12 +309,15 @@ else
 
     % Plot Self non vocal behavior (Free session)
     LegendSNVB = cell(1,length(SpikeRate.BehavType));
+    MeanSelfNVBehav = nan(length(SpikeRate.BehavType));
     for bb=1:length(SpikeRate.BehavType)
-        if ~isnan(SpikeRate.SelfNVBehav_rate{bb})
+        if ~isnan(SpikeRate.SelfNVBehav_rate{bb}(1,1))
+            Ind = SpikeRate.SelfNVBehav_rate{bb}(:,2)>MinDur;
             %         Jitter_local = rand([size(SpikeRate.SelfNVBehav_rate{bb},1),1]).*0.4-0.2;
-            swarmchart((bb+NaxisCount).*ones(size(SpikeRate.SelfNVBehav_rate{bb},1),1),Fun(SpikeRate.SelfNVBehav_rate{bb}),ScatterMarkerSz,ColorSelf,'o','filled','MarkerFaceAlpha',0.5,'MarkerEdgeAlpha',0.5)
+            swarmchart((bb+NaxisCount).*ones(sum(Ind),1),Fun(SpikeRate.SelfNVBehav_rate{bb}(Ind,1)),ScatterMarkerSz,ColorSelf,'o','filled','MarkerFaceAlpha',0.5,'MarkerEdgeAlpha',0.5)
             hold on
-            errorbar(bb+NaxisCount,mean(Fun(SpikeRate.SelfNVBehav_rate{bb})),std(Fun(SpikeRate.SelfNVBehav_rate{bb}))/size(SpikeRate.SelfNVBehav_rate{bb},1)^0.5, 'dr','MarkerSize',MeanMarkerSize,'MarkerFaceColor','r')
+            MeanSelfNVBehav(bb) = mean(Fun(SpikeRate.SelfNVBehav_rate{bb}(Ind,1)));
+            errorbar(bb+NaxisCount,MeanSelfNVBehav(bb),std(Fun(SpikeRate.SelfNVBehav_rate{bb}(Ind,1)))/sum(Ind)^0.5, 'dr','MarkerSize',MeanMarkerSize,'MarkerFaceColor','r')
             hold on
 
             if contains(SpikeRate.BehavType{bb}, 'teeth')
@@ -311,7 +325,7 @@ else
             else
                 LegendSNVB{bb} = sprintf('Self-%s',SpikeRate.BehavType{bb});
             end
-            text(bb+NaxisCount,-0.5,sprintf('%d',size(SpikeRate.SelfNVBehav_rate{bb},1)))
+            text(bb+NaxisCount,-0.5,sprintf('%d',sum(Ind)))
         else
             if contains(SpikeRate.BehavType{bb}, 'teeth')
                 LegendSNVB{bb} = sprintf('Self-%s','nailbiting');
@@ -324,12 +338,15 @@ else
 
     % Plot Others non vocal behavior (Free session)
     LegendONVB = cell(1,length(SpikeRate.BehavType));
+    MeanOthersNVBehav = nan(length(SpikeRate.BehavType));
     for bb=1:length(SpikeRate.BehavType)
-        if ~isnan(SpikeRate.OthersNVBehav_rate{bb})
+        if ~isnan(SpikeRate.OthersNVBehav_rate{bb}(1,1))
+            Ind = SpikeRate.OthersNVBehav_rate{bb}(:,2)>MinDur;
             %         Jitter_local = rand([size(SpikeRate.OthersNVBehav_rate{bb},1),1]).*0.4-0.2;
-            swarmchart((bb+NaxisCount+length(SpikeRate.BehavType)).*ones(size(SpikeRate.OthersNVBehav_rate{bb},1),1),Fun(SpikeRate.OthersNVBehav_rate{bb}),ScatterMarkerSz,ColorOthers,'o','filled','MarkerFaceAlpha',0.5,'MarkerEdgeAlpha',0.5)
+            swarmchart((bb+NaxisCount+length(SpikeRate.BehavType)).*ones(sum(Ind),1),Fun(SpikeRate.OthersNVBehav_rate{bb}(Ind,1)),ScatterMarkerSz,ColorOthers,'o','filled','MarkerFaceAlpha',0.5,'MarkerEdgeAlpha',0.5)
             hold on
-            errorbar(bb+NaxisCount+length(SpikeRate.BehavType),mean(Fun(SpikeRate.OthersNVBehav_rate{bb})),std(Fun(SpikeRate.SelfNVBehav_rate{bb}))/size(SpikeRate.SelfNVBehav_rate{bb},1)^0.5, 'sr','MarkerSize',MeanMarkerSize,'MarkerFaceColor','r')
+            MeanOthersNVBehav(bb) = mean(Fun(SpikeRate.OthersNVBehav_rate{bb}(Ind,1)));
+            errorbar(bb+NaxisCount+length(SpikeRate.BehavType),MeanOthersNVBehav(bb),std(Fun(SpikeRate.SelfNVBehav_rate{bb}(Ind,1)))/sum(Ind)^0.5, 'sr','MarkerSize',MeanMarkerSize,'MarkerFaceColor','r')
             hold on
 
             if contains(SpikeRate.BehavType{bb}, 'teeth')
@@ -337,7 +354,7 @@ else
             else
                 LegendONVB{bb} = sprintf('Others-%s',SpikeRate.BehavType{bb});
             end
-            text(bb+NaxisCount+length(SpikeRate.BehavType),-0.5,sprintf('%d',size(SpikeRate.OthersNVBehav_rate{bb},1)))
+            text(bb+NaxisCount+length(SpikeRate.BehavType),-0.5,sprintf('%d',sum(Ind)))
         else
             if contains(SpikeRate.BehavType{bb}, 'teeth')
                 LegendONVB{bb} = sprintf('Others-%s','nailbiting');
@@ -352,7 +369,7 @@ else
     ylabel('Spike rate (Hz)')
     FullLegend = [LegendVoc LegendSNVB LegendONVB];
     set(gca,'XTick', 1:length(FullLegend),'XTickLabel',FullLegend)
-    title(sprintf('Mean rate\n%s on %s Tetrode %s SS%s %s',SubjectID, Date, NeuralInputID{1},NeuralInputID{3},NeuralInputID{2}))
+    title(sprintf('Mean rate of events longer than %d ms\n%s on %s Tetrode %s SS%s %s',MinDur, SubjectID, Date, NeuralInputID{1},NeuralInputID{3},NeuralInputID{2}))
     xlim(gca,[0 length(LegendVoc)+2*length(SpikeRate.BehavType)+1])
 
     orient(Fig,'landscape')
@@ -444,16 +461,18 @@ else
     bbChewing = find(contains(SpikeRate.BehavType, 'chewing'));
     bbLicking = find(contains(SpikeRate.BehavType, 'licking'));
     if ~isempty(bbQuiet) && ~isempty(bbChewing) && sum(~isnan(SpikeRate.SelfNVBehav_rate{bbChewing})) && sum(~isnan(SpikeRate.SelfNVBehav_rate{bbQuiet}))
-        N1 = length(SpikeRate.SelfNVBehav_rate{bbChewing});
-        N2 = length(SpikeRate.SelfNVBehav_rate{bbQuiet});
-        yGLM = [SpikeRate.SelfNVBehav_rate{bbChewing};SpikeRate.SelfNVBehav_rate{bbQuiet}];
+        IndC = SpikeRate.SelfNVBehav_rate{bbChewing}(:,2)>MinDur;
+        N1 = sum(IndC);
+        IndQ = SpikeRate.SelfNVBehav_rate{bbQuiet}(:,2)>MinDur;
+        N2 = sum(IndQ);
+        yGLM = [SpikeRate.SelfNVBehav_rate{bbChewing}(IndC,1);SpikeRate.SelfNVBehav_rate{bbQuiet}(IndQ,1)];
         yGLM(yGLM==0) = R0;
         MDL = fitglm([ones(N1,1);zeros(N2,1)],yGLM,'linear', 'CategoricalVars',1,'Distribution', 'poisson');
         DT = MDL.devianceTest;
         p4 = DT.pValue(2);
         fprintf(1,'Free: Chewing vs Quiet: p = %.4f   chi2Stat=%.2f   DF = %.1f\n', p4, DT.chi2Stat(2), -diff(DT.DFE))
         TestCount = TestCount+1;
-        Stats(TestCount,:) = {'Self-Free-ChewingVsQuiet', exp(MDL.Coefficients.Estimate(2)), p4,DT.chi2Stat(2), -diff(DT.DFE),N1,N2};
+        Stats(TestCount,:) = {'Self-Free-ChewingVsQuiet', exp(MDL.Coefficients.Estimate(2)), p4,DT.chi2Stat(2), -diff(DT.DFE),N1,N2, MeanSelfNVBehav(bbChewing),MeanSelfNVBehav(bbQuiet)};
 
 %         [~, p4, ~,stats] = ttest2(SpikeRate.SelfNVBehav_rate{bbQuiet}, SpikeRate.SelfNVBehav_rate{bbChewing});
 %         fprintf(1,'Free: Chewing vs Quiet: p = %.4f   t=%.2f   DF = %.1f\n', p4, stats.tstat, stats.df)
@@ -461,16 +480,18 @@ else
 %         Stats(TestCount,:) = {'Self-Free-ChewingVsQuiet', p4,stats.tstat, stats.df,length(SpikeRate.SelfNVBehav_rate{bbChewing}),length(SpikeRate.SelfNVBehav_rate{bbQuiet})};
     end
     if ~isempty(bbQuiet) && ~isempty(bbLicking) && sum(~isnan(SpikeRate.SelfNVBehav_rate{bbLicking})) && sum(~isnan(SpikeRate.SelfNVBehav_rate{bbQuiet}))
-        N1 = length(SpikeRate.SelfNVBehav_rate{bbLicking});
-        N2 = length(SpikeRate.SelfNVBehav_rate{bbQuiet});
-        yGLM = [SpikeRate.SelfNVBehav_rate{bbLicking};SpikeRate.SelfNVBehav_rate{bbQuiet}];
+        IndL = SpikeRate.SelfNVBehav_rate{bbLicking}(:,2)>MinDur;
+        N1 = sum(IndL);
+        IndQ = SpikeRate.SelfNVBehav_rate{bbQuiet}(:,2)>MinDur;
+        N2 = sum(IndQ);
+        yGLM = [SpikeRate.SelfNVBehav_rate{bbLicking}(IndL,1);SpikeRate.SelfNVBehav_rate{bbQuiet}(IndQ,1)];
         yGLM(yGLM==0) = R0;
         MDL = fitglm([ones(N1,1);zeros(N2,1)],yGLM,'linear', 'CategoricalVars',1,'Distribution', 'poisson');
         DT = MDL.devianceTest;
         p5 = DT.pValue(2);
         fprintf(1,'Free: Licking vs Quiet: p = %.4f   chi2Stat=%.2f   DF = %.1f\n', p5, DT.chi2Stat(2), -diff(DT.DFE))
         TestCount = TestCount+1;
-        Stats(TestCount,:) = {'Self-Free-LickingVsQuiet', exp(MDL.Coefficients.Estimate(2)), p5,DT.chi2Stat(2), -diff(DT.DFE),N1,N2};
+        Stats(TestCount,:) = {'Self-Free-LickingVsQuiet', exp(MDL.Coefficients.Estimate(2)), p5,DT.chi2Stat(2), -diff(DT.DFE),N1,N2, MeanSelfNVBehav(bbLicking),MeanSelfNVBehav(bbQuiet)};
 
 %         [~, p5, ~,stats] = ttest2(SpikeRate.SelfNVBehav_rate{bbQuiet}, SpikeRate.SelfNVBehav_rate{bbLicking});
 %         fprintf(1,'Free: Licking vs Quiet: p = %.4f   t=%.2f   DF = %.1f\n', p5, stats.tstat, stats.df)
@@ -479,15 +500,16 @@ else
     end
     if ~isempty(bbQuiet) && exist('IndSelf', 'var') && sum(~isnan(SpikeRate.SelfNVBehav_rate{bbQuiet}))
         N1 = sum(IndSelf);
-        N2 = length(SpikeRate.SelfNVBehav_rate{bbQuiet});
-        yGLM = [SpikeRate.SelfCall_rate(IndSelf,1);SpikeRate.SelfNVBehav_rate{bbQuiet}];
+        IndQ = SpikeRate.SelfNVBehav_rate{bbQuiet}(:,2)>MinDur;
+        N2 = sum(IndQ);
+        yGLM = [SpikeRate.SelfCall_rate(IndSelf,1);SpikeRate.SelfNVBehav_rate{bbQuiet}(IndQ,1)];
         yGLM(yGLM==0) = R0;
         MDL = fitglm([ones(N1,1);zeros(N2,1)],yGLM,'linear', 'CategoricalVars',1,'Distribution', 'poisson');
         DT = MDL.devianceTest;
         p6 = DT.pValue(2);
         fprintf(1,'Free: Vocalizing vs Quiet: p = %.4f   chi2Stat=%.2f   DF = %.1f\n', p6, DT.chi2Stat(2), -diff(DT.DFE))
         TestCount = TestCount+1;
-        Stats(TestCount,:) = {'Self-Free-VocalizingVsQuiet', exp(MDL.Coefficients.Estimate(2)), p6,DT.chi2Stat(2), -diff(DT.DFE),N1,N2};
+        Stats(TestCount,:) = {'Self-Free-VocalizingVsQuiet', exp(MDL.Coefficients.Estimate(2)), p6,DT.chi2Stat(2), -diff(DT.DFE),N1,N2, MeanS,MeanSelfNVBehav(bbQuiet)};
 
 %         [~, p6, ~,stats] = ttest2(SpikeRate.SelfNVBehav_rate{bbQuiet}, SpikeRate.SelfCall_rate(IndSelf,1));
 %         fprintf(1,'Free: Vocalizing vs Quiet: p = %.4f   t=%.2f   DF = %.1f\n', p6, stats.tstat, stats.df)
