@@ -223,6 +223,10 @@ SRcoeffEstimates_all = table('Size',[length(GoodCellIndices) 7], 'VariableTypes'
     ["logical","double", "double","double","double", "double", "double"],...
     'VariableNames',["Single-Unit" TestNames],...
     'RowNames',ListSSU(GoodCellIndices));
+MeanNames = ["Self-Free-Vocalizing","Others-Free-Vocalizing","Self-Free-Chewing","Self-Free-Licking","Self-Free-Quiet"];
+SRmean = table('Size', [length(GoodCellIndices) length(MeanNames)], 'VariableTypes',...
+    ["double","double","double","double","double"],'VariableNames',MeanNames,...
+    'RowNames',ListSSU(GoodCellIndices));
 
 for ss=1:length(GoodCellIndices)
     fprintf(1,'Cell %d/%d\n',ss,length(GoodCellIndices))
@@ -260,9 +264,47 @@ for ss=1:length(GoodCellIndices)
             SRcoeffEstimates_all(ss,pp+1) = {nan};
         end
     end
+    
+    %Self-Free-Vocalizing
+    Row = find(strcmp(SRStats.Test, "Voc-Free-SelfVsBgd"));
+    if ~isempty(Row)
+        SRmean(ss,1) = SRStats(Row,end-1);
+        Row = find(strcmp(SRStats.Test, "Self-Free-VocalizingVsQuiet"));
+        if ~isempty(Row)
+            SRmean(ss,5) = SRStats(Row,end);
+        else
+            SRmean(ss,5) = nan;
+        end
+    else
+        SRmean(ss,1) = nan;
+    end
+    %Others-Free-Vocalizing
+    Row = find(strcmp(SRStats.Test, "Voc-Free-OthersVsBgd"));
+    if ~isempty(Row)
+        SRmean(ss,2) = SRStats(Row,end-1);
+    else
+        SRmean(ss,2) = nan;
+    end
+    %Self-Free-Chewing
+    Row = find(strcmp(SRStats.Test, "Self-Free-ChewingVsQuiet"));
+    if ~isempty(Row)
+        SRmean(ss,3) = SRStats(Row,end-1);
+        SRmean(ss,5) = SRStats(Row,end);
+    else
+        SRmean(ss,3) = nan;
+    end
+    %Self-Free-Licking
+    Row = find(strcmp(SRStats.Test, "Self-Free-LickingVsQuiet"));
+    if ~isempty(Row)
+        SRmean(ss,4) = SRStats(Row,end-1);
+        SRmean(ss,5) = SRStats(Row,end);
+    else
+        SRmean(ss,4) = nan;
+    end
 end
 fprintf(' DONE \n')
-save(fullfile(OutputPath,'TimeAverageSpikeRate_pValues.mat'), 'SRpValues_all', 'SRcoeffEstimates_all');
+save(fullfile(OutputPath,'TimeAverageSpikeRate_pValues.mat'), 'SRpValues_all', 'SRcoeffEstimates_all','SRmean');
+% The plot is saved under OutputPath as sprintf('%s_%s_%s_SS%s_%s-%s_MeanRateScatter.pdf', SubjectID, SSQ,TetrodeID,SSID))
 %% 
 
 % obtain scatter plot of the coefficient estimates of GLM Poisson for the population data
@@ -332,7 +374,14 @@ IndSUMax = find(SRcoeffEstimates_all.(sprintf(TestNames(1)))(logical(~MU_logical
 ListSSU_SUSig = ListSSU(GoodCellIndices(logical(~MU_logical.*Sig_logical)));
 fprintf(1,'the ID of the SU with max estimate for vocalizing vs Background is %s', ListSSU_SUSig{IndSUMax})
 
-% The plot is saved under OutputPath as sprintf('%s_%s_%s_SS%s_%s-%s_MeanRateScatter.pdf', SubjectID, SSQ,TetrodeID,SSID))
+% figure of population average rate
+[~,DescendVoc] = sort(SRmean.Self-Free-Vocalizing, 'descend');
+figure()
+plot(zscore(SRmean'), 'LineWidth',1.5,'Color','k')
+set(gca, 'XTick', 1:length(MeanNames), 'XTickLabel',MeanNames,'XTickLabelRotation',25)
+ylabel('mean time average rate across events (z-score)')
+
+
 %% Plot rasters for vocalizations
 fprintf(1,' RASTER PLOTS (AND KDE) of NEURAL DATA CORRESPONDING TO VOCALIZATIONS\n');
 Delay = [5000 5000];
