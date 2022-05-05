@@ -302,14 +302,14 @@ if length(SpikeRate.BehavType)==0
     end
 
 %     keyboard
-    print(Fig,fullfile(OutputPath,sprintf('%s_%s_SS%s_%s-%s_MeanRateScatter.pdf', SubjectID, Date,NeuralInputID{3},NeuralInputID{1},NeuralInputID{2})),'-dpdf','-fillpage')
+    print(Fig,fullfile(OutputPath,sprintf('%s_%s_SS%s_%s-%s_MeanRateScatter_%dms.pdf', SubjectID, Date,NeuralInputID{3},NeuralInputID{1},NeuralInputID{2}, MinDur)),'-dpdf','-fillpage')
     close all
 
 else
 
     % Plot Self non vocal behavior (Free session)
     LegendSNVB = cell(1,length(SpikeRate.BehavType));
-    MeanSelfNVBehav = nan(length(SpikeRate.BehavType));
+    MeanSelfNVBehav = nan(length(SpikeRate.BehavType),1);
     for bb=1:length(SpikeRate.BehavType)
         if ~isnan(SpikeRate.SelfNVBehav_rate{bb}(1,1))
             Ind = SpikeRate.SelfNVBehav_rate{bb}(:,2)>MinDur;
@@ -338,7 +338,7 @@ else
 
     % Plot Others non vocal behavior (Free session)
     LegendONVB = cell(1,length(SpikeRate.BehavType));
-    MeanOthersNVBehav = nan(length(SpikeRate.BehavType));
+    MeanOthersNVBehav = nan(length(SpikeRate.BehavType),1);
     for bb=1:length(SpikeRate.BehavType)
         if ~isnan(SpikeRate.OthersNVBehav_rate{bb}(1,1))
             Ind = SpikeRate.OthersNVBehav_rate{bb}(:,2)>MinDur;
@@ -346,7 +346,7 @@ else
             swarmchart((bb+NaxisCount+length(SpikeRate.BehavType)).*ones(sum(Ind),1),Fun(SpikeRate.OthersNVBehav_rate{bb}(Ind,1)),ScatterMarkerSz,ColorOthers,'o','filled','MarkerFaceAlpha',0.5,'MarkerEdgeAlpha',0.5)
             hold on
             MeanOthersNVBehav(bb) = mean(Fun(SpikeRate.OthersNVBehav_rate{bb}(Ind,1)));
-            errorbar(bb+NaxisCount+length(SpikeRate.BehavType),MeanOthersNVBehav(bb),std(Fun(SpikeRate.SelfNVBehav_rate{bb}(Ind,1)))/sum(Ind)^0.5, 'sr','MarkerSize',MeanMarkerSize,'MarkerFaceColor','r')
+            errorbar(bb+NaxisCount+length(SpikeRate.BehavType),MeanOthersNVBehav(bb),std(Fun(SpikeRate.OthersNVBehav_rate{bb}(Ind,1)))/sum(Ind)^0.5, 'sr','MarkerSize',MeanMarkerSize,'MarkerFaceColor','r')
             hold on
 
             if contains(SpikeRate.BehavType{bb}, 'teeth')
@@ -460,7 +460,7 @@ else
     bbQuiet = find(contains(SpikeRate.BehavType, 'quiet'));
     bbChewing = find(contains(SpikeRate.BehavType, 'chewing'));
     bbLicking = find(contains(SpikeRate.BehavType, 'licking'));
-    if ~isempty(bbQuiet) && ~isempty(bbChewing) && sum(~isnan(SpikeRate.SelfNVBehav_rate{bbChewing})) && sum(~isnan(SpikeRate.SelfNVBehav_rate{bbQuiet}))
+    if ~isempty(bbQuiet) && ~isempty(bbChewing) && any(~isnan(SpikeRate.SelfNVBehav_rate{bbChewing}(:,1))) && any(~isnan(SpikeRate.SelfNVBehav_rate{bbQuiet}(:,1)))
         IndC = SpikeRate.SelfNVBehav_rate{bbChewing}(:,2)>MinDur;
         N1 = sum(IndC);
         IndQ = SpikeRate.SelfNVBehav_rate{bbQuiet}(:,2)>MinDur;
@@ -479,7 +479,7 @@ else
 %         TestCount = TestCount+1;
 %         Stats(TestCount,:) = {'Self-Free-ChewingVsQuiet', p4,stats.tstat, stats.df,length(SpikeRate.SelfNVBehav_rate{bbChewing}),length(SpikeRate.SelfNVBehav_rate{bbQuiet})};
     end
-    if ~isempty(bbQuiet) && ~isempty(bbLicking) && sum(~isnan(SpikeRate.SelfNVBehav_rate{bbLicking})) && sum(~isnan(SpikeRate.SelfNVBehav_rate{bbQuiet}))
+    if ~isempty(bbQuiet) && ~isempty(bbLicking) && any(~isnan(SpikeRate.SelfNVBehav_rate{bbLicking}(:,1))) && any(~isnan(SpikeRate.SelfNVBehav_rate{bbQuiet}(:,1)))
         IndL = SpikeRate.SelfNVBehav_rate{bbLicking}(:,2)>MinDur;
         N1 = sum(IndL);
         IndQ = SpikeRate.SelfNVBehav_rate{bbQuiet}(:,2)>MinDur;
@@ -498,7 +498,7 @@ else
 %         TestCount = TestCount+1;
 %         Stats(TestCount,:) = {'Self-Free-LickingVsQuiet', p5,stats.tstat, stats.df,length(SpikeRate.SelfNVBehav_rate{bbLicking}),length(SpikeRate.SelfNVBehav_rate{bbQuiet})};
     end
-    if ~isempty(bbQuiet) && exist('IndSelf', 'var') && sum(~isnan(SpikeRate.SelfNVBehav_rate{bbQuiet}))
+    if ~isempty(bbQuiet) && exist('IndSelf', 'var') && any(~isnan(SpikeRate.SelfNVBehav_rate{bbQuiet}(:,1)))
         N1 = sum(IndSelf);
         IndQ = SpikeRate.SelfNVBehav_rate{bbQuiet}(:,2)>MinDur;
         N2 = sum(IndQ);
@@ -516,7 +516,7 @@ else
 %         TestCount = TestCount+1;
 %         Stats(TestCount,:) = {'Self-Free-VocalizingVsQuiet', p6,stats.tstat, stats.df,sum(IndSelf),length(SpikeRate.SelfNVBehav_rate{bbQuiet})};
     end
-    if ~isempty(bbQuiet) && ~isempty(bbChewing) && sum(~isnan(SpikeRate.SelfNVBehav_rate{bbChewing})) && sum(~isnan(SpikeRate.SelfNVBehav_rate{bbQuiet}))
+    if ~isempty(bbQuiet) && ~isempty(bbChewing) && any(~isnan(SpikeRate.SelfNVBehav_rate{bbChewing}(:,1))) && any(~isnan(SpikeRate.SelfNVBehav_rate{bbQuiet}(:,1)))
         line(length(LegendVoc)+[bbQuiet bbChewing], Ylim(2).*ones(2,1).*0.9, 'Color','k', 'LineWidth',2)
         TextX = length(LegendVoc)+min(bbQuiet,bbChewing)+abs(bbQuiet-bbChewing)/2;
         if p4<0.001
@@ -529,7 +529,7 @@ else
             text(TextX-0.2, Ylim(2)*0.925, 'NS', 'FontSize',12)
         end
     end
-    if ~isempty(bbQuiet) && ~isempty(bbLicking) && sum(~isnan(SpikeRate.SelfNVBehav_rate{bbLicking})) && sum(~isnan(SpikeRate.SelfNVBehav_rate{bbQuiet}))
+    if ~isempty(bbQuiet) && ~isempty(bbLicking) && any(~isnan(SpikeRate.SelfNVBehav_rate{bbLicking}(:,1))) && any(~isnan(SpikeRate.SelfNVBehav_rate{bbQuiet}(:,1)))
         line(length(LegendVoc)+[bbQuiet bbLicking], Ylim(2).*ones(2,1).*0.95, 'Color','k', 'LineWidth',2)
         TextX = length(LegendVoc)+min(bbQuiet, bbLicking) + abs(bbQuiet-bbLicking)/2;
         if p5<0.001
@@ -542,7 +542,7 @@ else
             text(TextX-0.2, Ylim(2)*0.975, 'NS', 'FontSize',12)
         end
     end
-    if ~isempty(bbQuiet) && exist('IndSelf', 'var') && sum(~isnan(SpikeRate.SelfNVBehav_rate{bbQuiet}))
+    if ~isempty(bbQuiet) && exist('IndSelf', 'var') && any(~isnan(SpikeRate.SelfNVBehav_rate{bbQuiet}(:,1)))
         line([find(strcmp(LegendVoc, 'Self-Voc-Free')) length(LegendVoc)+bbQuiet], Ylim(2).*ones(2,1).*1,'Color', 'k', 'LineWidth',2)
         TextX = find(strcmp(LegendVoc, 'Self-Voc-Free')) + (3 + bbQuiet)/2;
         if p6<0.001
@@ -556,7 +556,7 @@ else
         end
         Fig.Children.YLim(2) = Ylim(2)*1.05;
     end
-    print(Fig,fullfile(OutputPath,sprintf('%s_%s_SS%s_%s-%s_MeanRateScatter.pdf', SubjectID, Date,NeuralInputID{3},NeuralInputID{1},NeuralInputID{2})),'-dpdf','-fillpage')
+    print(Fig,fullfile(OutputPath,sprintf('%s_%s_SS%s_%s-%s_MeanRateScatter_%dms.pdf', SubjectID, Date,NeuralInputID{3},NeuralInputID{1},NeuralInputID{2},MinDur)),'-dpdf','-fillpage')
     close all
 end
 Stats = Stats(1:TestCount,:);

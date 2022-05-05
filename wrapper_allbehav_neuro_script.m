@@ -213,7 +213,7 @@ fprintf(' DONE \n')
 
 %% Plot the average spike rate during various types of behaviors including vocalizations
 fprintf(' PLOTING NEURAL DATA (Av RATE) CORRESPONDING TO ALL BEHAVIORS.... ')
-UseOldData=1;
+UseOldData=0;
 TestNames = ["Voc-Free-SelfVsBgd","Self-Free-VocalizingVsQuiet","Voc-Free-SelfVsOthers","Voc-Free-OthersVsBgd","Self-Free-ChewingVsQuiet","Self-Free-LickingVsQuiet"];
 SRpValues_all = table('Size',[length(GoodCellIndices) 7], 'VariableTypes',...
     ["logical","double", "double","double","double", "double", "double"],...
@@ -273,17 +273,17 @@ for ss=1:length(GoodCellIndices)
         if ~isempty(Row)
             SRmean(ss,5) = SRStats(Row,end);
         else
-            SRmean(ss,5) = nan;
+            SRmean(ss,5) = {nan};
         end
     else
-        SRmean(ss,1) = nan;
+        SRmean(ss,1) = {nan};
     end
     %Others-Free-Vocalizing
     Row = find(strcmp(SRStats.Test, "Voc-Free-OthersVsBgd"));
     if ~isempty(Row)
         SRmean(ss,2) = SRStats(Row,end-1);
     else
-        SRmean(ss,2) = nan;
+        SRmean(ss,2) = {nan};
     end
     %Self-Free-Chewing
     Row = find(strcmp(SRStats.Test, "Self-Free-ChewingVsQuiet"));
@@ -291,7 +291,7 @@ for ss=1:length(GoodCellIndices)
         SRmean(ss,3) = SRStats(Row,end-1);
         SRmean(ss,5) = SRStats(Row,end);
     else
-        SRmean(ss,3) = nan;
+        SRmean(ss,3) = {nan};
     end
     %Self-Free-Licking
     Row = find(strcmp(SRStats.Test, "Self-Free-LickingVsQuiet"));
@@ -299,7 +299,7 @@ for ss=1:length(GoodCellIndices)
         SRmean(ss,4) = SRStats(Row,end-1);
         SRmean(ss,5) = SRStats(Row,end);
     else
-        SRmean(ss,4) = nan;
+        SRmean(ss,4) = {nan};
     end
 end
 fprintf(' DONE \n')
@@ -384,12 +384,12 @@ ylabel('mean time average rate across events (z-score)')
 
 %% Plot rasters for vocalizations
 fprintf(1,' RASTER PLOTS (AND KDE) of NEURAL DATA CORRESPONDING TO VOCALIZATIONS\n');
-Delay = [5000 5000];
+Delay = [500 500];
 PlotDyn = 0; %Set to 1 to plot dnamic plots
 DurOrd = 0; % set to 1 to order neural responses by increasing vocalization duration
 for ss=1:length(GoodCellIndices)
     fprintf(1,'Cell %d/%d\n',ss,length(GoodCellIndices))
-    plot_rastervoc_perfile(ListSSU{Files2Run(GoodCellIndices(ss))}, OutputPath, Delay, PlotDyn, DurOrd)
+    plot_rastervoc_perfile(ListSSU{GoodCellIndices(ss)}, OutputPath, Delay, PlotDyn, DurOrd)
     close all
 end
 fprintf(' DONE \n')
