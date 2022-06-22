@@ -27,10 +27,11 @@ Delay=10; %start to gather spikes a few ms before onset of action (motor!)
 % Indices of vocalization renditions produced by subject ('self') or not
 IndVocS = find(contains(Data.What, 'Voc').*contains(Data.Who, 'self'));
 IndVocO = find(contains(Data.What, 'Voc').*~contains(Data.Who, 'self'));
+IndVocSF = intersect(find(strcmp(Data.ExpType, 'F')), IndVocS);
 IndVoc = find(contains(Data.What, 'Voc'));
 
 % Indices of non-vocal behavior
-IndNVBehav = ~contains(Data.What, 'Voc');
+IndNVBehav = ~contains(Data.What, 'Vo');
 % Find the list of other behaviors extracted
 BehavType = unique(Data.What(IndNVBehav));
 
@@ -51,7 +52,7 @@ if ~isempty(IndVocS)
         SelfCall_exptype{oo} = Data.ExpType{IndVocS(oo)};
     end
 else
-    SelfCall_rate = nan(1,2);
+    SelfCall_rate = nan(1,4);
     SelfCall_exptype = {};
 end
 
@@ -70,22 +71,22 @@ if ~isempty(IndVocO)
         OthersCall_exptype{oo} = Data.ExpType{IndVocO(oo)};
     end
 else
-    OthersCall_rate = nan(1,2);
+    OthersCall_rate = nan(1,4);
     OthersCall_exptype = {};
 end
 
 % Calculate the spike rate in Hz of self non-vocal behaviors cut into the
-% same duration chuncks as vocalizations (for fair comparisons 
+% same duration chuncks as self vocalizations in Free session (for fair comparisons) 
 SelfNVBehav_rate = cell(length(BehavType),1);
 for bb=1:length(BehavType)
     IndNVBehavS = find(contains(Data.What, BehavType{bb}).*contains(Data.Who, 'self'));
-    if ~isempty(IndNVBehavS)
-        SelfNVBehav_rate{bb} = nan(length(IndVoc),2);
-        [DurVoc,~] = sort(Data.Duration(IndVoc)+Delay,'descend');
+    if ~isempty(IndNVBehavS) && ~isempty(IndVocSF)
+        SelfNVBehav_rate{bb} = nan(length(IndVocSF),2);
+        [DurVoc,~] = sort(Data.Duration(IndVocSF)+Delay,'descend');
         DurNVB = Data.Duration(IndNVBehavS);
         UsedTime = zeros(length(IndNVBehavS),1);
         UsedIdx = [];
-        for oo=1:length(IndVoc)
+        for oo=1:length(IndVocSF)
             [GoodIdx,DurNVB,UsedTime,UsedIdx] = recurDur(DurNVB, DurVoc(oo),UsedTime,UsedIdx);
             if ~isempty(GoodIdx)
                 SAT = Data.SpikesArrivalTimes_Behav{IndNVBehavS(GoodIdx)};
@@ -106,13 +107,13 @@ end
 OthersNVBehav_rate = cell(length(BehavType),1);
 for bb=1:length(BehavType)
     IndNVBehavO = find(contains(Data.What, BehavType{bb}).*~contains(Data.Who, 'self'));
-    if ~isempty(IndNVBehavO)
-        OthersNVBehav_rate{bb} = nan(length(IndVoc),2);
-        [DurVoc,~] = sort(Data.Duration(IndVoc)+Delay,'descend');
+    if ~isempty(IndNVBehavO) && ~isempty(IndVocSF)
+        OthersNVBehav_rate{bb} = nan(length(IndVocSF),2);
+        [DurVoc,~] = sort(Data.Duration(IndVocSF)+Delay,'descend');
         DurNVB = Data.Duration(IndNVBehavO);
         UsedTime = zeros(length(IndNVBehavO),1);
         UsedIdx = [];
-        for oo=1:length(IndVoc)
+        for oo=1:length(IndVocSF)
             [GoodIdx,DurNVB,UsedTime,UsedIdx] = recurDur(DurNVB, DurVoc(oo),UsedTime, UsedIdx);
             if ~isempty(GoodIdx)
                 SAT = Data.SpikesArrivalTimes_Behav{IndNVBehavO(GoodIdx)};

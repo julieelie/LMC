@@ -213,14 +213,14 @@ fprintf(' DONE \n')
 
 %% Plot the average spike rate during various types of behaviors including vocalizations
 fprintf(' PLOTING NEURAL DATA (Av RATE) CORRESPONDING TO ALL BEHAVIORS.... ')
-UseOldData=0;
-TestNames = ["Voc-Free-SelfVsBgd","Self-Free-VocalizingVsQuiet","Voc-Free-SelfVsOthers","Voc-Free-OthersVsBgd","Self-Free-ChewingVsQuiet","Self-Free-LickingVsQuiet"];
-SRpValues_all = table('Size',[length(GoodCellIndices) 7], 'VariableTypes',...
-    ["logical","double", "double","double","double", "double", "double"],...
+UseOldData=1;
+TestNames = ["Voc-Free-SelfVsBgd","Self-Free-VocalizingVsQuiet","Voc-Free-SelfVsOthers","Voc-Free-OthersVsBgd","Others-Free-VocalizingVsQuiet","Self-Free-ChewingVsQuiet","Self-Free-LickingVsQuiet"];
+SRpValues_all = table('Size',[length(GoodCellIndices) 8], 'VariableTypes',...
+    ["logical","double", "double","double","double", "double", "double", "double"],...
     'VariableNames',["Single-Unit" TestNames],...
     'RowNames',ListSSU(GoodCellIndices));
-SRcoeffEstimates_all = table('Size',[length(GoodCellIndices) 7], 'VariableTypes',...
-    ["logical","double", "double","double","double", "double", "double"],...
+SRcoeffEstimates_all = table('Size',[length(GoodCellIndices) 8], 'VariableTypes',...
+    ["logical","double", "double","double","double", "double", "double", "double"],...
     'VariableNames',["Single-Unit" TestNames],...
     'RowNames',ListSSU(GoodCellIndices));
 MeanNames = ["Self-Free-Vocalizing","Others-Free-Vocalizing","Self-Free-Chewing","Self-Free-Licking","Self-Free-Quiet"];
@@ -228,6 +228,10 @@ SRmean = table('Size', [length(GoodCellIndices) length(MeanNames)], 'VariableTyp
     ["double","double","double","double","double"],'VariableNames',MeanNames,...
     'RowNames',ListSSU(GoodCellIndices));
 
+SRn = table('Size', [length(GoodCellIndices) length(MeanNames)], 'VariableTypes',...
+    ["double","double","double","double","double"],'VariableNames',MeanNames,...
+    'RowNames',ListSSU(GoodCellIndices));
+%
 for ss=1:length(GoodCellIndices)
     fprintf(1,'Cell %d/%d\n',ss,length(GoodCellIndices))
     if UseOldData
@@ -250,6 +254,7 @@ for ss=1:length(GoodCellIndices)
         SRStats = SpikeRate.Stats;
 
     else
+%         cal_spikerate_perfile(ListSSU{GoodCellIndices(ss)},OutputPath)
         [SRStats] = plot_av_spikerate_perfile(ListSSU{GoodCellIndices(ss)}, OutputPath);
     end
     SRpValues_all(ss,1) = {strcmp(SSQ_Files2Run{GoodCellIndices(ss)} , 'SSSU')};
@@ -269,41 +274,53 @@ for ss=1:length(GoodCellIndices)
     Row = find(strcmp(SRStats.Test, "Voc-Free-SelfVsBgd"));
     if ~isempty(Row)
         SRmean(ss,1) = SRStats(Row,end-1);
+        SRn(ss,1) = SRStats(Row,end-3);
         Row = find(strcmp(SRStats.Test, "Self-Free-VocalizingVsQuiet"));
         if ~isempty(Row)
             SRmean(ss,5) = SRStats(Row,end);
+            SRn(ss,5) = SRStats(Row,end-2);
         else
             SRmean(ss,5) = {nan};
+            SRn(ss,5) = {nan};
         end
     else
         SRmean(ss,1) = {nan};
+        SRn(ss,1) = {nan};
     end
     %Others-Free-Vocalizing
     Row = find(strcmp(SRStats.Test, "Voc-Free-OthersVsBgd"));
     if ~isempty(Row)
         SRmean(ss,2) = SRStats(Row,end-1);
+        SRn(ss,2) = SRStats(Row,end-3);
     else
         SRmean(ss,2) = {nan};
+        SRn(ss,2) = {nan};
     end
     %Self-Free-Chewing
     Row = find(strcmp(SRStats.Test, "Self-Free-ChewingVsQuiet"));
     if ~isempty(Row)
         SRmean(ss,3) = SRStats(Row,end-1);
+        SRn(ss,3) = SRStats(Row,end-3);
         SRmean(ss,5) = SRStats(Row,end);
+        SRn(ss,5) = SRStats(Row,end-2);
     else
         SRmean(ss,3) = {nan};
+        SRn(ss,3) = {nan};
     end
     %Self-Free-Licking
     Row = find(strcmp(SRStats.Test, "Self-Free-LickingVsQuiet"));
     if ~isempty(Row)
         SRmean(ss,4) = SRStats(Row,end-1);
+        SRn(ss,4) = SRStats(Row,end-3);
         SRmean(ss,5) = SRStats(Row,end);
+        SRn(ss,5) = SRStats(Row,end-2);
     else
         SRmean(ss,4) = {nan};
+        SRn(ss,4) = {nan};
     end
 end
 fprintf(' DONE \n')
-save(fullfile(OutputPath,'TimeAverageSpikeRate_pValues.mat'), 'SRpValues_all', 'SRcoeffEstimates_all','SRmean');
+save(fullfile(OutputPath,'TimeAverageSpikeRate_pValues.mat'), 'SRpValues_all', 'SRcoeffEstimates_all','SRmean', 'SRn','TestNames');
 % The plot is saved under OutputPath as sprintf('%s_%s_%s_SS%s_%s-%s_MeanRateScatter.pdf', SubjectID, SSQ,TetrodeID,SSID))
 %% 
 
@@ -317,10 +334,12 @@ ColorMU = [0 0.4470 0.7410];
 ColorSU = [0.9290 0.6940 0.1250];
 BarGraph=nan(4,6);
 MU_logical = ~SRpValues_all.("Single-Unit");
-NiceNames = {'Vocalizing','Vocalizing vs Quiet','Vocalizing vs Hearing','Hearing', 'Chewing vs Quiet', 'Licking vs Quiet'};
+NiceNames = {'Vocalizing','Vocalizing vs Quiet','Vocalizing vs Hearing','Hearing','Hearing vs Quiet', 'Chewing vs Quiet', 'Licking vs Quiet'};
 for tt=1:length(TestNames)
-    Sig_logical = SRpValues_all.(sprintf(TestNames(tt)))<=plim;
-    NSig_logical = SRpValues_all.(sprintf(TestNames(tt)))>plim; % this is to make sure nan values stays 0 indices
+    [~,Ordp]=sort(SRpValues_all.(sprintf(TestNames(tt))));
+    Ntest = sum(~isnan(SRpValues_all.(sprintf(TestNames(tt)))));
+    Sig_logical = SRpValues_all.(sprintf(TestNames(tt)))<=(plim.*Ordp./Ntest);
+    NSig_logical = SRpValues_all.(sprintf(TestNames(tt)))>(plim.*Ordp./Ntest); % this is to make sure nan values stays 0 indices
     BarGraph(3,tt) = sum(MU_logical.* (~isnan(SRpValues_all.(sprintf(TestNames(tt))))));
     BarGraph(4,tt) = sum((~MU_logical) .* (~isnan(SRpValues_all.(sprintf(TestNames(tt))))));
     BarGraph(1,tt) = sum(MU_logical .* Sig_logical)./BarGraph(3,tt);
@@ -368,23 +387,62 @@ end
 suplabel('Poisson GLM on time average spike rate', 't')
 
 % find the single unit with max estimate during vocalization
-Sig_logical = SRpValues_all.(sprintf(TestNames(1)))<=plim;
-[~,IndSUdesc] = sort(SRcoeffEstimates_all.(sprintf(TestNames(1)))(logical(~MU_logical.*Sig_logical)), 'descend');
-IndSUMax = find(SRcoeffEstimates_all.(sprintf(TestNames(1)))(logical(~MU_logical.*Sig_logical)) == max(SRcoeffEstimates_all.(sprintf(TestNames(1)))(logical(~MU_logical.*Sig_logical))));
+[~,Ordp]=sort(SRpValues_all.(sprintf(TestNames(3))));
+Ntest = sum(~isnan(SRpValues_all.(sprintf(TestNames(3)))));
+Sig_logical = SRpValues_all.(sprintf(TestNames(3)))<=(plim.*Ordp./Ntest);
+[~,IndSUdesc] = sort(SRcoeffEstimates_all.(sprintf(TestNames(3)))(logical(~MU_logical.*Sig_logical)), 'descend');
+IndSUMax = find(SRcoeffEstimates_all.(sprintf(TestNames(3)))(logical(~MU_logical.*Sig_logical)) == max(SRcoeffEstimates_all.(sprintf(TestNames(3)))(logical(~MU_logical.*Sig_logical))));
 ListSSU_SUSig = ListSSU(GoodCellIndices(logical(~MU_logical.*Sig_logical)));
 fprintf(1,'the ID of the SU with max estimate for vocalizing vs Background is %s', ListSSU_SUSig{IndSUMax})
 
-% figure of population average rate
-[~,DescendVoc] = sort(SRmean.Self-Free-Vocalizing, 'descend');
+% % figure of population average rate
+NonNanCells = logical((~MU_logical).*(~isnan(SRmean.("Self-Free-Vocalizing"))).*(~isnan(SRmean.("Others-Free-Vocalizing"))).*(~isnan(SRmean.("Self-Free-Chewing"))).*(~isnan(SRmean.("Self-Free-Licking"))).*(~isnan(SRmean.("Self-Free-Quiet"))));
+SRmeanZS =nan(sum(NonNanCells),size(SRmean,2));
+PeakRate = nan(sum(NonNanCells),1);
+SRmeanNonNan = SRmean{NonNanCells,:};
+for rr=1:sum(NonNanCells)
+    SRmeanZS(rr,:) = zscore(SRmeanNonNan(rr,:));
+    PeakRate(rr) = find(SRmeanZS(rr,:)==max(SRmeanZS(rr,:)),1);
+end
+[~,IndPeak] = sort(PeakRate, 'ascend');
+GreatSort = nan(size(IndPeak));
+Counter=0;
+for pp=1:length(unique(PeakRate))
+    LocalCells = find(PeakRate==pp);
+    if pp==1
+        [~,I1] = sort(SRmeanZS(LocalCells,pp)-SRmeanZS(LocalCells,2), 'descend');
+    else
+        [~,I1] = sort(SRmeanZS(LocalCells,pp)-SRmeanZS(LocalCells,1), 'ascend');
+    end
+    GreatSort(Counter + (1:length(I1))) = LocalCells(I1);
+    Counter = Counter + length(I1);
+end
+
+[~,IndMaxVoc] = sort(SRmeanZS(:,1), 'ascend');
 figure()
-plot(zscore(SRmean'), 'LineWidth',1.5,'Color','k')
+% plot(SRmeanZS(PeakRate,:), 'LineWidth',1.5,'Color','k')
+plot(SRmeanZS', 'LineWidth',1.5,'Color','k')
 set(gca, 'XTick', 1:length(MeanNames), 'XTickLabel',MeanNames,'XTickLabelRotation',25)
 ylabel('mean time average rate across events (z-score)')
+
+figure()
+imagesc(SRmeanZS(IndPeak,:))
+set(gca, 'XTick', 1:length(MeanNames), 'XTickLabel',MeanNames,'XTickLabelRotation',25)
+ylabel('Cells')
+title('mean time average rate across events (z-score) N=')
+
+
+figure()
+imagesc(SRmeanZS(GreatSort,:))
+set(gca, 'XTick', 1:length(MeanNames), 'XTickLabel',MeanNames,'XTickLabelRotation',25)
+ylabel('Cells')
+colorbar()
+title(sprintf('mean time average rate across events (z-score) N=%d SU', size(SRmeanZS,1)))
 
 
 %% Plot rasters for vocalizations
 fprintf(1,' RASTER PLOTS (AND KDE) of NEURAL DATA CORRESPONDING TO VOCALIZATIONS\n');
-Delay = [500 500];
+Delay = [200 200];
 PlotDyn = 0; %Set to 1 to plot dnamic plots
 DurOrd = 0; % set to 1 to order neural responses by increasing vocalization duration
 for ss=1:length(GoodCellIndices)

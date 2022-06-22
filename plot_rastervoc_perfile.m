@@ -68,6 +68,7 @@ Color = ColorLegend.color{1}.*contains(Data.Who, 'self') + ColorLegend.color{2}.
 % Color = [0.6350, 0.0780, 0.1840, 0.5];
 if isfield(Data.KDE_onset, 'SelfVocFr') && isfield(Data.KDE_onset, 'OthersVocFr')
     Fig10 = figure(10);
+    clf
     ColKDE = [0.4940, 0.1840, 0.5560; 0.3010, 0.7450, 0.9330] ;
     timerasterkdeOnAmp2(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,[IndVocPDF; IndVocHDF],Data.BioSound, Color,ColorLegend,IndVocPDF,IndVocHDF, ColKDE )
     print(Fig10,fullfile(OutputPath,sprintf('%s_RasterVocFreeSelfOthers_%d.pdf', FileNameBase, Delay(1))),'-dpdf','-fillpage');
@@ -881,7 +882,8 @@ end
     axis(v_axis);
 %     xlabel('time (ms)');
     ylabel('Frequency');
-    XLIM = [-Delay(1) max(Duration(Indices))+Delay(2)];
+%     XLIM = [-Delay(1) max(Duration(Indices))+Delay(2)];
+    XLIM = [-Delay(1) mean(Duration(Indices))+Delay(2)];
     xlim(XLIM) 
     ss1.Children.Parent.YColor = ss1.Children.Parent.XColor;
     ss1.Box = 'off';
@@ -890,12 +892,22 @@ end
     % Plot spikes and vocalization spots alligned to vocalization onset
     % and gather amplitude data
     XAmp_Mat = zeros(length(Indices), Duration(LongestVoc));
+    XAmp_Mat1 = zeros(length(Indices1), Duration(LongestVoc));
+    CountMat1=0;
+    XAmp_Mat2 = zeros(length(Indices2), Duration(LongestVoc));
+    CountMat2=0;
     YSpike_Mat = zeros(length(Indices), Duration(LongestVoc) + sum(Delay));
     ss3=subplot(7,1,[4 5 6 7]);
     for oo=1:length(Indices)
         cc=IDur(oo);
         XAmp_Mat(oo,round(BioSound{Indices(cc),2}.tAmp .*1000)+1) = BioSound{Indices(cc),2}.amp;
-        
+        if any(Indices1==Indices(cc))
+            CountMat1 = CountMat1+1;
+            XAmp_Mat1(oo,round(BioSound{Indices(cc),2}.tAmp .*1000)+1) = XAmp_Mat(oo,round(BioSound{Indices(cc),2}.tAmp .*1000)+1);
+        elseif any(Indices2==Indices(cc))
+            CountMat2 = CountMat2+1;
+            XAmp_Mat2(oo,round(BioSound{Indices(cc),2}.tAmp .*1000)+1) = XAmp_Mat(oo,round(BioSound{Indices(cc),2}.tAmp .*1000)+1);
+        end
         hold on
         % plot vocalization timing
         if size(Color,1)==1
@@ -922,14 +934,15 @@ end
             Sat = Sat(SpikeInd);
             for spike=1:length(Sat)
                 hold on
-                plot(Sat(spike)*ones(2,1), oo-[0.9 0.1], 'Color', ColSpike, 'LineWidth',1.5)
+%                 plot(Sat(spike)*ones(2,1), oo-[0.9 0.1], 'Color', ColSpike, 'LineWidth',1.5)
+                plot(Sat(spike), oo-0.5, 'Marker','o','LineStyle','none','MarkerSize',2,'MarkerFaceColor',ColSpike, 'MarkerEdgeColor', ColSpike)
                 YSpike_Mat(oo, ceil(Sat(spike)+Delay(1)))=1;
             end
         end
         hold on
         
     end
-    XLIM = [-Delay(1) max(Duration(Indices))+Delay(2)];
+%     XLIM = [-Delay(1) max(Duration(Indices))+Delay(2)];
     xlabel('Time centered at vocalization onset (ms)')
     ylim([0 length(Indices)+1])
     xlim(XLIM)
@@ -944,7 +957,7 @@ end
     
     % Plot the KDE and on top of the spectrogram the average amplitude of vocalizations
     TR=10;
-    Overlap = 0;
+    Overlap = 5;
     [YPerStim1, YPerStimt1,FS1] = get_y_4Coherence(SpikesArrivalTimes(Indices1), Duration(Indices1),Delay,TR,Overlap);
     [YPerStim2, YPerStimt2,FS2] = get_y_4Coherence(SpikesArrivalTimes(Indices2), Duration(Indices2),Delay,TR,Overlap);
     
@@ -954,11 +967,19 @@ end
 %     ColorAmp = [0.6350, 0.0780, 0.1840, 0.7];
     ColorAmp = [0.3, 0.3, 0.3];
     AvAmp = [zeros(1, Delay(1)) mean(XAmp_Mat,1) zeros(1, Delay(2))];
+    AvAmp1 = [zeros(1, Delay(1)) mean(XAmp_Mat1,1) zeros(1, Delay(2))];
+    AvAmp2 = [zeros(1, Delay(1)) mean(XAmp_Mat2,1) zeros(1, Delay(2))];
     Ampx = -(Delay(1)):1:max(Duration(Indices))+Delay(2)-1;
     StdAmp = [zeros(1, Delay(1)) std(XAmp_Mat,0,1)./(size(XAmp_Mat,1))^0.5 zeros(1, Delay(2))];
-    shadedErrorBar(Ampx,AvAmp,StdAmp,{'--','Color',ColorAmp, 'LineWidth',2})
+    StdAmp1 = [zeros(1, Delay(1)) std(XAmp_Mat1,0,1)./(size(XAmp_Mat1,1))^0.5 zeros(1, Delay(2))];
+    StdAmp2 = [zeros(1, Delay(1)) std(XAmp_Mat2,0,1)./(size(XAmp_Mat2,1))^0.5 zeros(1, Delay(2))];
+    shadedErrorBar(Ampx,AvAmp2,StdAmp2,{'--','Color',ColKDE(2,:), 'LineWidth',2})
+    hold on
+    shadedErrorBar(Ampx,AvAmp1,StdAmp1,{'--','Color',ColKDE(1,:), 'LineWidth',2})
+%     shadedErrorBar(Ampx,AvAmp,StdAmp,{'--','Color',ColorAmp, 'LineWidth',2})
     ylabel('Average Amplitude')
     ss1.YAxis(2).Color = ColorAmp(1:3);
+    xlim(XLIM)
     
     ss4 = subplot(7,1,[2 3]);
     cla

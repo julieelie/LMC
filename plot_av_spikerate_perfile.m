@@ -31,7 +31,7 @@ load(FullDataSetFile, 'SpikeRate');
 
 % Output
 % Stats = table('Size',[10 6],'VariableTypes',["string", 'double', 'double','double','int16', 'int16'],'VariableNames',{'Test', 'p-value','t-stat','DF','n1','n2'});
-Stats = table('Size',[10 9],'VariableTypes',["string", 'double', 'double', 'double','double','int16', 'int16', 'double','double'],'VariableNames',{'Test', 'Estimate', 'p-value','chi2stat','DF','n1','n2','mean1', 'mean2'});
+Stats = table('Size',[11 9],'VariableTypes',["string", 'double', 'double', 'double','double','int16', 'int16', 'double','double'],'VariableNames',{'Test', 'Estimate', 'p-value','chi2stat','DF','n1','n2','mean1', 'mean2'});
 TestCount = 0;
 %% Plot the figure
 ScatterMarkerSz = 30;
@@ -44,7 +44,11 @@ Nevents = zeros(8,1);
 LegendVoc = {};
 NaxisInd = -1;
 % Plot the spike rate in Hz of self calls Operant
-Ind = logical(contains(SpikeRate.SelfCall_exptype, 'O') .* SpikeRate.SelfCall_rate(:,3)>MinDur);
+if any(~isnan(SpikeRate.SelfCall_rate(:,1)))
+    Ind = logical(contains(SpikeRate.SelfCall_exptype, 'O') .* SpikeRate.SelfCall_rate(:,3)>MinDur);
+else
+    Ind=[];
+end
 if sum(Ind)>5
     NaxisInd = NaxisInd+2;
     Nevents(NaxisInd:NaxisInd+1) = sum(Ind).*ones(2,1);
@@ -75,7 +79,11 @@ end
 
 
 % Plot the spike rate in Hz of self calls Free session
-Ind = logical(contains(SpikeRate.SelfCall_exptype, 'F') .* SpikeRate.SelfCall_rate(:,3)>MinDur);
+if any(~isnan(SpikeRate.SelfCall_rate(:,1)))
+    Ind = logical(contains(SpikeRate.SelfCall_exptype, 'F') .* SpikeRate.SelfCall_rate(:,3)>MinDur);
+else
+    Ind = [];
+end
 if sum(Ind)>5
     NaxisInd = NaxisInd+2;
     Nevents(NaxisInd:(NaxisInd+1)) = sum(Ind).*ones(2,1);
@@ -119,8 +127,11 @@ if ~isempty(SpikeRate.OthersCall_exptype)
     %     hold on
     %     errorbar(6,mean(SpikeRate.OthersCall_rate(Ind,2)),std(SpikeRate.OthersCall_rate(Ind,2))/sum(Ind)^0.5, 'sc','MarkerSize',MeanMarkerSize,'MarkerFaceColor','c')
     %     hold on
-
-    Ind = logical(contains(SpikeRate.OthersCall_exptype, 'O').* SpikeRate.OthersCall_rate(:,3)>MinDur);
+    if any(~isnan(SpikeRate.OthersCall_rate(:,1)))
+        Ind = logical(contains(SpikeRate.OthersCall_exptype, 'O').* SpikeRate.OthersCall_rate(:,3)>MinDur);
+    else
+        Ind=[];
+    end
     if sum(Ind)>5
         NaxisInd = NaxisInd+2;
         Nevents(NaxisInd:(NaxisInd+1)) = sum(Ind).*ones(2,1);
@@ -152,7 +163,11 @@ if ~isempty(SpikeRate.OthersCall_exptype)
 
 
     % Plot the spike rate in Hz of others calls Free session
-    Ind = logical(contains(SpikeRate.OthersCall_exptype, 'F') .* SpikeRate.OthersCall_rate(:,3)>MinDur);
+    if any(~isnan(SpikeRate.OthersCall_rate(:,1)))
+        Ind = logical(contains(SpikeRate.OthersCall_exptype, 'F') .* SpikeRate.OthersCall_rate(:,3)>MinDur);
+    else
+        Ind=[];
+    end
     if sum(Ind)>5
         NaxisInd = NaxisInd +2;
         Nevents(NaxisInd:(NaxisInd+1)) = sum(Ind).*ones(2,1);
@@ -181,7 +196,7 @@ if ~isempty(SpikeRate.OthersCall_exptype)
 %         Stats(TestCount,:) = {'Voc-Free-OthersVsBgd', pOF,stats.tstat, stats.df,sum(Ind),sum(Ind)};
         
         if exist('IndSelf', 'var') % minimum of 5 calls to get into the plot and t-test
-            yGLM = [SpikeRate.SelfCall_rate(IndSelf,1);SpikeRate.OthersCall_rate(Ind,2)];
+            yGLM = [SpikeRate.SelfCall_rate(IndSelf,1);SpikeRate.OthersCall_rate(Ind,1)];
             yGLM(yGLM==0) = R0;
             MDL = fitglm([ones(sum(IndSelf),1);zeros(sum(Ind),1)],yGLM,'linear', 'CategoricalVars',1,'Distribution', 'poisson');
             DT = MDL.devianceTest;
@@ -196,6 +211,7 @@ if ~isempty(SpikeRate.OthersCall_exptype)
 %             Stats(TestCount,:) = {'Voc-Free-SelfVsOthers', p3,stats.tstat, stats.df,sum(IndSelf),sum(Ind)};
         end
         LegendVoc = [LegendVoc{:} {'Others-Voc-Free' 'bOthers-Voc-Free'}];
+        IndOthers = Ind;
     end
 
 
@@ -311,6 +327,9 @@ else
     LegendSNVB = cell(1,length(SpikeRate.BehavType));
     MeanSelfNVBehav = nan(length(SpikeRate.BehavType),1);
     for bb=1:length(SpikeRate.BehavType)
+        if strcmp(SpikeRate.BehavType{bb}, 'VoNan') % these are vocalizations on which BioSound could not calculate anything, they are not true
+            continue
+        end
         if ~isnan(SpikeRate.SelfNVBehav_rate{bb}(1,1))
             Ind = SpikeRate.SelfNVBehav_rate{bb}(:,2)>MinDur;
             %         Jitter_local = rand([size(SpikeRate.SelfNVBehav_rate{bb},1),1]).*0.4-0.2;
@@ -516,6 +535,21 @@ else
 %         TestCount = TestCount+1;
 %         Stats(TestCount,:) = {'Self-Free-VocalizingVsQuiet', p6,stats.tstat, stats.df,sum(IndSelf),length(SpikeRate.SelfNVBehav_rate{bbQuiet})};
     end
+    
+    if ~isempty(bbQuiet) && exist('IndOthers', 'var') && any(~isnan(SpikeRate.SelfNVBehav_rate{bbQuiet}(:,1)))
+        N1 = sum(IndOthers);
+        IndQ = SpikeRate.SelfNVBehav_rate{bbQuiet}(:,2)>MinDur;
+        N2 = sum(IndQ);
+        yGLM = [SpikeRate.OthersCall_rate(IndOthers,1);SpikeRate.SelfNVBehav_rate{bbQuiet}(IndQ,1)];
+        yGLM(yGLM==0) = R0;
+        MDL = fitglm([ones(N1,1);zeros(N2,1)],yGLM,'linear', 'CategoricalVars',1,'Distribution', 'poisson');
+        DT = MDL.devianceTest;
+        p7 = DT.pValue(2);
+        fprintf(1,'Free: Hearing vs Quiet: p = %.4f   chi2Stat=%.2f   DF = %.1f\n', p7, DT.chi2Stat(2), -diff(DT.DFE))
+        TestCount = TestCount+1;
+        Stats(TestCount,:) = {'Others-Free-VocalizingVsQuiet', exp(MDL.Coefficients.Estimate(2)), p7,DT.chi2Stat(2), -diff(DT.DFE),N1,N2, MeanO,MeanSelfNVBehav(bbQuiet)};
+    end
+
     if ~isempty(bbQuiet) && ~isempty(bbChewing) && any(~isnan(SpikeRate.SelfNVBehav_rate{bbChewing}(:,1))) && any(~isnan(SpikeRate.SelfNVBehav_rate{bbQuiet}(:,1)))
         line(length(LegendVoc)+[bbQuiet bbChewing], Ylim(2).*ones(2,1).*0.9, 'Color','k', 'LineWidth',2)
         TextX = length(LegendVoc)+min(bbQuiet,bbChewing)+abs(bbQuiet-bbChewing)/2;
@@ -556,6 +590,22 @@ else
         end
         Fig.Children.YLim(2) = Ylim(2)*1.05;
     end
+
+    if ~isempty(bbQuiet) && exist('IndOthers', 'var') && any(~isnan(SpikeRate.SelfNVBehav_rate{bbQuiet}(:,1)))
+        line([find(strcmp(LegendVoc, 'Others-Voc-Free')) length(LegendVoc)+bbQuiet], Ylim(2).*ones(2,1).*1.05,'Color', 'k', 'LineWidth',2)
+        TextX = find(strcmp(LegendVoc, 'Others-Voc-Free')) + (3 + bbQuiet)/2;
+        if p7<0.001
+            text(TextX-0.3, Ylim(2).*1.05, '***', 'FontSize',25)
+        elseif p7<0.01
+            text(TextX-0.2, Ylim(2).*1.05, '**', 'FontSize',25)
+        elseif p7<0.05
+            text(TextX-0.1, Ylim(2).*1.05, '*', 'FontSize',25)
+        else
+            text(TextX-0.2, Ylim(2)*1.075, 'NS', 'FontSize',12)
+        end
+        Fig.Children.YLim(2) = Ylim(2)*1.1;
+    end
+
     print(Fig,fullfile(OutputPath,sprintf('%s_%s_SS%s_%s-%s_MeanRateScatter_%dms.pdf', SubjectID, Date,NeuralInputID{3},NeuralInputID{1},NeuralInputID{2},MinDur)),'-dpdf','-fillpage')
     close all
 end
