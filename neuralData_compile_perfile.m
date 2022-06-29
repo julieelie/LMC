@@ -454,7 +454,7 @@ for ff=1:length(DataDir)
                                 % VocBa for a bark and VocUn for undefined Voc
                                 if ~isempty(BioSoundCalls{VocCall(nf),1})
                                     if strcmp(ExpType{NExpe}{sum(VocCall)}, 'O')
-                                        What{NExpe}{sum(VocCall)} = ['Voc' ManualCallType{VocCall(nf)}];
+                                        What{NExpe}{sum(VocCall)} = ['Voc' ManualCallType{VocCall(nf)}]; % There is only information about manual call type in Operant. Free session nly one day
                                     else
                                         What{NExpe}{sum(VocCall)} = ['Voc' BioSoundCalls{VocCall(nf),1}.type];
                                     end
