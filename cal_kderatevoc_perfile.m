@@ -119,6 +119,10 @@ if ~isempty(IndVocPDF) && length(IndVocPDF)>MinNumCall
         [KDE_offset.SelfTrFr] = kderate_offset(Data.SpikesArrivalTimes_Behav(IndTrPDF),Data.Duration(IndTrPDF),Delay,Bin_ms);
     end
     IndBaPDF = intersect(IndBa, IndVocPDF);
+    if strcmp(SubjectID, '11689') && ~isempty(IndBaPDF)
+        warning('11689 not supposed to emit bark calls but only Trills during operant....')
+        keyboard
+    end
     if length(IndBaPDF)>MinNumCall
         [KDE_onset.SelfBaFr] = kderate_onset(Data.SpikesArrivalTimes_Behav(IndBaPDF),Data.Duration(IndBaPDF),Delay,Bin_ms);
         [KDE_offset.SelfBaFr] = kderate_offset(Data.SpikesArrivalTimes_Behav(IndBaPDF),Data.Duration(IndBaPDF),Delay,Bin_ms);

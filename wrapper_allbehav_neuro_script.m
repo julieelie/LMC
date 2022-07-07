@@ -199,17 +199,17 @@ for ss=1:length(GoodCellIndices)
 end
 fprintf(' DONE \n')
 % Data for each unit and all experimental session are appended to: sprintf('%s_%s_SS%s_%s-%s.mat', SubjectID, Date,SSQ,TetrodeID,SSID) 
-
+% Last run in June 2022
 
 %% calculate the KDE SPIKE RATE of vocalizations
 fprintf(1,' CALCULATING KDE OF THE TIME-VARYING SPIKE RATE CORRESPONDING TO VOCALIZATIONS\n');
 Delay = [5000 5000];
-for ss=1:length(GoodCellIndices)
+for ss=1056:length(GoodCellIndices)
     fprintf(1,'Cell %d/%d\n',ss,length(GoodCellIndices))
     cal_kderatevoc_perfile(ListSSU{GoodCellIndices(ss)}, OutputPath,Delay)
 end
 fprintf(' DONE \n')
-
+% Last run June 29 2022
 
 %% Plot the average spike rate during various types of behaviors including vocalizations
 fprintf(' PLOTING NEURAL DATA (Av RATE) CORRESPONDING TO ALL BEHAVIORS.... ')
