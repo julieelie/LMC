@@ -340,7 +340,7 @@ for ff=1:length(DataDir)
                                 Durations2Preceding_events = IndVocStartRaw_merged{VocInd(vv)}{ll}(nn) - AllStops;
                                 if strcmp(SessionType_local, 'O')
                                     ExpDelay = (0.7*Delay*FS/1000); % in voc_localize_operant the vocalizations are extracted with a little less than 200ms buffer on each side
-                                elseif strcmp(SessionType_local, 'O')
+                                elseif strcmp(SessionType_local, 'F')
                                     ExpDelay = 2.2*Delay*FS/1000; % in voc_localize_using_piezo the vocalizations are extracted and merged within 500ms buffer
                                 end
                                 if sum(Durations2Preceding_events>0) && (IndVocStartRaw_merged{VocInd(vv)}{ll}(nn)>ExpDelay) % some calls happened just before and thie vocalization was correctly placed at least 2 * Delay ms after begining of the sequence

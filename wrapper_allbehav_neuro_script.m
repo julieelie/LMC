@@ -5,17 +5,18 @@ addpath(genpath('/Users/elie/Documents/CODE/GitHub/Kilosort2'))
 addpath(genpath('/Users/elie/Documents/CODE/GitHub/LoggerDataProcessing'))
 addpath(genpath('/Users/elie/Documents/CODE/GitHub/SoundAnalysisBats'))
 Path2RecordingTable = '/Users/elie/Google Drive/Mon Drive/BatmanData/RecordingLogs/recording_logs.xlsx';
-BasePath = '/Volumes/JulieE8T';
+% BasePath = '/Volumes/JulieE8T';
 %% RUN audio data extraction for the operant tests
-% BasePath = '/Volumes/server_home/users/JulieE/LMC';
+BasePath = '/Volumes/server_home/users/JulieE/LMC';
 ListOfPaths = gather_operant_datapath(BasePath);
 
-
-Path2Run = find(contains(ListOfPaths, 'HoHa'));
+% These lines focus on Hodor and Hank data
+Path2Run = find(contains(ListOfPaths, 'HoHa')); 
 % Path2Run(contains(ListOfPaths(Path2Run), '20190207'))=[]; % No Neural Data in Hodor
 % Path2Run(contains(ListOfPaths(Path2Run), '20190213'))=[]; % No Neural Data in Hodor
 % Path2Run(contains(ListOfPaths(Path2Run), '20190214'))=[]; % No Neural Data in Hodor
 
+% Uncomment the following lines to focus on Cooper and Ed Data
 %  Path2Run = find(contains(ListOfPaths, 'CoEd'));
 %  Path2Run(contains(ListOfPaths(Path2Run), '20190703'))=[];
 %  Path2Run(contains(ListOfPaths(Path2Run), '20190709'))=[];
@@ -32,7 +33,7 @@ for pp=1:length(Path2Run)
     
     Path2ParamFile = ListOfPaths{Path2Run(pp)};
     fprintf(1,'\n\n\n\nRunning result_operant_bat on %d/%d %s\n\n', pp, length(Path2Run),Path2ParamFile)
-    
+    % Below are examples of path values
     % Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190202/HoHa_190202_1046_VocTrigger_param.txt';
     % Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190131/HoHa_190131_1108_VocTrigger_param.txt';
     % Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190130/HoHa_190130_1007_VocTrigger_param.txt';
@@ -57,7 +58,7 @@ for pp=1:length(Path2Run)
     % Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190212/HoHa_190212_1033_VocTrigger_param.txt';
     % Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190213/HoHa_190213_1101_VocTrigger_param.txt';
 %     Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC_HoHa/audio/20190214/HoHa_190214_1130_VocTrigger_param.txt';
-%     Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC/LMC_CoEd/audio/20190604/CoEd_190604_1200_VocTrigger_param.txt'; % Needs to point to a reconly param files
+%     Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC/LMC_CoEd/audio/20190604/CoEd_190604_1200_VocTrigger_param.txt'; 
 %     Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC/LMC_CoEd/audio/20190610/CoEd_190610_0953_VocTrigger_param.txt';
 %     Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC/LMC_CoEd/audio/20190607/CoEd_190607_0827_VocTrigger_param.txt';
 %     Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC/LMC_CoEd/audio/20190612/CoEd_190612_1030_VocTrigger_param.txt';
@@ -91,10 +92,10 @@ for pp= 1:length(Path2RunRecOnly)
 end
 
 %% Generate the list of paths to gather the data
-% BasePath = '/Volumes/server_home/users/JulieE/LMC';
+% BasePath = '/Volumes/server_home/users/JulieE/LMC/';
 % BasePath = '/Volumes/Julie8T';
-%OutputPath = '/Users/elie/Documents/LMCResults';
-OutputPath = '/Volumes/JulieE8T/LMCResults';
+OutputPath = '/Volumes/server_home/users/JulieE/LMC/LMCResults';
+%OutputPath = '/Volumes/JulieE8T/LMCResults';
 [ListSSU] = gather_neural_datapath(BasePath);
 save(fullfile(OutputPath,'ListSSU.mat'), 'ListSSU')
 % Define the path were the data will be saved

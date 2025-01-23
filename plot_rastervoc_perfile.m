@@ -48,18 +48,18 @@ IndVocFD = intersect(IndVocD,IndVocF);
 
 
 %% Figure only onset with spectrograms and amplitude
-% 
-% Fig6bis = figure();
-% % ColorLegend.name = {'Ba' 'Tr'};
+
+Fig6bis = figure();
+ColorLegend.name = {'Ba' 'Tr'};
 % ColorLegend.name = {'Vocalization'};
-% % ColorLegend.color = {[0/255 191/255 255/255]; [1 0.7 0.7]};
+ColorLegend.color = {[0/255 191/255 255/255]; [1 0.7 0.7]};
 % ColorLegend.color = {[0.6350, 0.0780, 0.1840, 0.5]};
-% % Color = ColorLegend.color{1}.*contains(Data.What, ColorLegend.name{1}) + ColorLegend.color{2}.*contains(Data.What, ColorLegend.name{2});
+Color = ColorLegend.color{1}.*contains(Data.What, ColorLegend.name{1}) + ColorLegend.color{2}.*contains(Data.What, ColorLegend.name{2});
 % Color = [0.6350, 0.0780, 0.1840, 0.5];
-% if isfield(Data.KDE_onset, 'SelfVocOp')
-%     ColKDE = [0.25 0.25 0.25];
-%     timerasterkdeOnSpectroAmp(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPDO,Data.BioSound, Color,ColorLegend,Data.KDE_onset.SelfVocOp,ColKDE)
-% end
+if isfield(Data.KDE_onset, 'SelfVocOp')
+    ColKDE = [0.25 0.25 0.25];
+    timerasterkdeOnSpectroAmp(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,IndVocPDO,Data.BioSound, Color,ColorLegend,Data.KDE_onset.SelfVocOp,ColKDE)
+end
 
 %% Figure only onset of both hearing and producing during Free session with amplitude envelope
 ColorLegend.name = {'Vocalizing', 'Hearing'};
@@ -71,8 +71,8 @@ if isfield(Data.KDE_onset, 'SelfVocFr') && isfield(Data.KDE_onset, 'OthersVocFr'
     clf
     ColKDE = [0.4940, 0.1840, 0.5560; 0.3010, 0.7450, 0.9330] ;
     timerasterkdeOnAmp2(Data.SpikesArrivalTimes_Behav,Data.Duration,Delay,[IndVocPDF; IndVocHDF],Data.BioSound, Color,ColorLegend,IndVocPDF,IndVocHDF, ColKDE )
-    print(Fig10,fullfile(OutputPath,sprintf('%s_RasterVocFreeSelfOthers_%d.pdf', FileNameBase, Delay(1))),'-dpdf','-fillpage');
-    close(Fig10)
+    % print(Fig10,fullfile(OutputPath,sprintf('%s_RasterVocFreeSelfOthers_%d.pdf', FileNameBase, Delay(1))),'-dpdf','-fillpage');
+    % close(Fig10)
 end
 
 % %% Time Raster plot alligned to vocalization production onset/offset self vocalizations Operant + Free First voc of sequence only
