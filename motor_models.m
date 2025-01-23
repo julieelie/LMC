@@ -2309,7 +2309,7 @@ for nc=1:NCells %(demo cell= 560 or 207; or 78
         ModelAmpGLMPoisson_Coeff{nc,2} =  [ModelGLMPoissonAmp.Coefficients.Estimate(1)'; AmpPC_P * [ModelGLMPoissonAmp.Coefficients.Estimate(2:(NPC_P+1)); zeros(size(AmpPC_P,2)-NPC_P,1)]]';
         ModelAmpGLMPoisson_Coeff{nc,1} = -(Bins*TR - BestShift(nc)); % - here to be in the same order as the coherence (I think!)
         DT = ModelGLMPoissonAmp.devianceTest;
-        ModelAmpGLMPoissonDev_test(nc,1) = DT.pValue(2);
+        ModelAmpGLMPoissonD ev_test(nc,1) = DT.pValue(2);
         ModelAmpGLMPoissonDev_test(nc,2) = DT.chi2Stat(2)/abs(diff(DT.DFE));
         % weird filter here as compared to what I got without PCA below.
         % Beta coefficints of regularized GLM seems to be -1 the ones I

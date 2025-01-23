@@ -62,7 +62,8 @@ for pp=1:length(Path2Run)
 %     Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC/LMC_CoEd/audio/20190607/CoEd_190607_0827_VocTrigger_param.txt';
 %     Path2ParamFile = '/Volumes/server_home/users/JulieE/LMC/LMC_CoEd/audio/20190612/CoEd_190612_1030_VocTrigger_param.txt';
 %     
-     result_operant_bat_what(Path2ParamFile)
+    result_operant_bat_who(Path2ParamFile) 
+    result_operant_bat_what(Path2ParamFile)
     
 end
 
@@ -82,7 +83,7 @@ Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190131'))=[];% Al
 Path2RunRecOnly(contains(List2RecOnlyPath(Path2RunRecOnly), '20190202_1400'))=[];% No logger data
 
 %%
-for pp= 32:length(Path2RunRecOnly) 
+for pp= 1:length(Path2RunRecOnly) 
 
     Path2ParamFile = List2RecOnlyPath{Path2RunRecOnly(pp)};
     fprintf(1,'\n\n\n\nRunning result_reconly_bat on %d/%d %s\n\n',pp, length(Path2RunRecOnly), Path2ParamFile)

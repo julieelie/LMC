@@ -69,7 +69,7 @@ end
     % by voc_localize and voc_localize_operant for each cell
     for ss=1:length(ListSSU)
         cut_neuralData_voc_perfile(InputDataFile, Flags, OutputPath, DenoiseT, Rthreshold)
-    
+    end
     
     % Get the path to audio data for operant conditioning experiment
     [AudioDataPath, DataFile ,~]=fileparts(Path2ParamFile);
