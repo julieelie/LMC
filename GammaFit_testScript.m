@@ -1,3 +1,7 @@
+% This code generates some inter spike arrival times that follow a time
+% varying rate and a gamma noise as defined by the parameters of the gamma
+% function. The rate at each spike is defined by the scale and shape of the
+% gamma as 1./(ScaleData.*Shape).
 % case study of an input signal with
 FS = 1000; % sampling frequency of 1000Hz
 TR = 10; %Time resolution in ms set to 10ms (work on a case where there is coherence up to 1000/(TR*2) Hz ->50Hz
@@ -98,9 +102,18 @@ for tt = 1:length(TRFactors) %TR = 100; %window size in ms
     ExpRate = resample(ExpectedRate, SAT(2:end),1);
     figure(3); subplot(4,1,4);plot(SAT(SAT<=LimTime),ExpectedRate(SAT<=LimTime), '-k', 'LineWidth',2);hold on;plot(ExpRate(1:LimTime), '--k', 'LineWidth',2);hold on; yyaxis left; plot(YRate{1}(1:LimTime), '-r', 'LineWidth',2); hold on; plot(NNKE(1:LimTime), '-b', 'LineWidth',2); legend({'Expected Rate' 'Rescaled Expected Rate' 'calculated Rate Gaussian conv' 'calculated NN kernel'}); ylim([0 0.4])
     
-    suplabel(sprintf('SSE Gaussian convolution = %.2f SSE NNKE = %.2f', sum((YRate{1}(1:length(ExpRate))-ExpRate').^2), sum((NNKE(1:length(ExpRate))-ExpRate').^2)),'t')
-    SSE_Gaussconv(tt) = sum((YRate{1}(1:length(ExpRate))-ExpRate').^2);
-    SSE_SSKernel(tt) = sum((NNKE(1:length(ExpRate))-ExpRate').^2);
+    % suplabel(sprintf('SSE Gaussian convolution = %.2f SSE NNKE = %.2f', sum((YRate{1}(1:length(ExpRate))-ExpRate').^2), sum((NNKE(1:length(ExpRate))-ExpRate').^2)),'t')
+    suplabel(sprintf('SSE Gaussian convolution = %.2f SSE NNKE = %.2f', sum((YRate{1}(1:length(NNKE))-ExpRate(1:length(NNKE))').^2), sum((NNKE(1:length(NNKE))-ExpRate(1:length(NNKE))').^2)),'t')
+    try 
+        SSE_Gaussconv(tt) = sum((YRate{1}(1:length(ExpRate))-ExpRate').^2);
+    catch
+        SSE_Gaussconv(tt) = sum((YRate{1}(1:length(YRate{1}))-ExpRate(1:length(YRate{1}))').^2);
+    end
+    try
+        SSE_SSKernel(tt) = sum((NNKE(1:length(ExpRate))-ExpRate').^2);
+    catch
+        SSE_SSKernel(tt) = sum((NNKE(1:length(YRate{1}))-ExpRate(1:length(YRate{1}))').^2);
+    end
     
     FIG = figure(6)
     clf
