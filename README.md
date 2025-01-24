@@ -1,0 +1,4 @@
+Few notes on some pieces of code:
+voc_localize: generates voc_transc_time based on Mic signal only, identifies sequences of sounds manually extracted, so there could be vocalizations before and after potentially.
+get_logger_data_voc: generates voc _transc_time_refined, realligned the logger signal to the microphone signal but not enlarging the window
+cut_neuralData_voc_perfile: add a Buffer before and after the neural data really corresponding to the bout of vocalizations delineated by voc _transc_time_refined. This buffer is set to be the buffer used to merge calls in bouts when these are parsed out and individualized by who_calls. This is reasonnable here to assume that there is no vocalizations if NeuroBuffer is set to be 200ms, but is dangerous for the first and last vocalizations of the bouts as NeuroBuffer becomes larger.
